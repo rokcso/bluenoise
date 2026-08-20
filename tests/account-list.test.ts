@@ -232,4 +232,43 @@ describe("account list providers", () => {
 		);
 		vi.unstubAllGlobals();
 	});
+
+	it("follows the whitelist since-cursor to fetch all pages", async () => {
+		const total = 2500; // spans two pages at the 2000/page limit
+		const all = Array.from({ length: total }, (_, i) => ({
+			x_user_id: String(200000 + i),
+			handle: `w${i}`,
+			last_scored: 1000 + i,
+		}));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (url: string) => {
+				if (url.includes("/meta"))
+					return Response.json({
+						version: "v-9-999",
+						artifacts: { lite: "/v1/artifacts/lite-x.json" },
+					});
+				if (url.includes("/artifacts/lite"))
+					return Response.json({
+						schema: 2,
+						generatedAt: 999,
+						entries: liteRows(1200, "9000"),
+					});
+				const u = new URL(url);
+				const since = Number(u.searchParams.get("since")) || 0;
+				const limit = Number(u.searchParams.get("limit")) || 500;
+				const page = all.filter((r) => r.last_scored > since).slice(0, limit);
+				const latestAt = page.length
+					? page[page.length - 1].last_scored
+					: since;
+				return Response.json({ list: page, latestAt, count: page.length });
+			}),
+		);
+		const result = await syncAccountListSource(metaSource);
+		expect(result.whitelistIds).toHaveLength(total);
+		expect(result.whitelistIds[0]).toBe("200000");
+		expect(result.whitelistIds[total - 1]).toBe(String(200000 + total - 1));
+		expect(result.whitelistCount).toBe(total);
+		vi.unstubAllGlobals();
+	});
 });
