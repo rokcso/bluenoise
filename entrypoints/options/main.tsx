@@ -6,14 +6,14 @@ import "../popup/style.css";
 import "./style.css";
 import { setLanguage, t } from "@/lib/i18n";
 import {
-	DatabaseFillIcon,
-	DatabaseIcon,
 	FilterFillIcon,
 	FilterIcon,
 	ListFilterFillIcon,
 	ListFilterIcon,
 	SettingsFillIcon,
 	SettingsIcon,
+	UsersFillIcon,
+	UsersIcon,
 	XIcon,
 } from "@/src/ui/icons";
 
@@ -38,8 +38,8 @@ const navigation: {
 	{
 		id: "accounts",
 		label: "accounts",
-		lineIcon: DatabaseIcon,
-		fillIcon: DatabaseFillIcon,
+		lineIcon: UsersIcon,
+		fillIcon: UsersFillIcon,
 	},
 	{
 		id: "filtering",

@@ -10,10 +10,10 @@ import {
 } from "@/src/domain/account-list";
 import { fetchKeywordSource } from "@/src/domain/keywords";
 import {
+	AccountFilterIcon,
 	AppearanceIcon,
 	DatabaseIcon,
 	DiagnosticsIcon,
-	ExtensionIcon,
 	ExternalLinkIcon,
 	ListFilterIcon,
 	LoaderIcon,
@@ -25,6 +25,8 @@ import {
 	ShieldCheckIcon,
 	SlidersIcon,
 	SunIcon,
+	ToolbarIcon,
+	UserSlashIcon,
 } from "@/src/ui/icons";
 import { useConfig } from "./useConfig";
 import { useTheme } from "./useTheme";
@@ -63,7 +65,7 @@ export default function App() {
 					}
 					className="grid h-9 w-9 cursor-pointer place-items-center rounded-full text-x-muted transition-colors hover:bg-x-hover hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
 				>
-					<SettingsIcon className="h-[18px] w-[18px]" />
+					<SettingsIcon aria-hidden="true" className="h-[18px] w-[18px]" />
 				</button>
 			</header>
 
@@ -119,7 +121,7 @@ export function SettingsApp({
 						</SettingsGroup>
 						<SettingsGroup
 							label={t("extension")}
-							icon={ExtensionIcon}
+							icon={ToolbarIcon}
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
@@ -179,7 +181,7 @@ export function SettingsApp({
 						<PageHeading title={t("accounts")} />
 						<SettingsGroup
 							label={t("account_filtering")}
-							icon={DatabaseIcon}
+							icon={AccountFilterIcon}
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
@@ -192,7 +194,7 @@ export function SettingsApp({
 						</SettingsGroup>
 						<SettingsGroup
 							label={t("account_blacklist_title")}
-							icon={ShieldCheckIcon}
+							icon={UserSlashIcon}
 							labelClassName="font-normal"
 						>
 							<AccountListSettings
@@ -414,9 +416,9 @@ function AccountListSettings({
 						className="flex cursor-pointer items-center gap-1 rounded-full border border-x-border px-2.5 py-1 text-xs text-x-fg hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{syncing ? (
-							<LoaderIcon className="h-3 w-3 animate-spin" />
+							<LoaderIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
 						) : (
-							<RefreshIcon className="h-3 w-3" />
+							<RefreshIcon aria-hidden="true" className="h-3 w-3" />
 						)}
 						{t("sync")}
 					</button>
@@ -756,9 +758,9 @@ function SourceToggle({
 						className="flex cursor-pointer items-center gap-1 rounded-full border border-x-border px-2.5 py-1 text-xs text-x-fg hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{syncing ? (
-							<LoaderIcon className="h-3 w-3 animate-spin" />
+							<LoaderIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
 						) : (
-							<RefreshIcon className="h-3 w-3" />
+							<RefreshIcon aria-hidden="true" className="h-3 w-3" />
 						)}
 						{t("sync")}
 					</button>
@@ -894,17 +896,17 @@ function GeneralSettings({
 		{
 			value: "auto",
 			label: t("theme_auto"),
-			icon: <MonitorIcon className="h-3.5 w-3.5" />,
+			icon: <MonitorIcon aria-hidden="true" className="h-3.5 w-3.5" />,
 		},
 		{
 			value: "light",
 			label: t("theme_light"),
-			icon: <SunIcon className="h-3.5 w-3.5" />,
+			icon: <SunIcon aria-hidden="true" className="h-3.5 w-3.5" />,
 		},
 		{
 			value: "dark",
 			label: t("theme_dark"),
-			icon: <MoonIcon className="h-3.5 w-3.5" />,
+			icon: <MoonIcon aria-hidden="true" className="h-3.5 w-3.5" />,
 		},
 	] as const;
 	const activeIndex = themeOptions.findIndex(
