@@ -37,7 +37,8 @@ export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
 	runAt: "document_start",
 	allFrames: false,
-	async main() {
+	async main(ctx) {
+		ctx.onInvalidated(teardown);
 		hookMessages();
 		await init().catch(reportInitError);
 	},
@@ -199,14 +200,16 @@ function showReveal(row: Element, x: number, y: number): void {
 	reveal.el.style.setProperty("--xsf-reveal-radius", `${REVEAL_RADIUS}px`);
 }
 
+function onPointerMove(event: PointerEvent): void {
+	const target = event.target;
+	const row =
+		target instanceof Element ? target.closest(`.${HIT_CLASS}`) : null;
+	if (row) showReveal(row, event.clientX, event.clientY);
+	else hideReveal();
+}
+
 function hookReveal(): void {
-	document.addEventListener("pointermove", (event) => {
-		const target = event.target;
-		const row =
-			target instanceof Element ? target.closest(`.${HIT_CLASS}`) : null;
-		if (row) showReveal(row, event.clientX, event.clientY);
-		else hideReveal();
-	});
+	document.addEventListener("pointermove", onPointerMove);
 	window.addEventListener("scroll", hideReveal, {
 		capture: true,
 		passive: true,
@@ -622,6 +625,35 @@ function stop(): void {
 	scheduleBadge();
 }
 
+/**
+ * WXT revokes this content script's context when the extension is reloaded or
+ * updated. The page and its own listeners stay alive, so any leftover timer,
+ * MutationObserver, or DOM listener would keep firing and throw "Extension
+ * context invalidated." the next time it touches `chrome.*`. Disconnect
+ * everything the moment the context is invalidated so the old instance dies
+ * quietly instead of crashing.
+ */
+function teardown(): void {
+	clearRescanTimers();
+	if (flushTimer) clearTimeout(flushTimer);
+	if (rafId) cancelAnimationFrame(rafId);
+	flushTimer = 0;
+	rafId = 0;
+	flushScheduled = false;
+	if (badgeTimer) clearTimeout(badgeTimer);
+	badgeTimer = 0;
+	observer?.disconnect();
+	observer = null;
+	document.removeEventListener("pointermove", onPointerMove);
+	window.removeEventListener("scroll", hideReveal, { capture: true });
+	window.removeEventListener("resize", hideReveal);
+	window.removeEventListener("popstate", onUrlChange);
+	window.removeEventListener("pageshow", onPageShow);
+	document.removeEventListener("visibilitychange", onVisibility);
+	hideReveal();
+	pending.clear();
+}
+
 function refresh(options: { rebuild?: boolean } = {}): void {
 	if (options.rebuild) refreshMatchers();
 	generation++;
@@ -788,9 +820,11 @@ async function init(): Promise<void> {
 	if (cfg.enabled && active) start();
 	else applyStyleVars();
 
-	document.addEventListener("visibilitychange", () => {
-		if (!document.hidden) fullScan();
-	});
+	document.addEventListener("visibilitychange", onVisibility);
+}
+
+function onVisibility(): void {
+	if (!document.hidden) fullScan();
 }
 
 async function loadAccountList(): Promise<void> {

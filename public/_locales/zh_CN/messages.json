@@ -114,5 +114,8 @@
 	},
 	"contextMenu_addKeyword": {
 		"message": "将选中的文本添加到 BlueNoise 关键词"
+	},
+	"contextMenu_addAccount": {
+		"message": "将选中的文本添加到 BlueNoise 账号黑名单"
 	}
 }

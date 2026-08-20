@@ -120,5 +120,8 @@
 	},
 	"contextMenu_addKeyword": {
 		"message": "Add selected text to BlueNoise keywords"
+	},
+	"contextMenu_addAccount": {
+		"message": "Add selected text to BlueNoise account blacklist"
 	}
 }
