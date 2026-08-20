@@ -10,7 +10,7 @@ import {
 	matchAccountIndex,
 } from "@/src/domain/account-list";
 import { loadConfig } from "@/src/domain/defaults";
-import { buildMatchers, matchAny } from "@/src/domain/matcher";
+import { buildMatchers, matchAny, matchDetail } from "@/src/domain/matcher";
 
 const ARTICLE_SEL = 'article[data-testid="tweet"], article[role="article"]';
 const CELL_SEL = 'div[data-testid="cellInnerDiv"]';
@@ -59,8 +59,28 @@ let active = false;
 /** Bumped on config change to invalidate stale results cached in the WeakMap. */
 let generation = 0;
 
-const state = new WeakMap<Element, { sig: string; hit: string | null }>();
+const state = new WeakMap<
+	Element,
+	{ sig: string; hit: string | null; log: FilteredLog | null }
+>();
 const pending = new Set<Element>();
+
+/** A single filtered reply, recorded only when debug logging is enabled. */
+interface FilteredLog {
+	handle?: string;
+	id?: string;
+	/** Why it was filtered: a keyword rule or the account blacklist. */
+	category: "keyword" | "account";
+	/** Which text matched, body or display name (keyword hits only). */
+	field?: "body" | "name";
+	/** The raw rule (keyword or /regex/) that matched. */
+	rule?: string;
+	/** Which list the rule came from: a subscription name or "user". */
+	source?: string;
+	kind?: "plain" | "regex";
+	/** Short excerpt of the offending text around the match. */
+	snippet?: string;
+}
 let flushScheduled = false;
 let rafId = 0;
 let flushTimer = 0;
@@ -268,18 +288,23 @@ function applyStyleVars(): void {
 
 // ==================== Evaluation ====================
 
-function evaluate(article: Element): void {
+function evaluate(article: Element): {
+	fresh: boolean;
+	log: FilteredLog | null;
+} {
 	const text = readText(article.querySelector(TEXT_SEL));
 	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
 	const sig = [generation, accountListVersion, text, name].join(SEP);
 
 	const cached = state.get(article);
 	if (cached && cached.sig === sig) {
-		return;
+		return { fresh: false, log: null };
 	}
 
 	const mainTweet = isMainTweet(article);
 	let hit: string | null = null;
+	let log: FilteredLog | null = null;
+
 	if (
 		!mainTweet &&
 		(matchers.count > 0 ||
@@ -297,22 +322,88 @@ function evaluate(article: Element): void {
 					cfg.accountBlacklist,
 				)
 			: null;
-		if (accountMatch === "blacklist") hit = "account:blacklist";
-		else if (accountMatch !== "whitelist") {
-			hit =
-				matchAny(matchers, text) ?? (name ? matchAny(matchers, name) : null);
+		if (accountMatch === "blacklist") {
+			hit = "account:blacklist";
+			log = {
+				handle: identity.handle,
+				id: identity.id,
+				category: "account",
+			};
+		} else if (accountMatch !== "whitelist") {
+			if (cfg.debugLogging) {
+				const bodyMatch = matchDetail(matchers, text);
+				const nameMatch = name ? matchDetail(matchers, name) : null;
+				if (bodyMatch) {
+					hit = bodyMatch.hit;
+					log = {
+						handle: identity.handle,
+						id: identity.id,
+						category: "keyword",
+						field: "body",
+						rule: bodyMatch.hit,
+						source: bodyMatch.source ?? undefined,
+						kind: bodyMatch.kind,
+						snippet: bodyMatch.snippet,
+					};
+				} else if (nameMatch) {
+					hit = nameMatch.hit;
+					log = {
+						handle: identity.handle,
+						id: identity.id,
+						category: "keyword",
+						field: "name",
+						rule: nameMatch.hit,
+						source: nameMatch.source ?? undefined,
+						kind: nameMatch.kind,
+						snippet: nameMatch.snippet,
+					};
+				}
+			} else {
+				hit =
+					matchAny(matchers, text) ?? (name ? matchAny(matchers, name) : null);
+			}
 		}
 	}
-	debugLog("Evaluated tweet", {
-		isMainTweet: mainTweet,
-		bodyLength: text.length,
-		nameLength: name.length,
-		matcherCount: matchers.count,
-		hit,
-	});
 
-	state.set(article, { sig, hit });
+	state.set(article, { sig, hit, log });
 	applyMark(article, hit);
+	return { fresh: true, log };
+}
+
+/** One readable log line per filtered reply, then a reason breakdown. */
+function emitFilteredLogs(logs: FilteredLog[]): void {
+	const reasonCount = new Map<string, number>();
+	for (const log of logs) {
+		const key =
+			log.category === "account"
+				? "account:blacklist"
+				: `${log.source ?? "?"} :: ${log.rule}`;
+		reasonCount.set(key, (reasonCount.get(key) ?? 0) + 1);
+	}
+
+	console.group?.(`[BlueNoise] Filtered ${logs.length} reply(s)`);
+	for (const log of logs) {
+		console.info(
+			`[BlueNoise] filtered @${log.handle ?? "?"}${
+				log.id ? ` (id ${log.id})` : ""
+			}`,
+			{
+				reason:
+					log.category === "account"
+						? "account blacklist"
+						: `keyword:${log.field}`,
+				rule: log.rule,
+				kind: log.kind,
+				source: log.source,
+				snippet: log.snippet,
+			},
+		);
+	}
+	console.info(
+		"[BlueNoise] reason breakdown",
+		Object.fromEntries([...reasonCount.entries()].sort((a, b) => b[1] - a[1])),
+	);
+	console.groupEnd?.();
 }
 
 function readAuthorIdentity(article: Element): {
@@ -346,10 +437,14 @@ function flush(): void {
 		return;
 	}
 	const queuedCount = pending.size;
+	const logs: FilteredLog[] = [];
+	let evaluatedCount = 0;
 	for (const article of pending) {
 		if (!article.isConnected) continue;
 		try {
-			evaluate(article);
+			const result = evaluate(article);
+			if (result.fresh) evaluatedCount++;
+			if (result.log) logs.push(result.log);
 		} catch (error) {
 			console.error("[BlueNoise] Failed to process a reply:", error);
 		}
@@ -357,8 +452,10 @@ function flush(): void {
 	pending.clear();
 	debugLog("Scan completed", {
 		queuedArticleCount: queuedCount,
+		evaluatedCount,
 		filteredCount: document.querySelectorAll(`.${HIT_CLASS}`).length,
 	});
+	if (logs.length) emitFilteredLogs(logs);
 	scheduleBadge();
 }
 
@@ -627,6 +724,10 @@ function watchConfig(): void {
 				isStatusPage: active,
 				matcherCount: matchers.count,
 			});
+			// Re-run a full scan so every already-rendered reply gets re-evaluated
+			// and logged, instead of being skipped by the sig cache.
+			generation++;
+			fullScan();
 		}
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {

@@ -4,7 +4,7 @@ import { SettingsApp, type SettingsSection } from "../popup/App";
 import { useConfig } from "../popup/useConfig";
 import "../popup/style.css";
 import "./style.css";
-import { t } from "@/lib/i18n";
+import { setLanguage, t } from "@/lib/i18n";
 import {
 	DatabaseFillIcon,
 	DatabaseIcon,
@@ -61,8 +61,11 @@ function OptionsPage() {
 	const { config } = useConfig();
 
 	useEffect(() => {
-		document.title = config ? t("options_title") : "BlueNoise Settings";
-	}, [config]);
+		// Re-seed the catalog (cheap and idempotent) so the title follows the
+		// user's chosen language, even before a full config reload.
+		setLanguage(config?.language ?? "auto");
+		document.title = t("options_title");
+	}, [config?.language]);
 
 	useEffect(() => {
 		const onPopState = () => setSection(sectionFromUrl());

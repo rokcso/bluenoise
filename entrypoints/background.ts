@@ -1,3 +1,4 @@
+import { setLanguage, t } from "@/lib/i18n";
 import type { AppConfig } from "@/src/contracts/config";
 import { CONFIG_KEY } from "@/src/contracts/config";
 import {
@@ -51,15 +52,21 @@ export default defineBackground(() => {
 			// Reading lastError prevents Chrome from reporting an unchecked error
 			// when this is the first worker start and no item exists yet.
 			void chrome.runtime.lastError;
-			chrome.contextMenus?.create(
-				{
-					id: "add-keyword",
-					title: "Add selected text to BlueNoise keywords",
-					contexts: ["selection"],
-					documentUrlPatterns: ["https://x.com/*", "https://twitter.com/*"],
-				},
-				() => void chrome.runtime.lastError,
-			);
+			// Localize the item with the user's chosen language (not just the
+			// browser locale) by seeding the message catalog from stored config.
+			chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
+				const cfg = (config ?? defaultConfig()) as AppConfig;
+				setLanguage(cfg.language);
+				chrome.contextMenus?.create(
+					{
+						id: "add-keyword",
+						title: t("contextMenu_addKeyword"),
+						contexts: ["selection"],
+						documentUrlPatterns: ["https://x.com/*", "https://twitter.com/*"],
+					},
+					() => void chrome.runtime.lastError,
+				);
+			});
 		});
 	}
 	chrome.contextMenus?.onClicked.addListener((info) => {

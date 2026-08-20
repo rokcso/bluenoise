@@ -12,7 +12,7 @@
 	"follow_maker": { "message": "Follow the maker" },
 	"follow_maker_aria": { "message": "Follow @rokcso on X" },
 	"filter_status_label": { "message": "Filter reply noise" },
-	"filter_effect": { "message": "Noise treatment" },
+	"filter_effect": { "message": "Matched replies" },
 	"filter_effect_hint": {
 		"message": "Choose whether matched replies are blurred or hidden."
 	},
@@ -32,13 +32,22 @@
 	},
 	"account_blacklist_placeholder": { "message": "123456789\n@spam_account" },
 	"account_whitelist_hint": {
-		"message": "Local account whitelist. It always overrides every blacklist."
+		"message": "Local account whitelist. It overrides every blacklist."
 	},
 	"account_whitelist_placeholder": { "message": "987654321\n@trusted_account" },
 	"account_status": {
-		"message": "$1 blacklisted · $2 whitelisted · Updated $3"
+		"message": "$1 blacklisted · $2 whitelisted · Updated $3",
+		"placeholders": {
+			"blacklistedCount": { "content": "$1" },
+			"whitelistedCount": { "content": "$2" },
+			"date": { "content": "$3" }
+		}
 	},
-	"keyword_count": {
+	"keyword_count.one": {
+		"message": "$1 keyword",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"keyword_count.other": {
 		"message": "$1 keywords",
 		"placeholders": { "count": { "content": "$1" } }
 	},
@@ -57,7 +66,9 @@
 	"whitelist_hint": {
 		"message": "Replies matching these rules are never filtered. Use one rule per line."
 	},
-	"whitelist_placeholder": { "message": "trusted name\n/allowed phrase/i" },
+	"whitelist_placeholder": {
+		"message": "a phrase to always keep\n/fine to show/i"
+	},
 	"theme": { "message": "Theme" },
 	"theme_hint": {
 		"message": "Choose how the extension looks in light and dark environments."
@@ -67,7 +78,7 @@
 	"theme_dark": { "message": "Dark" },
 	"general": { "message": "General" },
 	"appearance": { "message": "Appearance" },
-	"extension": { "message": "Extension" },
+	"extension": { "message": "Toolbar" },
 	"keywords": { "message": "Keywords" },
 	"accounts": { "message": "Accounts" },
 	"account_filtering": { "message": "Account filtering" },
@@ -75,8 +86,8 @@
 	"account_blacklist_title": { "message": "My account blacklist" },
 	"account_whitelist_title": { "message": "My account whitelist" },
 	"filtering": { "message": "Filtering" },
-	"treatment": { "message": "Treatment" },
-	"matching": { "message": "Matching" },
+	"treatment": { "message": "Filtering mode" },
+	"matching": { "message": "Match options" },
 	"diagnostics": { "message": "Diagnostics" },
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
@@ -106,5 +117,8 @@
 	"debug_logging": { "message": "Debug logging" },
 	"debug_logging_hint": {
 		"message": "Write filtering diagnostics to the DevTools console of the page being filtered."
+	},
+	"contextMenu_addKeyword": {
+		"message": "Add selected text to BlueNoise keywords"
 	}
 }
