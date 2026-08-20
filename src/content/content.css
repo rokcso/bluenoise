@@ -1,5 +1,6 @@
 /* BlueNoise — content script styles.
- * Only affect marked replies on status pages; the main tweet is never affected.
+ * Only affect marked replies on status pages and tweets on the home timeline;
+ * the main tweet on a status page is never affected.
  */
 
 :root {
