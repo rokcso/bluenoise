@@ -4,6 +4,7 @@ import { CONFIG_KEY } from "@/src/contracts/config";
 import {
 	ACCOUNT_LIST_KEY,
 	type AccountListSnapshot,
+	normalizeAccountEntry,
 	syncAccountLists,
 } from "@/src/domain/account-list";
 import { defaultConfig } from "@/src/domain/defaults";
@@ -47,38 +48,81 @@ export default defineBackground(() => {
 	});
 	if (chrome.contextMenus) {
 		// Service workers can start more than once while the extension is alive.
-		// Remove the previous instance before registering the fixed-id menu item.
-		chrome.contextMenus.remove("add-keyword", () => {
+		// Remove the previous instances before registering the fixed-id items.
+		const menuItems = [
+			{
+				id: "add-keyword",
+				title: t("contextMenu_addKeyword"),
+			},
+			{
+				id: "add-account",
+				title: t("contextMenu_addAccount"),
+			},
+		] as const;
+		const removePrev = (index: number): void => {
+			if (index >= menuItems.length) return;
+			const item = menuItems[index];
 			// Reading lastError prevents Chrome from reporting an unchecked error
 			// when this is the first worker start and no item exists yet.
-			void chrome.runtime.lastError;
-			// Localize the item with the user's chosen language (not just the
-			// browser locale) by seeding the message catalog from stored config.
-			chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
-				const cfg = (config ?? defaultConfig()) as AppConfig;
-				setLanguage(cfg.language);
+			chrome.contextMenus.remove(item.id, () => {
+				void chrome.runtime.lastError;
+				removePrev(index + 1);
+			});
+		};
+		removePrev(0);
+		// Localize the items with the user's chosen language (not just the
+		// browser locale) by seeding the message catalog from stored config.
+		chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
+			const cfg = (config ?? defaultConfig()) as AppConfig;
+			setLanguage(cfg.language);
+			for (const item of menuItems) {
 				chrome.contextMenus?.create(
 					{
-						id: "add-keyword",
-						title: t("contextMenu_addKeyword"),
+						id: item.id,
+						title: item.title,
 						contexts: ["selection"],
 						documentUrlPatterns: ["https://x.com/*", "https://twitter.com/*"],
 					},
 					() => void chrome.runtime.lastError,
 				);
-			});
+			}
 		});
 	}
 	chrome.contextMenus?.onClicked.addListener((info) => {
-		if (info.menuItemId !== "add-keyword" || !info.selectionText) return;
-		void chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
-			const latest = (config ?? defaultConfig()) as AppConfig;
-			const keyword = info.selectionText?.trim();
-			if (!keyword || latest.userKeywords.includes(keyword)) return;
-			return chrome.storage.local.set({
-				config: { ...latest, userKeywords: [...latest.userKeywords, keyword] },
+		if (!info.selectionText) return;
+		const selection = info.selectionText.trim();
+		if (!selection) return;
+		if (info.menuItemId === "add-keyword") {
+			void chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
+				const latest = (config ?? defaultConfig()) as AppConfig;
+				const keyword = selection;
+				if (latest.userKeywords.includes(keyword)) return;
+				return chrome.storage.local.set({
+					config: {
+						...latest,
+						userKeywords: [...latest.userKeywords, keyword],
+					},
+				});
 			});
-		});
+		} else if (info.menuItemId === "add-account") {
+			void chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
+				const latest = (config ?? defaultConfig()) as AppConfig;
+				// Accept a numeric X user id or an @handle; anything else is ignored.
+				const entry = normalizeAccountEntry(selection);
+				if (!entry) return;
+				const already = latest.accountBlacklist.some(
+					(item) => normalizeAccountEntry(item) === entry,
+				);
+				if (already) return;
+				const stored = /^\d+$/.test(entry) ? entry : `@${entry}`;
+				return chrome.storage.local.set({
+					config: {
+						...latest,
+						accountBlacklist: [...latest.accountBlacklist, stored],
+					},
+				});
+			});
+		}
 	});
 
 	// Badge count.
