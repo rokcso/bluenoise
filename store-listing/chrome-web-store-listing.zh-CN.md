@@ -38,6 +38,7 @@ BlueNoise 让 X 的回复区和首页时间线更容易阅读，但不会替你�
 - `alarms`：安排低频的后台刷新，定时更新公开过滤列表（关键词每 12 小时、账号名单每 6 小时）。
 - `contextMenus`：在 X 页面右键选中文本时提供“添加关键词 / 添加账号”菜单项。
 - `raw.githubusercontent.com`：仅在首次获取或你手动同步词库时下载公开词库。
+- `x.zuoluo.tv`：仅在你启用外部账号名单时下载公开社区账号黑/白名单（Make X Great Again）。
 
 ### 隐私与源码
 
@@ -93,7 +94,7 @@ BlueNoise 注册两个右键菜单项，仅在用户在 X 页面选中文本时�
 
 ### Host permission（主机权限说明）
 
-唯一申请的站点权限是 `https://raw.githubusercontent.com/*`。它仅用于下载设置页中展示的两个社区关键词项目（x-spam-filter 与 x-comment-blocker）的公开关键词列表文件。下载发生在首次安装/使用时、用户手动点击“同步”时，以及上述定时刷新时。该权限绝不用来在这些主机上执行脚本或读取除纯文本关键词文件以外的内容；BlueNoise 不会在 X 之外的任何页面注入或观察。每个下载文件在使用前都会校验（体积上限 2 MB、拒绝 HTML 响应、要求非空关键词内容），请求不附带任何 cookie 或凭据。
+扩展申请两个收窄的站点权限。`https://raw.githubusercontent.com/*` 仅用于下载设置页中展示的两个社区关键词项目（x-spam-filter 与 x-comment-blocker）的公开关键词列表文件。`https://x.zuoluo.tv/*` 仅用于在用户于设置中启用外部账号名单时，下载公开社区账号黑/白名单（来自 Make X Great Again 项目）。下载发生在首次安装/使用时、用户手动点击“同步”时，以及上述定时刷新时。这些权限绝不用来在这些主机上执行脚本或读取除纯文本/JSON 列表文件以外的内容；BlueNoise 不会在 X 之外的任何页面注入或观察。每个下载文件在使用前都会校验（代码内体积上限、拒绝 HTML 响应、要求非空内容），请求不附带任何 cookie 或凭据。
 
 ### Are you using remote code?（是否使用远程代码？）
 

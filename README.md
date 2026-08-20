@@ -29,6 +29,7 @@ The extension uses these permissions:
 
 - `storage`: saves settings, rules, and the whitelist locally in your browser.
 - `https://raw.githubusercontent.com/*`: downloads public keyword lists when first needed or when you manually sync them.
+- `https://x.zuoluo.tv/*`: downloads the public community account blacklist/whitelist when you enable external account lists.
 
 Read the full [Privacy Policy](./docs/privacy-policy.md).
 

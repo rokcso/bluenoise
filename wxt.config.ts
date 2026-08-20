@@ -21,8 +21,9 @@ export default defineConfig({
 		minimum_chrome_version: "116",
 		default_locale: "en",
 		permissions: ["storage", "unlimitedStorage", "alarms", "contextMenus"],
-		// External subscription lists are fetched by the extension background page.
-		host_permissions: ["https://raw.githubusercontent.com/*"],
+		// External keyword lists come from GitHub raw; the community account
+		// blacklist/whitelist (Make X Great Again) is served from x.zuoluo.tv.
+		host_permissions: ["https://raw.githubusercontent.com/*", "https://x.zuoluo.tv/*"],
 		icons: {
 			16: "icons/icon-16.png",
 			32: "icons/icon-32.png",

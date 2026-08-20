@@ -37,6 +37,7 @@ The extension requests the minimum permissions needed for its single purpose:
 - `alarms`: schedules low-frequency background refreshes of the public filter lists (every 12 h for keywords, every 6 h for account lists).
 - `contextMenus`: adds "Add keyword" / "Add account" right-click items for selected text, only on X pages.
 - `raw.githubusercontent.com`: downloads public keyword lists only when first needed or when you choose to sync them.
+- `x.zuoluo.tv`: downloads the public community account blacklist/whitelist (Make X Great Again) only when you enable external account lists.
 
 ### Privacy
 
@@ -93,7 +94,7 @@ These items exist purely for convenience: users can add a filter rule from the p
 
 ### Host permission justification
 
-The only host permission requested is `https://raw.githubusercontent.com/*`. It is used solely to download the public keyword list files of the two community keyword projects shown on the settings page (x-spam-filter and x-comment-blocker). Downloads happen on first install/use, when the user manually clicks "sync", and on the scheduled refresh described above. This permission is never used to run scripts on those hosts or to read content from them beyond the plain-text keyword files; BlueNoise does not inject into or observe any page outside X. Each downloaded file is validated before use (size capped at 2 MB, HTML responses rejected, non-empty keyword content required), and no cookies or credentials are attached to the requests.
+The extension requests two narrow host permissions. `https://raw.githubusercontent.com/*` is used solely to download the public keyword list files of the two community keyword projects shown on the settings page (x-spam-filter and x-comment-blocker). `https://x.zuoluo.tv/*` is used solely to download the public community account blacklist/whitelist (from the Make X Great Again project) when the user enables external account lists in settings. Downloads happen on first install/use, when the user manually clicks "sync", and on the scheduled refresh described above. These permissions are never used to run scripts on those hosts or to read content from them beyond the plain-text/JSON list files; BlueNoise does not inject into or observe any page outside X. Each downloaded file is validated before use (size caps enforced in code, HTML responses rejected, non-empty content required), and no cookies or credentials are attached to the requests.
 
 ### Are you using remote code?
 

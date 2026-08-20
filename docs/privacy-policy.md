@@ -18,7 +18,12 @@ BlueNoise runs only on X pages to inspect reply text already rendered in your br
 
 ## Network requests
 
-BlueNoise contacts `raw.githubusercontent.com` only to download public keyword lists from the sources shown in its settings page. This happens when a list is first obtained or when you explicitly choose to sync it. These requests do not include your X account data, custom keywords, whitelist, or browsing history.
+BlueNoise makes limited outbound requests only to download public filter lists:
+
+- `raw.githubusercontent.com`: public keyword lists from the community projects shown in its settings page.
+- `x.zuoluo.tv`: the public community account blacklist/whitelist from the Make X Great Again project, only when you enable external account lists in settings.
+
+Downloads happen when a list is first obtained, on a low-frequency scheduled refresh (every 12 hours for keyword lists, every 6 hours for account lists), or when you explicitly choose to sync. These requests do not include your X account data, custom keywords, whitelist, or browsing history.
 
 ## Data retention and control
 
