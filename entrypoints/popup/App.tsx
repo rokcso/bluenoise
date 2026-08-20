@@ -716,8 +716,8 @@ function SourceToggle({
 	const subtitle = source.keywords
 		? t(
 				source.keywords.length === 1
-					? "keyword_count.one"
-					: "keyword_count.other",
+					? "keyword_count_one"
+					: "keyword_count_other",
 				String(source.keywords.length),
 			)
 		: t("not_synced");

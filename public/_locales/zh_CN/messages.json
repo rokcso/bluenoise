@@ -43,11 +43,11 @@
 			"date": { "content": "$3" }
 		}
 	},
-	"keyword_count.one": {
+	"keyword_count_one": {
 		"message": "$1 个关键词",
 		"placeholders": { "count": { "content": "$1" } }
 	},
-	"keyword_count.other": {
+	"keyword_count_other": {
 		"message": "$1 个关键词",
 		"placeholders": { "count": { "content": "$1" } }
 	},
