@@ -1,5 +1,6 @@
 import "../src/content/content.css";
 import { setLanguage } from "@/lib/i18n";
+import { readFiberUserId } from "@/src/content/fiber";
 import type { AppConfig, Matchers } from "@/src/contracts/config";
 import { CONFIG_KEY } from "@/src/contracts/config";
 import {
@@ -438,13 +439,19 @@ function readAuthorIdentity(article: Element): {
 			break;
 		}
 	}
-	const id =
+	// X does not expose the numeric user id in the DOM (no `data-user-id`); read
+	// it from React internals so account filtering survives @handle renames
+	// (mirrors MXGA). The `data-user-id` read below is only a cheap fallback for
+	// older X builds that did carry the attribute.
+	const fiberId = readFiberUserId(article, handle);
+	const attrId =
 		article.getAttribute("data-user-id") ??
 		name?.getAttribute("data-user-id") ??
 		name
 			?.querySelector<HTMLElement>("[data-user-id]")
 			?.getAttribute("data-user-id") ??
 		undefined;
+	const id = fiberId ?? attrId;
 	return { id: id && /^\d+$/.test(id) ? id : undefined, handle };
 }
 

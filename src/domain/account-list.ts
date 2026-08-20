@@ -161,6 +161,35 @@ function parseWhitelist(value: unknown): { ids: string[]; handles: string[] } {
 	return { ids, handles };
 }
 
+/** MXGA's /v1/whitelist is paginated (`since` = last_scored cursor, up to
+ *  `limit` rows per page). Without following the cursor the external whitelist
+ *  silently shrinks to the first page (~500 rows), so accounts on the real
+ *  whitelist get over-hidden. Follow the cursor until it stops advancing. */
+const WHITELIST_PAGE_SIZE = 2000;
+const WHITELIST_MAX_PAGES = 20;
+
+async function fetchWhitelist(
+	source: AccountListSource,
+): Promise<{ ids: string[]; handles: string[] }> {
+	const rows: unknown[] = [];
+	let since = 0;
+	for (let page = 0; page < WHITELIST_MAX_PAGES; page++) {
+		const sep = source.whitelistUrl.includes("?") ? "&" : "?";
+		const url = `${source.whitelistUrl}${sep}limit=${WHITELIST_PAGE_SIZE}&since=${since}`;
+		const payload = (await fetchJsonBounded(url, MAX_WHITELIST_BYTES)) as {
+			list?: unknown;
+			latestAt?: number;
+		};
+		const list = Array.isArray(payload.list) ? payload.list : [];
+		if (list.length === 0) break;
+		rows.push(...list);
+		const latestAt = Number(payload.latestAt) || 0;
+		if (latestAt <= since) break; // cursor not advancing → no more pages
+		since = latestAt;
+	}
+	return parseWhitelist({ list: rows });
+}
+
 /** Buffer only bounded JSON responses; decompressed bytes count toward the cap. */
 async function fetchJsonBounded(
 	url: string,
@@ -226,9 +255,7 @@ export async function syncAccountListSource(
 			previous.blacklistIds.length > 0 &&
 			previous.blacklistHandles.length > 0;
 		if (unchanged) {
-			const white = parseWhitelist(
-				await fetchJsonBounded(source.whitelistUrl, MAX_WHITELIST_BYTES),
-			);
+			const white = await fetchWhitelist(source);
 			return {
 				version,
 				blacklistIds: previous.blacklistIds,
@@ -247,9 +274,7 @@ export async function syncAccountListSource(
 			fetchJsonBounded(liteUrl, MAX_LITE_BYTES).then((value) =>
 				parseLite(value, { dropInvalidEntries: true }),
 			),
-			fetchJsonBounded(source.whitelistUrl, MAX_WHITELIST_BYTES).then(
-				parseWhitelist,
-			),
+			fetchWhitelist(source),
 		]);
 		return {
 			version,
@@ -269,9 +294,7 @@ export async function syncAccountListSource(
 		fetchJsonBounded(source.blacklistUrl, MAX_LITE_BYTES).then((value) =>
 			parseLite(value, { dropInvalidEntries: true }),
 		),
-		fetchJsonBounded(source.whitelistUrl, MAX_WHITELIST_BYTES).then(
-			parseWhitelist,
-		),
+		fetchWhitelist(source),
 	]);
 	return {
 		version: black.version,
