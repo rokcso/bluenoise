@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - Make X readable again" },
 	"extDescription": {
-		"message": "Blur or hide noisy X replies with local, reversible keyword rules - no APIs, cookies, or account changes."
+		"message": "Blur or hide noisy X replies and timeline posts with local, reversible keyword rules - no APIs, cookies, or account changes."
 	},
 	"loading": { "message": "Loading…" },
 	"tagline": { "message": "Less noise. More signal." },
@@ -11,10 +11,10 @@
 	"open_settings": { "message": "Manage rules and settings" },
 	"follow_maker": { "message": "Follow the maker" },
 	"follow_maker_aria": { "message": "Follow @rokcso on X" },
-	"filter_status_label": { "message": "Filter reply noise" },
-	"filter_effect": { "message": "Matched replies" },
+	"filter_status_label": { "message": "Filter reply & timeline noise" },
+	"filter_effect": { "message": "Matched posts" },
 	"filter_effect_hint": {
-		"message": "Choose whether matched replies are blurred or hidden."
+		"message": "Choose whether matched replies or posts are blurred or hidden."
 	},
 	"enabled_on": { "message": "Filtering on" },
 	"enabled_off": { "message": "Filtering off" },
@@ -64,7 +64,7 @@
 	"my_keywords_placeholder": { "message": "spam\n/keyword/i" },
 	"whitelist_title": { "message": "Whitelist" },
 	"whitelist_hint": {
-		"message": "Replies matching these rules are never filtered. Use one rule per line."
+		"message": "Replies or posts matching these rules are never filtered. Use one rule per line."
 	},
 	"whitelist_placeholder": {
 		"message": "a phrase to always keep\n/fine to show/i"
@@ -96,7 +96,7 @@
 	"language_english": { "message": "English" },
 	"show_badge_count": { "message": "Show toolbar count" },
 	"show_badge_count_hint": {
-		"message": "Show the number of filtered replies on the BlueNoise toolbar icon."
+		"message": "Show the number of filtered replies and posts on the BlueNoise toolbar icon."
 	},
 	"reveal_on_hover": { "message": "Reveal around cursor" },
 	"reveal_on_hover_hint": {

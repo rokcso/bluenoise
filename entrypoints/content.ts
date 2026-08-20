@@ -56,7 +56,7 @@ let matchers: Matchers = {
 let accountIndex: AccountListIndex | undefined;
 let accountListVersion = 0;
 
-/** Whether the current URL is a status (tweet detail) page. Only those are filtered. */
+/** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
 /** Bumped on config change to invalidate stale results cached in the WeakMap. */
 let generation = 0;
@@ -253,8 +253,21 @@ function isStatusPage(): boolean {
 	return currentStatusId() !== null;
 }
 
-/** The main tweet (the one you opened) is never filtered — only replies are. */
+/** Home feed — "For You" and "Following" share the /home route. */
+function isHomeTimeline(): boolean {
+	return location.pathname === "/home";
+}
+
+/** Pages where filtering applies: tweet detail pages and the home timeline. */
+function isFilterablePage(): boolean {
+	return isStatusPage() || isHomeTimeline();
+}
+
+/** The main tweet (the one you opened) is never filtered — only replies are.
+ *  This exemption only exists on status pages; on the home timeline every
+ *  tweet is a filtering candidate. */
 function isMainTweet(article: Element): boolean {
+	if (!isStatusPage()) return false;
 	const id = currentStatusId();
 	if (id) {
 		const links = article.querySelectorAll('a[href*="/status/"]');
@@ -326,15 +339,16 @@ function evaluate(article: Element): {
 	let hit: string | null = null;
 	let log: FilteredLog | null = null;
 
-	if (
-		!mainTweet &&
-		(matchers.count > 0 ||
-			(cfg.accountListEnabled &&
-				(cfg.externalAccountListsEnabled ||
-					cfg.accountWhitelist.length > 0 ||
-					cfg.accountBlacklist.length > 0)))
-	) {
-		const identity = readAuthorIdentity(article);
+	// Account matching needs the numeric user id (React internals); keyword
+	// matching only needs the @handle from the DOM.
+	const accountListsActive =
+		cfg.accountListEnabled &&
+		(cfg.externalAccountListsEnabled ||
+			cfg.accountWhitelist.length > 0 ||
+			cfg.accountBlacklist.length > 0);
+
+	if (!mainTweet && (matchers.count > 0 || accountListsActive)) {
+		const identity = readAuthorIdentity(article, accountListsActive);
 		const accountMatch = cfg.accountListEnabled
 			? matchAccountIndex(
 					cfg.externalAccountListsEnabled ? accountIndex : undefined,
@@ -402,7 +416,7 @@ function emitFilteredLogs(logs: FilteredLog[]): void {
 		reasonCount.set(key, (reasonCount.get(key) ?? 0) + 1);
 	}
 
-	console.group?.(`[BlueNoise] Filtered ${logs.length} reply(s)`);
+	console.group?.(`[BlueNoise] Filtered ${logs.length} item(s)`);
 	for (const log of logs) {
 		console.info(
 			`[BlueNoise] filtered @${log.handle ?? "?"}${
@@ -427,7 +441,10 @@ function emitFilteredLogs(logs: FilteredLog[]): void {
 	console.groupEnd?.();
 }
 
-function readAuthorIdentity(article: Element): {
+function readAuthorIdentity(
+	article: Element,
+	needId: boolean,
+): {
 	id?: string;
 	handle?: string;
 } {
@@ -444,9 +461,9 @@ function readAuthorIdentity(article: Element): {
 	}
 	// X does not expose the numeric user id in the DOM (no `data-user-id`); read
 	// it from React internals so account filtering survives @handle renames
-	// (mirrors MXGA). The `data-user-id` read below is only a cheap fallback for
-	// older X builds that did carry the attribute.
-	const fiberId = readFiberUserId(article, handle);
+	// (mirrors MXGA). The fiber walk is budgeted but not free — skip it for
+	// keyword-only setups, where the cheap DOM reads below are enough.
+	const fiberId = needId ? readFiberUserId(article, handle) : undefined;
 	const attrId =
 		article.getAttribute("data-user-id") ??
 		name?.getAttribute("data-user-id") ??
@@ -473,7 +490,7 @@ function flush(): void {
 			if (result.fresh) evaluatedCount++;
 			if (result.log) logs.push(result.log);
 		} catch (error) {
-			console.error("[BlueNoise] Failed to process a reply:", error);
+			console.error("[BlueNoise] Failed to process an item:", error);
 		}
 	}
 	pending.clear();
@@ -661,7 +678,7 @@ function refresh(options: { rebuild?: boolean } = {}): void {
 	// It must never survive a SPA route transition.
 	hideReveal();
 	pending.clear();
-	active = isStatusPage();
+	active = isFilterablePage();
 
 	if (!cfg.enabled || !active) {
 		stop();
@@ -777,7 +794,7 @@ function watchConfig(): void {
 		if (!prev.debugLogging && cfg.debugLogging) {
 			debugLog("Debug logging enabled", {
 				url: location.href,
-				isStatusPage: active,
+				filtering: active,
 				matcherCount: matchers.count,
 			});
 			// Re-run a full scan so every already-rendered reply gets re-evaluated
@@ -809,10 +826,10 @@ async function init(): Promise<void> {
 	// fallback that notices a later X SPA transition back to a status page.
 	startObserving();
 
-	active = isStatusPage();
+	active = isFilterablePage();
 	debugLog("Initialized", {
 		url: location.href,
-		isStatusPage: active,
+		filtering: active,
 		enabled: cfg.enabled,
 		matcherCount: matchers.count,
 		userKeywordCount: cfg.userKeywords.length,
