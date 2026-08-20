@@ -134,6 +134,22 @@ function hideReveal(): void {
 	reveal = null;
 }
 
+/**
+ * Strip X's structural testid markers from the reveal overlay. X's virtualized
+ * list reconciliation decides which tweets to aria-hide partly by scanning for
+ * its own `data-testid` markers. If the overlay kept them, X would see an
+ * "extra copy" of the tweet, lose track of the active row, and apply
+ * `aria-hidden` to a focused real link — producing the DevTools warning
+ * "Blocked aria-hidden on an element because its descendant retained focus."
+ * `data-testid` has no layout effect, so visual fidelity is preserved.
+ */
+function sanitizeRevealClone(el: HTMLElement): void {
+	for (const node of el.querySelectorAll<HTMLElement>("[data-testid]")) {
+		node.removeAttribute("data-testid");
+	}
+	el.removeAttribute("data-testid");
+}
+
 function showReveal(row: Element, x: number, y: number): void {
 	if (!cfg.enabled || !active || cfg.mode !== "dim" || !cfg.revealOnHover) {
 		hideReveal();
@@ -151,6 +167,7 @@ function showReveal(row: Element, x: number, y: number): void {
 		el.classList.remove(HIT_CLASS);
 		el.classList.add("xsf-reveal");
 		el.removeAttribute(HIT_ATTR);
+		sanitizeRevealClone(el);
 		// The clone contains X links; inert keeps this purely visual overlay out of
 		// both sequential focus navigation and the accessibility tree.
 		el.inert = true;
