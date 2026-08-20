@@ -6,31 +6,36 @@ BlueNoise - Make X readable again
 
 ## Short description
 
-Blur or hide noisy X replies with local, reversible keyword rules - no APIs,
-cookies, or account changes.
+Blur or hide noisy X replies and timeline posts with local, reversible keyword
+rules - no APIs, cookies, or account changes.
 
 ## Detailed description
 
-BlueNoise makes X reply threads easier to read without taking actions on your
-account. It visually blurs or hides replies that match your keyword rules while
-leaving the original page, your X settings, and your account untouched.
+BlueNoise makes X reply threads and your home timeline easier to read without
+taking actions on your account. It visually blurs or hides replies and posts
+that match your keyword rules while leaving the original page, your X settings,
+and your account untouched.
 
 ### What it does
 
-- Filters replies on X post-detail pages using built-in, community, and personal
-  keyword lists.
+- Filters replies on X post-detail pages and posts on the home timeline using
+  built-in, community, and personal keyword lists.
+- Bans specific accounts by numeric ID or @handle with built-in community
+  account lists plus your own local blacklist and whitelist.
 - Supports plain keywords and custom `/regular-expression/flags` rules.
 - Handles common spacing and zero-width-character evasion.
-- Lets you blur or hide matched replies, with a whitelist for correcting false
+- Lets you blur or hide matched content, with a whitelist for correcting false
   positives.
-- Updates newly loaded replies without reloading the page.
+- Updates newly loaded replies and posts without reloading the page.
 
 ### What it does not do
 
 - It does not read cookies or call X APIs.
 - It does not block, mute, follow, unfollow, post, or otherwise alter your X
-  account.
-- It does not filter the post you opened; it only filters replies.
+  account - banned accounts are only blurred or hidden locally, never actioned
+  on X.
+- On a post-detail page it never filters the post you opened; it only filters
+  its replies. Home-timeline posts are filterable like replies.
 - It does not collect analytics or send your rules to a server.
 
 ### Permissions

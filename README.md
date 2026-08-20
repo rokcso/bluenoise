@@ -2,20 +2,23 @@
 
 > Make X readable again.
 
-BlueNoise is an open-source browser extension that blurs or hides noisy replies on X (formerly Twitter) post-detail pages with local, reversible keyword rules. It improves reading without calling X APIs, reading cookies, or changing your
+BlueNoise is an open-source browser extension that blurs or hides noisy replies on X (formerly Twitter) post-detail pages and posts on the home timeline with local, reversible keyword rules. It improves reading without calling X APIs, reading cookies, or changing your
 account state.
 
 Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
 ## Features
 
-- Filters replies only on X post-detail pages; it never filters the post you opened.
-- Blur or hide matched replies, and restore them instantly by disabling the extension.
+- Filters replies on X post-detail pages and posts on the home timeline; on a
+  post page it never filters the post you opened.
+- Blur or hide matched content, and restore it instantly by disabling the extension.
 - Supports built-in, community, and personal keyword lists.
+- Bans specific accounts by numeric ID or @handle with built-in community
+  account lists plus your own local blacklist and whitelist.
 - Supports plain keywords and JavaScript regular expressions, such as `/error/i`.
 - Detects common evasion using spaces and zero-width characters.
 - Includes a whitelist for correcting false positives.
-- Processes newly loaded replies automatically, with no page refresh required.
+- Processes newly loaded replies and posts automatically, with no page refresh required.
 - Stores settings, rules, and the whitelist only in local browser storage.
 
 ## Privacy and permissions
