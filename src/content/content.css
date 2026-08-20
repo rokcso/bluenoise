@@ -1,0 +1,38 @@
+/* BlueNoise — content script styles.
+ * Only affect marked replies on status pages; the main tweet is never affected.
+ */
+
+:root {
+	--xsf-opacity: 0.15;
+}
+
+/* Marked replies as a whole */
+[data-xsf-mode] .xsf-filtered {
+	opacity: var(--xsf-opacity);
+	filter: blur(3px);
+	transition:
+		opacity 0.2s ease,
+		filter 0.2s ease;
+}
+
+/* Opacity maxed: also disable pointer interaction to avoid accidental clicks */
+[data-xsf-mode][data-xsf-invisible] .xsf-filtered {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	pointer-events: none !important;
+}
+
+/* Hide mode: make the whole reply disappear */
+[data-xsf-mode="hide"] .xsf-filtered {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
+/* A pointer-events-free clone reveals just the cursor-sized circle of a blurred reply. */
+.xsf-reveal {
+	position: fixed;
+	z-index: 2147483646;
+	pointer-events: none;
+	clip-path: circle(
+		var(--xsf-reveal-radius) at var(--xsf-reveal-x) var(--xsf-reveal-y)
+	);
+}

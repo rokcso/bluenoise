@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
+		<!-- Apply before the bundled CSS loads so the popup never flashes an outer scrollbar. -->
+		<style>
+			html,
+			body {
+				margin: 0;
+				overflow: hidden;
+				scrollbar-width: none;
+				background: #0f1419;
+			}
+			html::-webkit-scrollbar,
+			body::-webkit-scrollbar {
+				display: none;
+			}
+		</style>
+		<title>BlueNoise</title>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="./main.tsx"></script>
+	</body>
+</html>

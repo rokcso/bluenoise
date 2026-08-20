@@ -1,0 +1,104 @@
+{
+	"extName": { "message": "BlueNoise - 让 X 重新值得阅读" },
+	"extDescription": {
+		"message": "使用本地、可逆的关键词规则模糊或隐藏嘈杂的 X 回复；不调用 API、不读取 Cookie，也不修改账号。"
+	},
+	"loading": { "message": "加载中…" },
+	"tagline": { "message": "更少噪音，更多信号。" },
+	"settings_label": { "message": "设置" },
+	"options_title": { "message": "BlueNoise 设置" },
+	"settings_navigation": { "message": "设置导航" },
+	"open_settings": { "message": "管理规则和设置" },
+	"follow_maker": { "message": "关注作者" },
+	"follow_maker_aria": { "message": "在 X 上关注 @rokcso" },
+	"filter_status_label": { "message": "过滤回复噪音" },
+	"filter_effect": { "message": "噪音处理方式" },
+	"filter_effect_hint": {
+		"message": "选择命中规则的回复是模糊显示还是直接隐藏。"
+	},
+	"enabled_on": { "message": "过滤已开启" },
+	"enabled_off": { "message": "过滤已关闭" },
+	"mode_dim": { "message": "模糊" },
+	"mode_hide": { "message": "隐藏" },
+	"external_keywords": { "message": "外部关键词" },
+	"account_lists_enabled": { "message": "启用账号过滤" },
+	"account_lists_enabled_hint": {
+		"message": "同时应用本地账号规则和已启用的外部账号名单。"
+	},
+	"external_account_lists": { "message": "使用外部账号名单" },
+	"account_source_link": { "message": "查看公开数据与审计历史" },
+	"account_blacklist_hint": {
+		"message": "本地账号黑名单。每行填写一个 X 数字 ID 或 @用户名。"
+	},
+	"account_blacklist_placeholder": { "message": "123456789\n@spam_account" },
+	"account_whitelist_hint": {
+		"message": "本地账号白名单，优先级高于所有黑名单。"
+	},
+	"account_whitelist_placeholder": { "message": "987654321\n@trusted_account" },
+	"account_status": { "message": "黑名单 $1 条 · 白名单 $2 条 · 更新于 $3" },
+	"keyword_count": {
+		"message": "$1 个关键词",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"not_synced": { "message": "未同步" },
+	"last_synced": {
+		"message": "更新于 $1",
+		"placeholders": { "date": { "content": "$1" } }
+	},
+	"sync": { "message": "同步" },
+	"my_keywords": { "message": "我的关键词" },
+	"my_keywords_hint": {
+		"message": "添加要触发过滤的关键词或正则表达式，每行一条。"
+	},
+	"my_keywords_placeholder": { "message": "推广\n/关键词/i" },
+	"whitelist_title": { "message": "白名单" },
+	"whitelist_hint": { "message": "命中这些规则的回复不会被过滤，每行一条。" },
+	"whitelist_placeholder": { "message": "可信用户\n/允许的短语/i" },
+	"theme": { "message": "主题" },
+	"theme_hint": { "message": "选择扩展在浅色和深色环境下的显示方式。" },
+	"theme_auto": { "message": "自动" },
+	"theme_light": { "message": "浅色" },
+	"theme_dark": { "message": "深色" },
+	"general": { "message": "常规" },
+	"appearance": { "message": "外观" },
+	"extension": { "message": "扩展" },
+	"keywords": { "message": "关键词" },
+	"accounts": { "message": "账号" },
+	"account_filtering": { "message": "账号过滤" },
+	"external_account_sources": { "message": "外部账号来源" },
+	"account_blacklist_title": { "message": "我的账号黑名单" },
+	"account_whitelist_title": { "message": "我的账号白名单" },
+	"filtering": { "message": "过滤" },
+	"treatment": { "message": "处理方式" },
+	"matching": { "message": "匹配" },
+	"diagnostics": { "message": "诊断" },
+	"language": { "message": "语言" },
+	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
+	"language_auto": { "message": "跟随浏览器" },
+	"language_chinese": { "message": "简体中文" },
+	"language_english": { "message": "English" },
+	"show_badge_count": { "message": "显示工具栏计数" },
+	"show_badge_count_hint": {
+		"message": "在 BlueNoise 工具栏图标上显示当前已过滤的回复数量。"
+	},
+	"reveal_on_hover": { "message": "在光标附近显示内容" },
+	"reveal_on_hover_hint": {
+		"message": "在模糊模式下，以光标为中心显示清晰区域。"
+	},
+	"match_names": { "message": "匹配昵称和 @用户名" },
+	"match_names_hint": {
+		"message": "匹配关键词时，同时检查作者的显示名称和 @用户名。"
+	},
+	"ignore_spaces": { "message": "忽略空格与隐藏字符" },
+	"ignore_spaces_hint": {
+		"message": "即使关键词中插入空格或隐藏字符，也能正常匹配。"
+	},
+	"case_sensitive": { "message": "普通关键词区分大小写" },
+	"case_sensitive_hint": {
+		"message": "严格区分普通关键词的大小写；自定义正则规则使用各自的正则修饰符。"
+	},
+	"debug_logging": { "message": "调试日志" },
+	"debug_logging_hint": {
+		"message": "将过滤诊断信息写入被过滤页面的开发者工具控制台。"
+	}
+}

@@ -1,0 +1,110 @@
+{
+	"extName": { "message": "BlueNoise - Make X readable again" },
+	"extDescription": {
+		"message": "Blur or hide noisy X replies with local, reversible keyword rules - no APIs, cookies, or account changes."
+	},
+	"loading": { "message": "Loading…" },
+	"tagline": { "message": "Less noise. More signal." },
+	"settings_label": { "message": "Settings" },
+	"options_title": { "message": "BlueNoise Settings" },
+	"settings_navigation": { "message": "Settings navigation" },
+	"open_settings": { "message": "Manage rules and settings" },
+	"follow_maker": { "message": "Follow the maker" },
+	"follow_maker_aria": { "message": "Follow @rokcso on X" },
+	"filter_status_label": { "message": "Filter reply noise" },
+	"filter_effect": { "message": "Noise treatment" },
+	"filter_effect_hint": {
+		"message": "Choose whether matched replies are blurred or hidden."
+	},
+	"enabled_on": { "message": "Filtering on" },
+	"enabled_off": { "message": "Filtering off" },
+	"mode_dim": { "message": "Blur" },
+	"mode_hide": { "message": "Hide" },
+	"external_keywords": { "message": "External keywords" },
+	"account_lists_enabled": { "message": "Enable account filtering" },
+	"account_lists_enabled_hint": {
+		"message": "Apply both local account rules and enabled external account sources."
+	},
+	"external_account_lists": { "message": "Use external account sources" },
+	"account_source_link": { "message": "View public data and audit history" },
+	"account_blacklist_hint": {
+		"message": "Local account blacklist. Enter one numeric X ID or @handle per line."
+	},
+	"account_blacklist_placeholder": { "message": "123456789\n@spam_account" },
+	"account_whitelist_hint": {
+		"message": "Local account whitelist. It always overrides every blacklist."
+	},
+	"account_whitelist_placeholder": { "message": "987654321\n@trusted_account" },
+	"account_status": {
+		"message": "$1 blacklisted · $2 whitelisted · Updated $3"
+	},
+	"keyword_count": {
+		"message": "$1 keywords",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"not_synced": { "message": "Not synced" },
+	"last_synced": {
+		"message": "Updated $1",
+		"placeholders": { "date": { "content": "$1" } }
+	},
+	"sync": { "message": "Sync" },
+	"my_keywords": { "message": "My keywords" },
+	"my_keywords_hint": {
+		"message": "Add words or regular expressions that should trigger filtering. Use one rule per line."
+	},
+	"my_keywords_placeholder": { "message": "spam\n/keyword/i" },
+	"whitelist_title": { "message": "Whitelist" },
+	"whitelist_hint": {
+		"message": "Replies matching these rules are never filtered. Use one rule per line."
+	},
+	"whitelist_placeholder": { "message": "trusted name\n/allowed phrase/i" },
+	"theme": { "message": "Theme" },
+	"theme_hint": {
+		"message": "Choose how the extension looks in light and dark environments."
+	},
+	"theme_auto": { "message": "Auto" },
+	"theme_light": { "message": "Light" },
+	"theme_dark": { "message": "Dark" },
+	"general": { "message": "General" },
+	"appearance": { "message": "Appearance" },
+	"extension": { "message": "Extension" },
+	"keywords": { "message": "Keywords" },
+	"accounts": { "message": "Accounts" },
+	"account_filtering": { "message": "Account filtering" },
+	"external_account_sources": { "message": "External account sources" },
+	"account_blacklist_title": { "message": "My account blacklist" },
+	"account_whitelist_title": { "message": "My account whitelist" },
+	"filtering": { "message": "Filtering" },
+	"treatment": { "message": "Treatment" },
+	"matching": { "message": "Matching" },
+	"diagnostics": { "message": "Diagnostics" },
+	"language": { "message": "Language" },
+	"language_hint": { "message": "Choose the language used by BlueNoise." },
+	"language_auto": { "message": "Follow browser" },
+	"language_chinese": { "message": "简体中文" },
+	"language_english": { "message": "English" },
+	"show_badge_count": { "message": "Show toolbar count" },
+	"show_badge_count_hint": {
+		"message": "Show the number of filtered replies on the BlueNoise toolbar icon."
+	},
+	"reveal_on_hover": { "message": "Reveal around cursor" },
+	"reveal_on_hover_hint": {
+		"message": "In Blur mode, show a clear area around the cursor."
+	},
+	"match_names": { "message": "Match names and @handles" },
+	"match_names_hint": {
+		"message": "Include the author's display name and @handle when matching keywords."
+	},
+	"ignore_spaces": { "message": "Ignore spaces and hidden characters" },
+	"ignore_spaces_hint": {
+		"message": "Match keywords even when spaces or hidden characters are inserted between letters."
+	},
+	"case_sensitive": { "message": "Case-sensitive plain keywords" },
+	"case_sensitive_hint": {
+		"message": "Match uppercase and lowercase letters exactly; custom regex rules use their own flags."
+	},
+	"debug_logging": { "message": "Debug logging" },
+	"debug_logging_hint": {
+		"message": "Write filtering diagnostics to the DevTools console of the page being filtered."
+	}
+}
