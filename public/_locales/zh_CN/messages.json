@@ -12,7 +12,7 @@
 	"follow_maker": { "message": "关注作者" },
 	"follow_maker_aria": { "message": "在 X 上关注 @rokcso" },
 	"filter_status_label": { "message": "过滤回复噪音" },
-	"filter_effect": { "message": "噪音处理方式" },
+	"filter_effect": { "message": "命中回复" },
 	"filter_effect_hint": {
 		"message": "选择命中规则的回复是模糊显示还是直接隐藏。"
 	},
@@ -35,8 +35,19 @@
 		"message": "本地账号白名单，优先级高于所有黑名单。"
 	},
 	"account_whitelist_placeholder": { "message": "987654321\n@trusted_account" },
-	"account_status": { "message": "黑名单 $1 条 · 白名单 $2 条 · 更新于 $3" },
-	"keyword_count": {
+	"account_status": {
+		"message": "黑名单 $1 条 · 白名单 $2 条 · 更新于 $3",
+		"placeholders": {
+			"blacklistedCount": { "content": "$1" },
+			"whitelistedCount": { "content": "$2" },
+			"date": { "content": "$3" }
+		}
+	},
+	"keyword_count.one": {
+		"message": "$1 个关键词",
+		"placeholders": { "count": { "content": "$1" } }
+	},
+	"keyword_count.other": {
 		"message": "$1 个关键词",
 		"placeholders": { "count": { "content": "$1" } }
 	},
@@ -53,7 +64,7 @@
 	"my_keywords_placeholder": { "message": "推广\n/关键词/i" },
 	"whitelist_title": { "message": "白名单" },
 	"whitelist_hint": { "message": "命中这些规则的回复不会被过滤，每行一条。" },
-	"whitelist_placeholder": { "message": "可信用户\n/允许的短语/i" },
+	"whitelist_placeholder": { "message": "始终保留的短语\n/可放心显示/i" },
 	"theme": { "message": "主题" },
 	"theme_hint": { "message": "选择扩展在浅色和深色环境下的显示方式。" },
 	"theme_auto": { "message": "自动" },
@@ -61,7 +72,7 @@
 	"theme_dark": { "message": "深色" },
 	"general": { "message": "常规" },
 	"appearance": { "message": "外观" },
-	"extension": { "message": "扩展" },
+	"extension": { "message": "工具栏" },
 	"keywords": { "message": "关键词" },
 	"accounts": { "message": "账号" },
 	"account_filtering": { "message": "账号过滤" },
@@ -69,8 +80,8 @@
 	"account_blacklist_title": { "message": "我的账号黑名单" },
 	"account_whitelist_title": { "message": "我的账号白名单" },
 	"filtering": { "message": "过滤" },
-	"treatment": { "message": "处理方式" },
-	"matching": { "message": "匹配" },
+	"treatment": { "message": "过滤模式" },
+	"matching": { "message": "匹配选项" },
 	"diagnostics": { "message": "诊断" },
 	"language": { "message": "语言" },
 	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
@@ -100,5 +111,8 @@
 	"debug_logging": { "message": "调试日志" },
 	"debug_logging_hint": {
 		"message": "将过滤诊断信息写入被过滤页面的开发者工具控制台。"
+	},
+	"contextMenu_addKeyword": {
+		"message": "将选中的文本添加到 BlueNoise 关键词"
 	}
 }

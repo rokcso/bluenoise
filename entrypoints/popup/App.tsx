@@ -714,7 +714,12 @@ function SourceToggle({
 	}
 
 	const subtitle = source.keywords
-		? t("keyword_count", String(source.keywords.length))
+		? t(
+				source.keywords.length === 1
+					? "keyword_count.one"
+					: "keyword_count.other",
+				String(source.keywords.length),
+			)
 		: t("not_synced");
 	const syncStatus = source.syncedAt
 		? `${subtitle} · ${t("last_synced", new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(source.syncedAt))}`

@@ -71,6 +71,10 @@ export interface Matchers {
 	custom: { source: string; re: RegExp }[];
 	/** Total participating rules (plain + custom). */
 	count: number;
+	/** Source label (subscription name or "user") of each plain keyword, keyed by normalized form. */
+	plainSources?: Map<string, string>;
+	/** Source label (subscription name or "user") of each custom regex, keyed by raw rule. */
+	customSources?: Map<string, string>;
 }
 
 /** Whitespace plus the zero-width / direction-control chars stripped during normalization. */
