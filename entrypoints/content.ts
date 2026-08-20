@@ -585,6 +585,21 @@ function startObserving(): void {
 
 // ==================== Badge count ====================
 
+/** True once the extension context is invalidated (dev-mode reload / update). */
+let dead = false;
+
+/** Send a message, tolerating an invalidated extension context.
+ *  After invalidation Chrome throws synchronously, so a bare `.catch()` on the
+ *  returned promise is not enough — the timer/rAF callback would rethrow. */
+function sendToBackground(message: unknown): void {
+	if (dead) return;
+	try {
+		chrome.runtime.sendMessage(message).catch(() => {});
+	} catch {
+		// Extension context invalidated mid-cycle — nothing left to notify.
+	}
+}
+
 function scheduleBadge(): void {
 	if (badgeTimer) return;
 	badgeTimer = window.setTimeout(() => {
@@ -595,7 +610,7 @@ function scheduleBadge(): void {
 				: 0;
 		if (count === lastBadge) return;
 		lastBadge = count;
-		chrome.runtime.sendMessage({ type: "XSF_COUNT", count }).catch(() => {});
+		sendToBackground({ type: "XSF_COUNT", count });
 	}, 400);
 }
 
@@ -608,8 +623,12 @@ function currentFilteredCount(): number {
 
 function hookMessages(): void {
 	chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-		if (message?.type === "XSF_GET_COUNT") {
-			sendResponse({ count: currentFilteredCount() });
+		try {
+			if (message?.type === "XSF_GET_COUNT") {
+				sendResponse({ count: currentFilteredCount() });
+			}
+		} catch {
+			// Context invalidated; drop the message quietly.
 		}
 	});
 }
@@ -651,6 +670,7 @@ function stop(): void {
  * quietly instead of crashing.
  */
 function teardown(): void {
+	dead = true;
 	clearRescanTimers();
 	if (flushTimer) clearTimeout(flushTimer);
 	if (rafId) cancelAnimationFrame(rafId);
