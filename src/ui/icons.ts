@@ -9,6 +9,7 @@ export {
 	RiDashboardLine as ToolbarIcon,
 	RiDatabase2Line as DatabaseIcon,
 	RiEqualizerLine as SlidersIcon,
+	RiEyeOffLine as EyeOffIcon,
 	RiFilter3Fill as FilterFillIcon,
 	RiFilter3Line as FilterIcon,
 	RiListSettingsFill as ListFilterFillIcon,

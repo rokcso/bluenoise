@@ -14,6 +14,8 @@ export interface AppConfig {
 	revealOnHover: boolean;
 	/** Show the number of filtered replies on the browser toolbar icon. */
 	showBadgeCount: boolean;
+	/** Hide X's in-timeline "Subscribe to Premium" upsell ad card. */
+	hidePremiumPromo: boolean;
 	/** User-controlled external keyword subscriptions. */
 	subscriptions: KeywordSubscription[];
 	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */

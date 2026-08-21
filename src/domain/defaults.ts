@@ -7,6 +7,7 @@ export const DEFAULTS: AppConfig = {
 	mode: "dim",
 	revealOnHover: true,
 	showBadgeCount: true,
+	hidePremiumPromo: false,
 	subscriptions: [
 		{
 			id: "x-spam-filter",
