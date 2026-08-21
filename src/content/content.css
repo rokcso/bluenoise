@@ -45,7 +45,15 @@
 [data-xsf-hide-follow]
 aside[role="complementary"]:has([data-testid="UserCell"]),
 [data-xsf-hide-follow]
-	div:has(> aside[role="complementary"]:has([data-testid="UserCell"])) {
+	div:has(> aside[role="complementary"]:has([data-testid="UserCell"])),
+[data-xsf-hide-follow]
+	div:has(> div > aside[role="complementary"]:has([data-testid="UserCell"])),
+[data-xsf-hide-follow]
+	div:has(> div > div > aside[role="complementary"]:has([data-testid="UserCell"])),
+[data-xsf-hide-follow]
+	div:has(> div > div > div > aside[role="complementary"]:has([data-testid="UserCell"])),
+[data-xsf-hide-follow]
+	div:has(> div > div > div > div > aside[role="complementary"]:has([data-testid="UserCell"])) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }

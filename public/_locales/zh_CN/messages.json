@@ -96,6 +96,7 @@
 	"hide_follow_suggestions_hint": {
 		"message": "移除侧边栏中的「推荐关注」面板。"
 	},
+	"hide_trends": { "message": "隐藏当前趋势" },
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"
 	},
