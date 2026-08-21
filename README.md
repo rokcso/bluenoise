@@ -11,11 +11,14 @@ Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
 ## Installation
 
-> BlueNoise is a [Chrome Web Store](https://chromewebstore.google.com) listing in progress. Until it is approved, install the extension manually from the [latest release](https://github.com/rokcso/bluenoise/releases/latest).
+<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khjGJcVzh1J3I8B5oE1/aU1sJbxmQ1yCXS5MYRDu.svg" alt="Available in the Chrome Web Store" width="220"></a>
 
-1. Download `bluenoise-<version>-chrome.zip` from the [releases page](https://github.com/rokcso/bluenoise/releases).
-2. Unzip it to a folder you won't delete (the browser needs the source files to stay put).
-3. Open `chrome://extensions` (or your Chromium browser's extension page), enable **Developer mode**, click **Load unpacked**, and select the unzipped folder.
+Install BlueNoise from the [Chrome Web Store](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid).
+
+Prefer to install manually? Download `bluenoise-<version>-chrome.zip` from the [releases page](https://github.com/rokcso/bluenoise/releases):
+
+1. Unzip it to a folder you won't delete (the browser needs the source files to stay put).
+2. Open `chrome://extensions` (or your Chromium browser's extension page), enable **Developer mode**, click **Load unpacked**, and select the unzipped folder.
 
 ## Features
 
@@ -90,7 +93,7 @@ BlueNoise is inspired by and pays tribute to these projects:
 
 ## Releases
 
-Published builds are attached to [GitHub Releases](https://github.com/rokcso/bluenoise/releases).
+The latest version is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid); source builds are attached to [GitHub Releases](https://github.com/rokcso/bluenoise/releases).
 
 ## License
 

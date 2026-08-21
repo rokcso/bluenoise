@@ -10,11 +10,14 @@ BlueNoise 是一款开源的浏览器扩展，可以模糊或隐藏 X（原 Twit
 
 ## 安装
 
-> BlueNoise 正在上架 [Chrome 应用商店](https://chromewebstore.google.com)。在审核通过之前，请先从[最新发布](https://github.com/rokcso/bluenoise/releases/latest)手动安装扩展。
+<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khjGJcVzh1J3I8B5oE1/aU1sJbxmQ1yCXS5MYRDu.svg" alt="在 Chrome 应用商店中获取" width="220"></a>
 
-1. 在[发布页面](https://github.com/rokcso/bluenoise/releases)下载 `bluenoise-<版本号>-chrome.zip`。
-2. 解压到一个你不会删掉的文件夹里（浏览器需要这些源文件一直保留在原位）。
-3. 打开 `chrome://extensions`（或你所用 Chromium 浏览器的扩展管理页），开启**开发者模式**，点击**加载已解压的扩展程序**，选择刚才解压出来的文件夹。
+从 [Chrome 应用商店](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid)安装 BlueNoise。
+
+想手动安装？从[发布页面](https://github.com/rokcso/bluenoise/releases)下载 `bluenoise-<版本号>-chrome.zip`：
+
+1. 解压到一个你不会删掉的文件夹里（浏览器需要这些源文件一直保留在原位）。
+2. 打开 `chrome://extensions`（或你所用 Chromium 浏览器的扩展管理页），开启**开发者模式**，点击**加载已解压的扩展程序**，选择刚才解压出来的文件夹。
 
 ## 功能特性
 
@@ -86,7 +89,7 @@ BlueNoise 的灵感来源于以下项目，并向它们致敬：
 
 ## 发布
 
-已构建的产物均挂载在 [GitHub Releases](https://github.com/rokcso/bluenoise/releases) 上。
+最新版本已上架 [Chrome 应用商店](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid)；源码构建产物挂载在 [GitHub Releases](https://github.com/rokcso/bluenoise/releases) 上。
 
 ## 许可证
 
