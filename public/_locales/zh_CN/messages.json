@@ -92,7 +92,10 @@
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"
 	},
 	"layout": { "message": "布局" },
-	"hide_trends": { "message": "隐藏当前趋势" },
+	"hide_follow_suggestions": { "message": "隐藏推荐关注" },
+	"hide_follow_suggestions_hint": {
+		"message": "移除侧边栏中的「推荐关注」面板。"
+	},
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"
 	},

@@ -39,6 +39,16 @@
 	display: none !important;
 }
 
+/* Hide X's "Who to follow" recommendations panel. The label is localized,
+ * while the panel's role and its stable UserCell test IDs are not. Match the
+ * complementary aside and hide its padded wrapper as well. */
+[data-xsf-hide-follow]
+aside[role="complementary"]:has([data-testid="UserCell"]),
+[data-xsf-hide-follow]
+	div:has(> aside[role="complementary"]:has([data-testid="UserCell"])) {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
 /* Hide X's current-trends panel. The region heading is localized, so use the
  * stable data-testid="trend" marker on its descendants and the accessible
  * "What's happening" section structure. The direct child section is selected

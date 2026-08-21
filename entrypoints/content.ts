@@ -29,8 +29,10 @@ const INVISIBLE_ATTR = "data-xsf-invisible";
 const PREMIUM_ATTR = "data-xsf-hide-premium";
 /** When present, hides X's site footer (CSS-driven). */
 const FOOTER_ATTR = "data-xsf-hide-footer";
-/** When present, hides X's trends panel (CSS-driven). */
+/** When present, hides X's current trends panel (CSS-driven). */
 const TRENDS_ATTR = "data-xsf-hide-trends";
+/** When present, hides X's "Who to follow" panel (CSS-driven). */
+const FOLLOW_ATTR = "data-xsf-hide-follow";
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
 const LOGO_SEL = 'a[aria-label="X"] svg';
@@ -341,6 +343,7 @@ function applyStyleVars(): void {
 		root.removeAttribute(PREMIUM_ATTR);
 		root.removeAttribute(FOOTER_ATTR);
 		root.removeAttribute(TRENDS_ATTR);
+		root.removeAttribute(FOLLOW_ATTR);
 		hideReveal();
 		return;
 	}
@@ -353,6 +356,8 @@ function applyStyleVars(): void {
 	else root.removeAttribute(FOOTER_ATTR);
 	if (cfg.hideTrends) root.setAttribute(TRENDS_ATTR, "");
 	else root.removeAttribute(TRENDS_ATTR);
+	if (cfg.hideFollowSuggestions) root.setAttribute(FOLLOW_ATTR, "");
+	else root.removeAttribute(FOLLOW_ATTR);
 	syncMarkedRowsInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) hideReveal();
 }

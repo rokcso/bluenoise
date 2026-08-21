@@ -22,6 +22,8 @@ export interface AppConfig {
 	useBlueBird: boolean;
 	/** Hide X's "What's happening" trends panel. */
 	hideTrends: boolean;
+	/** Hide X's "Who to follow" recommendations panel. */
+	hideFollowSuggestions: boolean;
 	/** User-controlled external keyword subscriptions. */
 	subscriptions: KeywordSubscription[];
 	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */
