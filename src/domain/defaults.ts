@@ -11,6 +11,7 @@ export const DEFAULTS: AppConfig = {
 	hideFooter: false,
 	useBlueBird: false,
 	hideTrends: false,
+	hideFollowSuggestions: false,
 	subscriptions: [
 		{
 			id: "x-spam-filter",
