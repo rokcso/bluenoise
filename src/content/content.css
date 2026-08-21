@@ -35,7 +35,7 @@
 
 /* Keep the CSS fallback aligned with the current-trends region structure. */
 [data-xsf-hide-trends]
-	section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"]) {
+section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"]) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
@@ -55,9 +55,16 @@
  * while the panel's role and its stable UserCell test IDs are not. Match the
  * complementary aside and hide its padded wrapper as well. */
 [data-xsf-hide-follow]
-	aside[role="complementary"]:has(> div > h2[role="heading"]):has(> ul[role="list"] > li[data-testid="UserCell"]),
+aside[role="complementary"]:has(> div > h2[role="heading"]):has(
+	> ul[role="list"] > li[data-testid="UserCell"]
+),
 [data-xsf-hide-follow]
-	div:has(> div > aside[role="complementary"]:has(> ul[role="list"] > li[data-testid="UserCell"])) {
+	div:has(
+		> div
+			> aside[role="complementary"]:has(
+				> ul[role="list"] > li[data-testid="UserCell"]
+			)
+	) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }

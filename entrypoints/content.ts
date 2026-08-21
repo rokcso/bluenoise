@@ -375,8 +375,7 @@ function applyStyleVars(): void {
 	// Page customizations apply on every X page, including profile pages. The
 	// filtering effect below remains limited to the home timeline and status
 	// pages via `active`.
-	if (cfg.enabled && cfg.hidePremiumPromo)
-		root.setAttribute(PREMIUM_ATTR, "");
+	if (cfg.enabled && cfg.hidePremiumPromo) root.setAttribute(PREMIUM_ATTR, "");
 	else root.removeAttribute(PREMIUM_ATTR);
 	if (cfg.enabled && cfg.hideFooter) root.setAttribute(FOOTER_ATTR, "");
 	else root.removeAttribute(FOOTER_ATTR);

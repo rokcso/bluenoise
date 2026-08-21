@@ -23,7 +23,10 @@ export default defineConfig({
 		permissions: ["storage", "unlimitedStorage", "alarms", "contextMenus"],
 		// External keyword lists come from GitHub raw; the community account
 		// blacklist/whitelist (Make X Great Again) is served from x.zuoluo.tv.
-		host_permissions: ["https://raw.githubusercontent.com/*", "https://x.zuoluo.tv/*"],
+		host_permissions: [
+			"https://raw.githubusercontent.com/*",
+			"https://x.zuoluo.tv/*",
+		],
 		icons: {
 			16: "icons/icon-16.png",
 			32: "icons/icon-32.png",
