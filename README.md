@@ -19,27 +19,28 @@ Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
 ## Features
 
-- Filters replies on X post-detail pages and posts on the home timeline; on a
-  post page it never filters the post you opened.
-- Blur or hide matched content, and restore it instantly by disabling the extension.
-- Supports built-in, community, and personal keyword lists.
-- Bans specific accounts by numeric ID or @handle with built-in community
-  account lists plus your own local blacklist and whitelist.
-- Supports plain keywords and JavaScript regular expressions, such as `/error/i`.
-- Detects common evasion using spaces and zero-width characters.
-- Includes a whitelist for correcting false positives.
-- Processes newly loaded replies and posts automatically, with no page refresh required.
-- Stores settings, rules, and the whitelist only in local browser storage.
+- Blur or hide noisy replies on post-detail pages and posts on the home timeline
+  (it never filters the post you opened). Turning the extension off restores everything instantly.
+- Match by keyword and by account: plain keywords, `/regex/` patterns, and account IDs or @handles.
+- Ships with built-in community keyword lists (X Spam Filter, X Comment Blocker) and community
+  account lists (Make X Great Again) that stay up to date automatically, plus your own personal
+  keyword lists and a local account blacklist/whitelist.
+- Right-click any selected text to add it as a keyword or an account ban.
+- A toolbar badge shows how many posts were filtered; hovering a blurred reply reveals it around your cursor.
+- Handles evasive forms (spaces and zero-width characters) and includes a whitelist to correct false positives.
+- New replies and posts are filtered automatically as they load, with no page refresh.
 
 ## Privacy and permissions
 
 BlueNoise collects no telemetry or analytics. It does not read cookies, access account credentials, call X APIs, or take account actions such as blocking, muting, following, or posting.
 
-The extension uses these permissions:
+The extension requests these permissions:
 
-- `storage`: saves settings, rules, and the whitelist locally in your browser.
-- `https://raw.githubusercontent.com/*`: downloads public keyword lists when first needed or when you manually sync them.
-- `https://x.zuoluo.tv/*`: downloads the public community account blacklist/whitelist when you enable external account lists.
+- `storage` and `unlimitedStorage`: save your settings, rules, and whitelist, and cache keyword lists locally.
+- `alarms`: periodically refresh subscribed keyword and account lists in the background.
+- `contextMenus`: add **Add keyword** / **Add account** to the right-click menu for selected text.
+- `https://raw.githubusercontent.com/*`: download public keyword lists.
+- `https://x.zuoluo.tv/*`: download the public community account blacklist/whitelist.
 
 Read the full [Privacy Policy](./docs/privacy-policy.md).
 
