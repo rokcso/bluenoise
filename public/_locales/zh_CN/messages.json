@@ -85,6 +85,11 @@
 	"treatment": { "message": "过滤模式" },
 	"matching": { "message": "匹配选项" },
 	"diagnostics": { "message": "诊断" },
+	"ads": { "message": "广告" },
+	"hide_premium_promo": { "message": "隐藏 X Premium 订阅广告" },
+	"hide_premium_promo_hint": {
+		"message": "从你的时间线中移除「订阅 Premium」卡片。"
+	},
 	"language": { "message": "语言" },
 	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
 	"language_auto": { "message": "跟随浏览器" },

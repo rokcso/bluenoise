@@ -89,6 +89,11 @@
 	"treatment": { "message": "Filtering mode" },
 	"matching": { "message": "Match options" },
 	"diagnostics": { "message": "Diagnostics" },
+	"ads": { "message": "Ads" },
+	"hide_premium_promo": { "message": "Hide X Premium ads" },
+	"hide_premium_promo_hint": {
+		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
+	},
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
 	"language_auto": { "message": "Follow browser" },

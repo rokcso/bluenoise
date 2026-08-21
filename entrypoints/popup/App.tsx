@@ -15,6 +15,7 @@ import {
 	DatabaseIcon,
 	DiagnosticsIcon,
 	ExternalLinkIcon,
+	EyeOffIcon,
 	ListFilterIcon,
 	LoaderIcon,
 	MonitorIcon,
@@ -256,6 +257,20 @@ export function SettingsApp({
 										/>
 									</>
 								)}
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("ads")}
+							icon={EyeOffIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("hide_premium_promo")}
+									hint={t("hide_premium_promo_hint")}
+									checked={config.hidePremiumPromo}
+									onChange={(v) => update({ hidePremiumPromo: v })}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup

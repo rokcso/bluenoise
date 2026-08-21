@@ -24,6 +24,8 @@ const HIT_ATTR = "data-xsf-keyword";
 const INERT_ATTR = "data-xsf-inert";
 const MODE_ATTR = "data-xsf-mode";
 const INVISIBLE_ATTR = "data-xsf-invisible";
+/** When present, hides X's "Subscribe to Premium" upsell card (CSS-driven). */
+const PREMIUM_ATTR = "data-xsf-hide-premium";
 const OPACITY_VAR = "--xsf-opacity";
 const DIM_OPACITY = 0.15;
 const REVEAL_RADIUS = 40;
@@ -310,12 +312,15 @@ function applyStyleVars(): void {
 	if (!cfg.enabled || !active) {
 		root.removeAttribute(MODE_ATTR);
 		root.removeAttribute(INVISIBLE_ATTR);
+		root.removeAttribute(PREMIUM_ATTR);
 		hideReveal();
 		return;
 	}
 	root.setAttribute(MODE_ATTR, cfg.mode === "hide" ? "hide" : "dim");
 	root.style.setProperty(OPACITY_VAR, String(DIM_OPACITY));
 	root.removeAttribute(INVISIBLE_ATTR);
+	if (cfg.hidePremiumPromo) root.setAttribute(PREMIUM_ATTR, "");
+	else root.removeAttribute(PREMIUM_ATTR);
 	syncMarkedRowsInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) hideReveal();
 }
