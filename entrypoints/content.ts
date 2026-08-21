@@ -1,4 +1,5 @@
 import "../src/content/content.css";
+import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import { setLanguage } from "@/lib/i18n";
 import { readFiberUserId } from "@/src/content/fiber";
 import type { AppConfig, Matchers } from "@/src/contracts/config";
@@ -28,6 +29,25 @@ const INVISIBLE_ATTR = "data-xsf-invisible";
 const PREMIUM_ATTR = "data-xsf-hide-premium";
 /** When present, hides X's site footer (CSS-driven). */
 const FOOTER_ATTR = "data-xsf-hide-footer";
+
+/** X's header logo link — its aria-label is the stable "X" brand name. */
+const LOGO_SEL = 'a[aria-label="X"] svg';
+/** Marker attribute set on an <svg> while it shows the Twitter blue bird. */
+const BIRD_MARK = "data-xsf-bird";
+let birdData: { viewBox: string; fill: string; path: string } | undefined;
+
+function getBirdData(): { viewBox: string; fill: string; path: string } {
+	if (birdData) return birdData;
+	const doc = new DOMParser().parseFromString(birdSvg, "image/svg+xml");
+	const source = doc.querySelector("svg");
+	const path = source?.querySelector("path");
+	if (!source || !path) throw new Error("Invalid Twitter logo SVG");
+	return (birdData = {
+		viewBox: source.getAttribute("viewBox") ?? "0 0 248 204",
+		fill: path.getAttribute("fill") ?? "#1d9bf0",
+		path: path.getAttribute("d") ?? "",
+	});
+}
 const OPACITY_VAR = "--xsf-opacity";
 const DIM_OPACITY = 0.15;
 const REVEAL_RADIUS = 40;
@@ -330,6 +350,48 @@ function applyStyleVars(): void {
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) hideReveal();
 }
 
+// ==================== Logo replacement ====================
+
+/**
+ * Swap X's header "X" mark for the classic Twitter blue bird (or restore it).
+ * This is DOM surgery (CSS cannot rewrite an <svg> path), so the original
+ * viewBox/path/fill are cached on the element before overwriting so the change
+ * is fully reversible. Runs on every X page (not just filterable ones); the
+ * BIRD_MARK dedupes re-application when X re-renders the logo during SPA
+ * navigation or while the same <svg> is re-scanned.
+ */
+function applyLogo(): void {
+	const replace = cfg.enabled && cfg.useBlueBird;
+	const bird = replace ? getBirdData() : null;
+	for (const svg of document.querySelectorAll<SVGSVGElement>(LOGO_SEL)) {
+		const path = svg.querySelector("path");
+		if (!path) continue;
+		if (replace) {
+			if (svg.hasAttribute(BIRD_MARK)) continue;
+			svg.setAttribute(BIRD_MARK, "");
+			svg.dataset.xsfOrigViewBox = svg.getAttribute("viewBox") ?? "";
+			svg.dataset.xsfOrigPath = path.getAttribute("d") ?? "";
+			svg.dataset.xsfOrigFill = path.getAttribute("fill") ?? "";
+			svg.setAttribute("viewBox", bird?.viewBox ?? "0 0 248 204");
+			path.setAttribute("d", bird?.path ?? "");
+			path.setAttribute("fill", bird?.fill ?? "#1d9bf0");
+		} else if (svg.hasAttribute(BIRD_MARK)) {
+			svg.setAttribute("viewBox", svg.dataset.xsfOrigViewBox || "0 0 24 24");
+			if (svg.dataset.xsfOrigPath)
+				path.setAttribute("d", svg.dataset.xsfOrigPath);
+			if (svg.dataset.xsfOrigFill) {
+				path.setAttribute("fill", svg.dataset.xsfOrigFill);
+			} else {
+				path.removeAttribute("fill");
+			}
+			svg.removeAttribute(BIRD_MARK);
+			delete svg.dataset.xsfOrigViewBox;
+			delete svg.dataset.xsfOrigPath;
+			delete svg.dataset.xsfOrigFill;
+		}
+	}
+}
+
 // ==================== Evaluation ====================
 
 function evaluate(article: Element): {
@@ -559,6 +621,9 @@ function fullScan(): void {
 // ==================== Incremental observation ====================
 
 function onMutations(records: MutationRecord[]): void {
+	// The header logo applies on every X page and X re-renders it on SPA
+	// navigation, so re-apply before the filterable-page guard below.
+	applyLogo();
 	// Content scripts run in an isolated world, so wrapping history.pushState is
 	// not sufficient to observe X's own SPA navigation. Any route change also
 	// changes the page DOM; notice it before processing stale rows.
@@ -813,6 +878,7 @@ function watchConfig(): void {
 		const prev = cfg;
 		cfg = loadConfig(changes.config.newValue);
 		setLanguage(cfg.language);
+		applyLogo();
 
 		if (matchingChanged(prev, cfg)) {
 			refresh({ rebuild: true });
@@ -855,6 +921,7 @@ async function init(): Promise<void> {
 	// Keep the observer alive off status pages as well. It is the reliable
 	// fallback that notices a later X SPA transition back to a status page.
 	startObserving();
+	applyLogo();
 
 	active = isFilterablePage();
 	debugLog("Initialized", {
