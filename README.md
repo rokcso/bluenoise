@@ -7,6 +7,14 @@ account state.
 
 Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
+## Installation
+
+> BlueNoise is a [Chrome Web Store](https://chromewebstore.google.com) listing in progress. Until it is approved, install the extension manually from the [latest release](https://github.com/rokcso/bluenoise/releases/latest).
+
+1. Download `bluenoise-<version>-chrome.zip` from the [releases page](https://github.com/rokcso/bluenoise/releases).
+2. Unzip it to a folder you won't delete (the browser needs the source files to stay put).
+3. Open `chrome://extensions` (or your Chromium browser's extension page), enable **Developer mode**, click **Load unpacked**, and select the unzipped folder.
+
 ## Features
 
 - Filters replies on X post-detail pages and posts on the home timeline; on a
@@ -76,6 +84,10 @@ BlueNoise is inspired by and pays tribute to these projects:
 - [x-spam-filter](https://github.com/ZPVIP/x-spam-filter)
 - [x-comment-blocker](https://github.com/amahteru/x-comment-blocker)
 - [make-x-great-again](https://github.com/foru17/make-x-great-again)
+
+## Releases
+
+Published builds are attached to [GitHub Releases](https://github.com/rokcso/bluenoise/releases).
 
 ## License
 
