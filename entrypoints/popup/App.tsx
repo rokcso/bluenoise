@@ -15,7 +15,6 @@ import {
 	DatabaseIcon,
 	DiagnosticsIcon,
 	ExternalLinkIcon,
-	EyeOffIcon,
 	LayoutIcon,
 	ListFilterIcon,
 	LoaderIcon,
