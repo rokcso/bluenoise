@@ -28,6 +28,11 @@
 	display: none !important;
 }
 
+[data-xsf-custom-hidden] {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
 /* Hide X's site footer. The footer is a <nav role="navigation"> whose
  * aria-label is localized (页脚 / Footer / …), unlike the Premium brand name,
  * so instead of the label we key on the always-present Terms-of-Service link
@@ -44,16 +49,13 @@
  * complementary aside and hide its padded wrapper as well. */
 [data-xsf-hide-follow]
 aside[role="complementary"]:has([data-testid="UserCell"]),
-[data-xsf-hide-follow]
-	div:has(> aside[role="complementary"]:has([data-testid="UserCell"])),
+/* The recommendation card can be nested in an additional layout wrapper.
+ * Keep an explicit selector for the exact structure X currently emits:
+ * outer div > inner div > aside. */
 [data-xsf-hide-follow]
 	div:has(> div > aside[role="complementary"]:has([data-testid="UserCell"])),
 [data-xsf-hide-follow]
-	div:has(> div > div > aside[role="complementary"]:has([data-testid="UserCell"])),
-[data-xsf-hide-follow]
-	div:has(> div > div > div > aside[role="complementary"]:has([data-testid="UserCell"])),
-[data-xsf-hide-follow]
-	div:has(> div > div > div > div > aside[role="complementary"]:has([data-testid="UserCell"])) {
+	div:has(> div[class*="r-1bro5k0"] > aside[role="complementary"]:has([data-testid="UserCell"])) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }

@@ -33,6 +33,7 @@ const FOOTER_ATTR = "data-xsf-hide-footer";
 const TRENDS_ATTR = "data-xsf-hide-trends";
 /** When present, hides X's "Who to follow" panel (CSS-driven). */
 const FOLLOW_ATTR = "data-xsf-hide-follow";
+const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
 const LOGO_SEL = 'a[aria-label="X"] svg';
@@ -334,30 +335,66 @@ function syncMarkedRowsInteractivity(): void {
 	}
 }
 
+function applyPageCustomizations(): void {
+	const enabled = cfg.enabled;
+	for (const el of document.querySelectorAll(`[${CUSTOM_HIDDEN_ATTR}]`))
+		el.removeAttribute(CUSTOM_HIDDEN_ATTR);
+	if (!enabled) return;
+
+	const hideAncestors = (element: Element, levels: number): void => {
+		let current: Element | null = element;
+		for (let i = 0; i <= levels && current; i++) {
+			if (current instanceof HTMLElement)
+				current.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			current = current.parentElement;
+		}
+	};
+	if (cfg.hideFollowSuggestions) {
+		for (const aside of document.querySelectorAll<HTMLElement>(
+			'aside[role="complementary"]:has([data-testid="UserCell"])',
+		))
+			hideAncestors(aside, 3);
+	}
+	if (cfg.hideTrends) {
+		for (const section of document.querySelectorAll<HTMLElement>(
+			'section[aria-labelledby]:has([data-testid="trend"])',
+		))
+			hideAncestors(section, 2);
+	}
+	if (cfg.hideFooter) {
+		for (const nav of document.querySelectorAll<HTMLElement>(
+			'nav[role="navigation"]:has(a[href$="/tos"])',
+		))
+			hideAncestors(nav, 1);
+	}
+}
+
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
 function applyStyleVars(): void {
 	const root = document.documentElement;
+	// Page customizations apply on every X page, including profile pages. The
+	// filtering effect below remains limited to the home timeline and status
+	// pages via `active`.
+	if (cfg.enabled && cfg.hidePremiumPromo)
+		root.setAttribute(PREMIUM_ATTR, "");
+	else root.removeAttribute(PREMIUM_ATTR);
+	if (cfg.enabled && cfg.hideFooter) root.setAttribute(FOOTER_ATTR, "");
+	else root.removeAttribute(FOOTER_ATTR);
+	if (cfg.enabled && cfg.hideTrends) root.setAttribute(TRENDS_ATTR, "");
+	else root.removeAttribute(TRENDS_ATTR);
+	if (cfg.enabled && cfg.hideFollowSuggestions)
+		root.setAttribute(FOLLOW_ATTR, "");
+	else root.removeAttribute(FOLLOW_ATTR);
+
+	applyPageCustomizations();
 	if (!cfg.enabled || !active) {
-		root.removeAttribute(MODE_ATTR);
 		root.removeAttribute(INVISIBLE_ATTR);
-		root.removeAttribute(PREMIUM_ATTR);
-		root.removeAttribute(FOOTER_ATTR);
-		root.removeAttribute(TRENDS_ATTR);
-		root.removeAttribute(FOLLOW_ATTR);
 		hideReveal();
 		return;
 	}
 	root.setAttribute(MODE_ATTR, cfg.mode === "hide" ? "hide" : "dim");
 	root.style.setProperty(OPACITY_VAR, String(DIM_OPACITY));
 	root.removeAttribute(INVISIBLE_ATTR);
-	if (cfg.hidePremiumPromo) root.setAttribute(PREMIUM_ATTR, "");
-	else root.removeAttribute(PREMIUM_ATTR);
-	if (cfg.hideFooter) root.setAttribute(FOOTER_ATTR, "");
-	else root.removeAttribute(FOOTER_ATTR);
-	if (cfg.hideTrends) root.setAttribute(TRENDS_ATTR, "");
-	else root.removeAttribute(TRENDS_ATTR);
-	if (cfg.hideFollowSuggestions) root.setAttribute(FOLLOW_ATTR, "");
-	else root.removeAttribute(FOLLOW_ATTR);
 	syncMarkedRowsInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) hideReveal();
 }
@@ -635,7 +672,9 @@ function fullScan(): void {
 function onMutations(records: MutationRecord[]): void {
 	// The header logo applies on every X page and X re-renders it on SPA
 	// navigation, so re-apply before the filterable-page guard below.
-	applyLogo();
+	applyPageCustomizations();
+	for (const node of records.flatMap((record) => [...record.addedNodes]))
+		if (node.nodeType === Node.ELEMENT_NODE) applyPageCustomizations();
 	// Content scripts run in an isolated world, so wrapping history.pushState is
 	// not sufficient to observe X's own SPA navigation. Any route change also
 	// changes the page DOM; notice it before processing stale rows.
