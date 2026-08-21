@@ -351,15 +351,15 @@ function applyPageCustomizations(): void {
 	};
 	if (cfg.hideFollowSuggestions) {
 		for (const aside of document.querySelectorAll<HTMLElement>(
-			'aside[role="complementary"]:has([data-testid="UserCell"])',
+			'aside[role="complementary"]:has(> div > h2[role="heading"]):has(> ul[role="list"] > li[data-testid="UserCell"])',
 		))
-			hideAncestors(aside, 3);
+			hideAncestors(aside, 2);
 	}
 	if (cfg.hideTrends) {
 		for (const section of document.querySelectorAll<HTMLElement>(
-			'section[aria-labelledby]:has([data-testid="trend"])',
+			'section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"])',
 		))
-			hideAncestors(section, 2);
+			hideAncestors(section, 1);
 	}
 	if (cfg.hideFooter) {
 		for (const nav of document.querySelectorAll<HTMLElement>(
