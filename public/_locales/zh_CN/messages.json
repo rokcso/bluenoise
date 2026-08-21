@@ -90,6 +90,11 @@
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"
 	},
+	"layout": { "message": "布局" },
+	"hide_footer": { "message": "隐藏 X 页脚" },
+	"hide_footer_hint": {
+		"message": "移除侧边栏中的「条款 / 隐私 / Cookie」页脚。"
+	},
 	"language": { "message": "语言" },
 	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
 	"language_auto": { "message": "跟随浏览器" },
