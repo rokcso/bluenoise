@@ -92,6 +92,10 @@
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"
 	},
 	"layout": { "message": "布局" },
+	"hide_trends": { "message": "隐藏当前趋势" },
+	"hide_trends_hint": {
+		"message": "移除侧边栏中的「当前趋势」面板。"
+	},
 	"hide_footer": { "message": "隐藏 X 页脚" },
 	"hide_footer_hint": {
 		"message": "移除侧边栏中的「条款 / 隐私 / Cookie」页脚。"
