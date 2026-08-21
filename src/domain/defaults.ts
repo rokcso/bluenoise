@@ -9,6 +9,7 @@ export const DEFAULTS: AppConfig = {
 	showBadgeCount: true,
 	hidePremiumPromo: false,
 	hideFooter: false,
+	useBlueBird: false,
 	subscriptions: [
 		{
 			id: "x-spam-filter",

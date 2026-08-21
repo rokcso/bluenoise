@@ -18,6 +18,8 @@ export interface AppConfig {
 	hidePremiumPromo: boolean;
 	/** Hide X's site footer (Terms / Privacy / Cookie links, copyright). */
 	hideFooter: boolean;
+	/** Replace X's header logo with the classic Twitter blue bird. */
+	useBlueBird: boolean;
 	/** User-controlled external keyword subscriptions. */
 	subscriptions: KeywordSubscription[];
 	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */

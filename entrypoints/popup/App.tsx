@@ -286,6 +286,13 @@ export function SettingsApp({
 									checked={config.hideFooter}
 									onChange={(v) => update({ hideFooter: v })}
 								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("use_blue_bird")}
+									hint={t("use_blue_bird_hint")}
+									checked={config.useBlueBird}
+									onChange={(v) => update({ useBlueBird: v })}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup

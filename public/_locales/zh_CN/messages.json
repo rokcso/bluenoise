@@ -95,6 +95,10 @@
 	"hide_footer_hint": {
 		"message": "移除侧边栏中的「条款 / 隐私 / Cookie」页脚。"
 	},
+	"use_blue_bird": { "message": "使用经典蓝鸟 logo" },
+	"use_blue_bird_hint": {
+		"message": "将 X 的 logo 替换为经典的 Twitter 蓝鸟。"
+	},
 	"language": { "message": "语言" },
 	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
 	"language_auto": { "message": "跟随浏览器" },

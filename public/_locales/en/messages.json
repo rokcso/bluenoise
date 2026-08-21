@@ -99,6 +99,10 @@
 	"hide_footer_hint": {
 		"message": "Remove the Terms / Privacy / Cookie footer from the sidebar."
 	},
+	"use_blue_bird": { "message": "Use the classic blue bird" },
+	"use_blue_bird_hint": {
+		"message": "Replace the X logo with the classic Twitter blue bird."
+	},
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
 	"language_auto": { "message": "Follow browser" },
