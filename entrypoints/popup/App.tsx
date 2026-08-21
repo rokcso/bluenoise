@@ -16,6 +16,7 @@ import {
 	DiagnosticsIcon,
 	ExternalLinkIcon,
 	EyeOffIcon,
+	LayoutIcon,
 	ListFilterIcon,
 	LoaderIcon,
 	MonitorIcon,
@@ -270,6 +271,20 @@ export function SettingsApp({
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}
 									onChange={(v) => update({ hidePremiumPromo: v })}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("layout")}
+							icon={LayoutIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("hide_footer")}
+									hint={t("hide_footer_hint")}
+									checked={config.hideFooter}
+									onChange={(v) => update({ hideFooter: v })}
 								/>
 							</SettingsPanel>
 						</SettingsGroup>

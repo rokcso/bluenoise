@@ -28,6 +28,17 @@
 	display: none !important;
 }
 
+/* Hide X's site footer. The footer is a <nav role="navigation"> whose
+ * aria-label is localized (页脚 / Footer / …), unlike the Premium brand name,
+ * so instead of the label we key on the always-present Terms-of-Service link
+ * (href$="/tos") to identify it in any language. Hide the nav and its padded
+ * wrapper (via :has) so no blank box is left behind. */
+[data-xsf-hide-footer] nav[role="navigation"]:has(a[href$="/tos"]),
+[data-xsf-hide-footer] div:has(> nav[role="navigation"]:has(a[href$="/tos"])) {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
 /* Hide X's "Subscribe to Premium" upsell card. The card is a localized
  * <aside role="complementary"> whose aria-label keeps the "Premium" brand name
  * in every language, so that stays stable while the generated r-/css- classes

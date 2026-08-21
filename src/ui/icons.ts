@@ -12,6 +12,7 @@ export {
 	RiEyeOffLine as EyeOffIcon,
 	RiFilter3Fill as FilterFillIcon,
 	RiFilter3Line as FilterIcon,
+	RiLayoutLine as LayoutIcon,
 	RiListSettingsFill as ListFilterFillIcon,
 	RiListSettingsLine as ListFilterIcon,
 	RiLoader4Line as LoaderIcon,

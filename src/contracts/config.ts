@@ -16,6 +16,8 @@ export interface AppConfig {
 	showBadgeCount: boolean;
 	/** Hide X's in-timeline "Subscribe to Premium" upsell ad card. */
 	hidePremiumPromo: boolean;
+	/** Hide X's site footer (Terms / Privacy / Cookie links, copyright). */
+	hideFooter: boolean;
 	/** User-controlled external keyword subscriptions. */
 	subscriptions: KeywordSubscription[];
 	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */

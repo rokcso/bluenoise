@@ -94,6 +94,11 @@
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
 	},
+	"layout": { "message": "Layout" },
+	"hide_footer": { "message": "Hide X footer" },
+	"hide_footer_hint": {
+		"message": "Remove the Terms / Privacy / Cookie footer from the sidebar."
+	},
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
 	"language_auto": { "message": "Follow browser" },
