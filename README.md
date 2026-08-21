@@ -1,5 +1,7 @@
 # BlueNoise
 
+**English** · [简体中文](./README.zh-CN.md)
+
 > Make X readable again.
 
 BlueNoise is an open-source browser extension that blurs or hides noisy replies on X (formerly Twitter) post-detail pages and posts on the home timeline with local, reversible keyword rules. It improves reading without calling X APIs, reading cookies, or changing your
