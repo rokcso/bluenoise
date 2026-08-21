@@ -84,7 +84,12 @@ export default function App() {
 	);
 }
 
-export type SettingsSection = "general" | "keywords" | "accounts" | "filtering";
+export type SettingsSection =
+	| "general"
+	| "keywords"
+	| "accounts"
+	| "filtering"
+	| "customization";
 
 /** Full configuration screen rendered from the extension's Options page. */
 export function SettingsApp({
@@ -232,6 +237,40 @@ export function SettingsApp({
 					</>
 				)}
 
+				{activeSection === "customization" && (
+					<>
+						<PageHeading title={t("customization")} />
+						<SettingsGroup
+							label={t("customization_options")}
+							icon={LayoutIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("hide_premium_promo")}
+									hint={t("hide_premium_promo_hint")}
+									checked={config.hidePremiumPromo}
+									onChange={(v) => update({ hidePremiumPromo: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_footer")}
+									hint={t("hide_footer_hint")}
+									checked={config.hideFooter}
+									onChange={(v) => update({ hideFooter: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("use_blue_bird")}
+									hint={t("use_blue_bird_hint")}
+									checked={config.useBlueBird}
+									onChange={(v) => update({ useBlueBird: v })}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+					</>
+				)}
+
 				{activeSection === "filtering" && (
 					<>
 						<PageHeading title={t("filtering")} />
@@ -258,41 +297,6 @@ export function SettingsApp({
 										/>
 									</>
 								)}
-							</SettingsPanel>
-						</SettingsGroup>
-						<SettingsGroup
-							label={t("ads")}
-							icon={EyeOffIcon}
-							labelClassName="font-normal"
-						>
-							<SettingsPanel>
-								<XToggle
-									label={t("hide_premium_promo")}
-									hint={t("hide_premium_promo_hint")}
-									checked={config.hidePremiumPromo}
-									onChange={(v) => update({ hidePremiumPromo: v })}
-								/>
-							</SettingsPanel>
-						</SettingsGroup>
-						<SettingsGroup
-							label={t("layout")}
-							icon={LayoutIcon}
-							labelClassName="font-normal"
-						>
-							<SettingsPanel>
-								<XToggle
-									label={t("hide_footer")}
-									hint={t("hide_footer_hint")}
-									checked={config.hideFooter}
-									onChange={(v) => update({ hideFooter: v })}
-								/>
-								<SettingsDivider />
-								<XToggle
-									label={t("use_blue_bird")}
-									hint={t("use_blue_bird_hint")}
-									checked={config.useBlueBird}
-									onChange={(v) => update({ useBlueBird: v })}
-								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup

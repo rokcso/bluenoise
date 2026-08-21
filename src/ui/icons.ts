@@ -13,6 +13,7 @@ export {
 	RiFilter3Fill as FilterFillIcon,
 	RiFilter3Line as FilterIcon,
 	RiLayoutLine as LayoutIcon,
+	RiLayoutFill as LayoutFillIcon,
 	RiListSettingsFill as ListFilterFillIcon,
 	RiListSettingsLine as ListFilterIcon,
 	RiLoader4Line as LoaderIcon,
