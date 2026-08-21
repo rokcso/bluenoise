@@ -1,7 +1,7 @@
 import "../src/content/content.css";
-import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import { setLanguage } from "@/lib/i18n";
 import { readFiberUserId } from "@/src/content/fiber";
+import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import type { AppConfig, Matchers } from "@/src/contracts/config";
 import { CONFIG_KEY } from "@/src/contracts/config";
 import {
@@ -29,6 +29,8 @@ const INVISIBLE_ATTR = "data-xsf-invisible";
 const PREMIUM_ATTR = "data-xsf-hide-premium";
 /** When present, hides X's site footer (CSS-driven). */
 const FOOTER_ATTR = "data-xsf-hide-footer";
+/** When present, hides X's trends panel (CSS-driven). */
+const TRENDS_ATTR = "data-xsf-hide-trends";
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
 const LOGO_SEL = 'a[aria-label="X"] svg';
@@ -42,11 +44,13 @@ function getBirdData(): { viewBox: string; fill: string; path: string } {
 	const source = doc.querySelector("svg");
 	const path = source?.querySelector("path");
 	if (!source || !path) throw new Error("Invalid Twitter logo SVG");
-	return (birdData = {
+	const next = {
 		viewBox: source.getAttribute("viewBox") ?? "0 0 248 204",
 		fill: path.getAttribute("fill") ?? "#1d9bf0",
 		path: path.getAttribute("d") ?? "",
-	});
+	};
+	birdData = next;
+	return next;
 }
 const OPACITY_VAR = "--xsf-opacity";
 const DIM_OPACITY = 0.15;
@@ -336,6 +340,7 @@ function applyStyleVars(): void {
 		root.removeAttribute(INVISIBLE_ATTR);
 		root.removeAttribute(PREMIUM_ATTR);
 		root.removeAttribute(FOOTER_ATTR);
+		root.removeAttribute(TRENDS_ATTR);
 		hideReveal();
 		return;
 	}
@@ -346,6 +351,8 @@ function applyStyleVars(): void {
 	else root.removeAttribute(PREMIUM_ATTR);
 	if (cfg.hideFooter) root.setAttribute(FOOTER_ATTR, "");
 	else root.removeAttribute(FOOTER_ATTR);
+	if (cfg.hideTrends) root.setAttribute(TRENDS_ATTR, "");
+	else root.removeAttribute(TRENDS_ATTR);
 	syncMarkedRowsInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) hideReveal();
 }

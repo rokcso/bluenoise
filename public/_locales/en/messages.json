@@ -97,6 +97,10 @@
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
 	},
 	"layout": { "message": "Layout" },
+	"hide_trends": { "message": "Hide current trends" },
+	"hide_trends_hint": {
+		"message": "Remove the \"What's happening\" trends panel from the sidebar."
+	},
 	"hide_footer": { "message": "Hide X footer" },
 	"hide_footer_hint": {
 		"message": "Remove the Terms / Privacy / Cookie footer from the sidebar."
