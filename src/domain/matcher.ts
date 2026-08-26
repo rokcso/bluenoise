@@ -1,4 +1,8 @@
-import type { AppConfig, Matchers } from "@/src/contracts/config";
+import type {
+	AppConfig,
+	KeywordSubscription,
+	Matchers,
+} from "@/src/contracts/config";
 import {
 	asRegex,
 	buildWhitelistIndex,
@@ -13,7 +17,13 @@ const CHUNK_SIZE = 400;
  * rules. Duplicate rules across the lists are de-duplicated here. Called only on
  * config change, never on the scanning hot path.
  */
-export function buildMatchers(cfg: AppConfig): Matchers {
+export function buildMatchers(
+	cfg: Pick<AppConfig, "caseSensitive" | "ignoreSpaces"> & {
+		subscriptions: KeywordSubscription[];
+		userKeywords: string[];
+		whitelist: string[];
+	},
+): Matchers {
 	// Collect raw rules tagged with their source label: a subscription name or
 	// "user" for the user's own list. Kept so debug logs can say which list a
 	// hit came from, not just the matched keyword.

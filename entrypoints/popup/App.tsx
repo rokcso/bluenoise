@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
 import { t } from "@/lib/i18n";
-import type { AppConfig, KeywordSubscription } from "@/src/contracts/config";
+import type {
+	KeywordSubscription,
+	RuleView,
+	AppConfig as SettingsConfig,
+} from "@/src/contracts/config";
+import { RULE_DATA_KEY } from "@/src/contracts/config";
 import {
-	ACCOUNT_LIST_KEY,
 	type AccountListSnapshot,
 	DEFAULT_ACCOUNT_LIST_SOURCES,
 	MXGA_DATA_URL,
 	MXGA_REPO_URL,
 } from "@/src/domain/account-list";
 import { fetchKeywordSource } from "@/src/domain/keywords";
+import { loadRuleData } from "@/src/domain/rules";
+
+type AppConfig = SettingsConfig & RuleView;
+
 import {
 	AccountFilterIcon,
 	AppearanceIcon,
@@ -467,19 +475,17 @@ function AccountListSettings({
 
 	useEffect(() => {
 		let active = true;
-		chrome.storage.local.get(ACCOUNT_LIST_KEY).then((result) => {
+		chrome.storage.local.get(RULE_DATA_KEY).then((result) => {
 			if (active)
-				setSnapshot(
-					result[ACCOUNT_LIST_KEY] as AccountListSnapshot | undefined,
-				);
+				setSnapshot(loadRuleData(result[RULE_DATA_KEY]).accounts.external.mxga);
 		});
 		const onChanged = (
 			changes: { [key: string]: chrome.storage.StorageChange },
 			area: string,
 		) => {
-			if (area === "local" && changes[ACCOUNT_LIST_KEY]) {
+			if (area === "local" && changes[RULE_DATA_KEY]) {
 				setSnapshot(
-					changes[ACCOUNT_LIST_KEY].newValue as AccountListSnapshot | undefined,
+					loadRuleData(changes[RULE_DATA_KEY].newValue).accounts.external.mxga,
 				);
 			}
 		};

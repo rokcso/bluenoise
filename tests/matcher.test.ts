@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AppConfig } from "@/src/contracts/config";
 import { DEFAULTS } from "@/src/domain/defaults";
 import { buildMatchers, matchAny } from "@/src/domain/matcher";
+import { KEYWORD_SOURCES } from "@/src/domain/rules";
 
 function cfg(overrides: Partial<AppConfig> = {}): AppConfig {
 	return { ...DEFAULTS, ...overrides };
@@ -44,8 +45,18 @@ describe("buildMatchers", () => {
 		const m = buildMatchers(
 			cfg({
 				subscriptions: [
-					{ ...DEFAULTS.subscriptions[0], keywords: ["贷款"], enabled: true },
-					{ ...DEFAULTS.subscriptions[1], keywords: ["广告"], enabled: false },
+					{
+						...KEYWORD_SOURCES[0],
+						keywords: ["贷款"],
+						enabled: true,
+						syncedAt: 0,
+					},
+					{
+						...KEYWORD_SOURCES[1],
+						keywords: ["广告"],
+						enabled: false,
+						syncedAt: 0,
+					},
 				],
 			}),
 		);
