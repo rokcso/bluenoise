@@ -716,7 +716,9 @@ function applyPageCustomizations(): void {
 			'[data-testid="primaryColumn"] [data-testid="pillLabel"]',
 		)) {
 			const pill = label.parentElement;
-			if (pill?.querySelector(':scope > [data-testid="userAvatars"]'))
+			// X wraps the avatar stack in an extra layout container. Match it
+			// anywhere inside the pill rather than requiring a direct child.
+			if (pill?.querySelector('[data-testid="userAvatars"]'))
 				hideAncestors(pill, 0);
 		}
 	}
