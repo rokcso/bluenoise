@@ -488,11 +488,19 @@ function applyLogo(): void {
 		const path = svg.querySelector("path");
 		if (!path) continue;
 		if (replace) {
-			if (svg.hasAttribute(BIRD_MARK)) continue;
-			svg.setAttribute(BIRD_MARK, "");
-			svg.dataset.xsfOrigViewBox = svg.getAttribute("viewBox") ?? "";
-			svg.dataset.xsfOrigPath = path.getAttribute("d") ?? "";
-			svg.dataset.xsfOrigFill = path.getAttribute("fill") ?? "";
+			if (!svg.hasAttribute(BIRD_MARK)) {
+				svg.setAttribute(BIRD_MARK, "");
+				svg.dataset.xsfOrigViewBox = svg.getAttribute("viewBox") ?? "";
+				svg.dataset.xsfOrigPath = path.getAttribute("d") ?? "";
+				svg.dataset.xsfOrigFill = path.getAttribute("fill") ?? "";
+			}
+			// X can reconcile the same SVG in place and restore its own path.
+			// Re-apply the bird whenever the current path no longer matches it.
+			if (
+				path.getAttribute("d") === bird?.path &&
+				svg.getAttribute("viewBox") === bird?.viewBox
+			)
+				continue;
 			svg.setAttribute("viewBox", bird?.viewBox ?? "0 0 248 204");
 			path.setAttribute("d", bird?.path ?? "");
 			path.setAttribute("fill", bird?.fill ?? "#1d9bf0");
@@ -744,6 +752,7 @@ function fullScan(): void {
 function onMutations(records: MutationRecord[]): void {
 	// The header logo applies on every X page and X re-renders it on SPA
 	// navigation, so re-apply before the filterable-page guard below.
+	applyLogo();
 	applyPageCustomizations();
 	for (const node of records.flatMap((record) => [...record.addedNodes]))
 		if (node.nodeType === Node.ELEMENT_NODE) applyPageCustomizations();
@@ -841,7 +850,12 @@ function clearRescanTimers(): void {
 function scheduleRescans(): void {
 	clearRescanTimers();
 	for (const delay of RESCAN_DELAYS) {
-		rescanTimers.push(window.setTimeout(fullScan, delay));
+		rescanTimers.push(
+			window.setTimeout(() => {
+				applyLogo();
+				fullScan();
+			}, delay),
+		);
 	}
 }
 
