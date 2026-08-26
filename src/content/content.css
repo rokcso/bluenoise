@@ -122,3 +122,18 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
+
+/* Injected items inside X's tweet ⋯ menu. Color is inherited from the menu
+ * container so light/dark themes stay readable; only hover feedback is ours. */
+.xsf-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 16px;
+	cursor: pointer;
+	user-select: none;
+	transition: background-color 0.2s ease;
+}
+.xsf-menu-item:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+}

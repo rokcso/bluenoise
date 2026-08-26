@@ -89,6 +89,35 @@ export function normalizeAccountEntry(value: string): string | null {
 	return /^[A-Za-z0-9_]{1,15}$/.test(handle) ? handle : null;
 }
 
+/**
+ * Turn an account identity into the form stored in the local lists:
+ * a bare numeric id, or an @-prefixed handle. Returns null when the
+ * identity carries neither a valid id nor a valid handle.
+ */
+export function accountIdentityToStored(
+	identity: AccountIdentity,
+): string | null {
+	const entry = normalizeAccountEntry(identity.id ?? identity.handle ?? "");
+	if (!entry) return null;
+	return /^\d+$/.test(entry) ? entry : `@${entry}`;
+}
+
+/**
+ * Append `stored` (already in stored form: "123" or "@handle") to a local
+ * account list, deduplicating against entries that normalize to the same
+ * account. Returns the new array, or null when the entry is invalid or
+ * already present (no-op).
+ */
+export function addAccountToList(
+	list: string[],
+	stored: string,
+): string[] | null {
+	const entry = normalizeAccountEntry(stored);
+	if (!entry) return null;
+	if (list.some((item) => normalizeAccountEntry(item) === entry)) return null;
+	return [...list, stored];
+}
+
 function matchesEntries(entries: string[], identity: AccountIdentity): boolean {
 	const id = identity.id;
 	const handle = normalizeAccountHandle(identity.handle);
