@@ -16,6 +16,8 @@ export interface AppConfig {
 	showBadgeCount: boolean;
 	/** Replace X's total with the loaded, unfiltered reply count on post pages. */
 	showActualReplyCount: boolean;
+	/** Always show X's left navigation sidebar in its compact icon-only layout. */
+	collapseSidebar: boolean;
 	/** Hide X's in-timeline "Subscribe to Premium" upsell ad card. */
 	hidePremiumPromo: boolean;
 	/** Hide X's site footer (Terms / Privacy / Cookie links, copyright). */

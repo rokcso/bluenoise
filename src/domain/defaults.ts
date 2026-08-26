@@ -8,6 +8,7 @@ export const DEFAULTS: AppConfig = {
 	revealOnHover: true,
 	showBadgeCount: true,
 	showActualReplyCount: false,
+	collapseSidebar: false,
 	hidePremiumPromo: false,
 	hideFooter: false,
 	useBlueBird: false,

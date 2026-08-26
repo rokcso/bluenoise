@@ -176,6 +176,10 @@
 	"show_actual_reply_count_hint": {
 		"message": "在帖子详情页中，用当前已加载且过滤后保留的评论数替换 X 的总回复数。"
 	},
+	"collapse_sidebar": { "message": "折叠导航侧边栏" },
+	"collapse_sidebar_hint": {
+		"message": "始终使用 X 的紧凑图标侧边栏，包括没有折叠按钮的页面。"
+	},
 	"reveal_on_hover": { "message": "在光标附近显示内容" },
 	"reveal_on_hover_hint": {
 		"message": "在模糊模式下，以光标为中心显示清晰区域。"
