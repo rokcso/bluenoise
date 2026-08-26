@@ -26,6 +26,8 @@ export interface AppConfig {
 	hideFollowSuggestions: boolean;
 	/** Hide follow recommendations embedded in the home timeline. */
 	hideTimelineFollowSuggestions: boolean;
+	/** Hide the Discover more recommendations at the bottom of a post page. */
+	hideDiscoverMore: boolean;
 	hideTitleCount: boolean;
 	hideNotificationBadges: boolean;
 	hideNewPostsPrompt: boolean;
