@@ -96,6 +96,10 @@
 	"filter_parody_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为戏仿账号的推文。"
 	},
+	"filter_automated_accounts": { "message": "过滤自动发推账号" },
+	"filter_automated_accounts_hint": {
+		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为自动发推的账号。"
+	},
 	"hide_premium_promo": { "message": "隐藏 X Premium 订阅广告" },
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"

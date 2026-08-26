@@ -100,6 +100,10 @@
 	"filter_parody_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as parody by X."
 	},
+	"filter_automated_accounts": { "message": "Filter automated accounts" },
+	"filter_automated_accounts_hint": {
+		"message": "Blur or hide posts from accounts marked as automated by X."
+	},
 	"hide_premium_promo": { "message": "Hide X Premium ads" },
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
