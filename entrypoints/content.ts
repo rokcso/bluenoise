@@ -159,6 +159,8 @@ const state = new WeakMap<
 	{ sig: string; hit: string | null; log: FilteredLog | null }
 >();
 const pending = new Set<Element>();
+/** Articles whose text/name subtree changed since the last evaluation. */
+const textDirty = new WeakSet<Element>();
 
 /** A single filtered reply, recorded only when debug logging is enabled. */
 interface FilteredLog {
@@ -1080,11 +1082,21 @@ function evaluate(article: Element): {
 	fresh: boolean;
 	log: FilteredLog | null;
 } {
+	const cached = state.get(article);
+	// Most mutations X emits are layout or accessibility updates. If the rule
+	// generation is unchanged and neither matching subtree is dirty, avoid the
+	// expensive TreeWalker pass entirely.
+	if (
+		cached &&
+		!textDirty.has(article) &&
+		cached.sig.startsWith(`${generation}${SEP}${accountListVersion}${SEP}`)
+	)
+		return { fresh: false, log: null };
+	textDirty.delete(article);
 	const text = readText(article.querySelector(TEXT_SEL));
 	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
 	const sig = [generation, accountListVersion, text, name].join(SEP);
 
-	const cached = state.get(article);
 	if (cached && cached.sig === sig) {
 		return { fresh: false, log: null };
 	}
@@ -1380,7 +1392,25 @@ function onMutations(records: MutationRecord[]): void {
 				? (target as Element)
 				: target.parentElement;
 		const article = targetElement?.closest(ARTICLE_SEL);
-		if (article) pending.add(article);
+		if (article) {
+			pending.add(article);
+			// A childList target can be the article itself when X replaces the
+			// text container, so inspect added nodes as well as the target.
+			const textChanged = Boolean(
+				targetElement?.closest(`${TEXT_SEL}, ${NAME_SEL}`) ??
+					((targetElement?.matches(ARTICLE_SEL) &&
+						[...rec.addedNodes].some(
+							(node) => node.nodeType === Node.TEXT_NODE,
+						)) ||
+						[...rec.addedNodes].some(
+							(node) =>
+								node.nodeType === Node.ELEMENT_NODE &&
+								((node as Element).matches(`${TEXT_SEL}, ${NAME_SEL}`) ||
+									(node as Element).querySelector(`${TEXT_SEL}, ${NAME_SEL}`)),
+						)),
+			);
+			if (textChanged) textDirty.add(article);
+		}
 		if (
 			rec.type === "childList" &&
 			targetElement?.closest('section[role="region"]')
