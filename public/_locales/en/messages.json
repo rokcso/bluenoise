@@ -62,6 +62,44 @@
 	},
 	"sync": { "message": "Sync" },
 	"rule_backup": { "message": "Rule backup" },
+	"rule_backup_title": { "message": "Rule backup" },
+	"rule_export_title": { "message": "Export user rules" },
+	"rule_export_description": {
+		"message": "Download your custom keyword and account rules as a backup file."
+	},
+	"rule_export_action": { "message": "Export" },
+	"rule_import_title": { "message": "Import user rules" },
+	"rule_import_description": {
+		"message": "Restore custom keyword and account rules from a BlueNoise backup file."
+	},
+	"rule_import_action": { "message": "Import" },
+	"rule_import_success_merge": {
+		"message": "Rules merged successfully. Ignored $1 invalid rules."
+	},
+	"rule_import_success_append": {
+		"message": "Rules appended successfully. Ignored $1 invalid rules."
+	},
+	"rule_import_success_replace": {
+		"message": "Rules replaced successfully. Ignored $1 invalid rules."
+	},
+	"rule_import_dialog_title": { "message": "Choose import mode" },
+	"rule_import_dialog_summary": {
+		"message": "Parsed $1 rules. Ignored $2 invalid rules."
+	},
+	"rule_import_mode_merge": { "message": "Merge" },
+	"rule_import_mode_merge_description": {
+		"message": "Keep existing rules and add only non-duplicate rules."
+	},
+	"rule_import_mode_append": { "message": "Append as-is" },
+	"rule_import_mode_append_description": {
+		"message": "Keep existing rules and append every valid rule, including duplicates."
+	},
+	"rule_import_mode_replace": { "message": "Replace" },
+	"rule_import_mode_replace_description": {
+		"message": "Replace all current user rules."
+	},
+	"rule_import_confirm": { "message": "Confirm import" },
+	"cancel": { "message": "Cancel" },
 	"my_keywords": { "message": "My keywords" },
 	"my_keywords_hint": {
 		"message": "Add words or regular expressions that should trigger filtering. Use one rule per line."
