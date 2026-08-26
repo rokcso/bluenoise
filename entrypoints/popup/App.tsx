@@ -35,7 +35,9 @@ import {
 	SlidersIcon,
 	SunIcon,
 	ToolbarIcon,
+	TwitterIcon,
 	UserSlashIcon,
+	XFillIcon,
 } from "@/src/ui/icons";
 import { useConfig } from "./useConfig";
 import { useTheme } from "./useTheme";
@@ -247,7 +249,13 @@ export function SettingsApp({
 
 				{activeSection === "customization" && (
 					<>
-						<PageHeading title={t("customization")} />
+						<PageHeading
+							title={
+								<>
+									<XPlatformIcon /> {t("customization")}
+								</>
+							}
+						/>
 						<SettingsGroup
 							label={t("customization_options")}
 							icon={LayoutIcon}
@@ -304,7 +312,14 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={t("hide_premium_promo")}
+									label={
+										<>
+											{t("hide_premium_promo_before_platform")}
+											<XPlatformIcon />
+											{t("hide_premium_promo_after_platform")}
+										</>
+									}
+									switchLabel={`${t("hide_premium_promo")} ${t("x_platform")}`}
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}
 									onChange={(v) => update({ hidePremiumPromo: v })}
@@ -347,7 +362,15 @@ export function SettingsApp({
 								<SettingsDivider />
 								<XToggle
 									label={t("use_blue_bird")}
-									hint={t("use_blue_bird_hint")}
+									hint={
+										<>
+											{t("use_blue_bird_hint_before")}
+											<XPlatformIcon />
+											{t("use_blue_bird_hint_between")}
+											<TwitterPlatformIcon />
+											{t("use_blue_bird_hint_after")}
+										</>
+									}
 									checked={config.useBlueBird}
 									onChange={(v) => update({ useBlueBird: v })}
 								/>
@@ -467,7 +490,16 @@ export function SettingsApp({
 function AboutPage() {
 	return (
 		<>
-			<PageHeading title={t("about")} description={t("about_intro")} />
+			<PageHeading
+				title={t("about")}
+				description={
+					<>
+						{t("about_intro_before_platform")}
+						<XPlatformIcon />
+						{t("about_intro_after_platform")}
+					</>
+				}
+			/>
 			<section className="about-hero" aria-labelledby="about-idea-title">
 				<img
 					src="/icons/icon-128.png"
@@ -477,7 +509,12 @@ function AboutPage() {
 				/>
 				<div>
 					<h2 id="about-idea-title">{t("about_idea_title")}</h2>
-					<p>{t("about_idea_body")}</p>
+					<p>
+						<XPlatformIcon />
+						{t("about_idea_body_after_platform")}
+						<XPlatformIcon />
+						{t("about_idea_body_after_api")}
+					</p>
 				</div>
 			</section>
 			<div className="about-grid">
@@ -511,6 +548,24 @@ function AboutPage() {
 				</a>
 			</nav>
 		</>
+	);
+}
+
+function XPlatformIcon() {
+	return (
+		<XFillIcon
+			aria-label={t("x_platform")}
+			className="mx-0.5 inline-block h-[0.9em] w-[0.9em] align-[-0.12em]"
+		/>
+	);
+}
+
+function TwitterPlatformIcon() {
+	return (
+		<TwitterIcon
+			aria-label={t("twitter_platform")}
+			className="mx-0.5 inline-block h-[0.9em] w-[0.9em] align-[-0.12em] text-[#1D9BF0]"
+		/>
 	);
 }
 
@@ -606,15 +661,17 @@ function AccountListSettings({
 				.map((source) => {
 					const snapshot = snapshots[source.id];
 					const status = snapshot
-						? t(
-								"account_status",
-								String(snapshot.blacklistCount),
-								String(snapshot.whitelistCount),
-								new Intl.DateTimeFormat(undefined, {
-									dateStyle: "medium",
-									timeStyle: "short",
-								}).format(snapshot.syncedAt),
-							)
+						? source.format === "one-per-line"
+							? `${t("account_blacklist_count", String(snapshot.blacklistCount))} · ${t("last_synced", new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(snapshot.syncedAt))}`
+							: t(
+									"account_status",
+									String(snapshot.blacklistCount),
+									String(snapshot.whitelistCount),
+									new Intl.DateTimeFormat(undefined, {
+										dateStyle: "medium",
+										timeStyle: "short",
+									}).format(snapshot.syncedAt),
+								)
 						: t("not_synced");
 					const enabled = config.accountSourceEnabled[source.id] ?? false;
 					const metadata = snapshot?.syncError || status;
@@ -639,6 +696,17 @@ function AccountListSettings({
 								<span className="mt-1 block truncate text-xs text-x-muted">
 									{metadata}
 								</span>
+								{source.format === "one-per-line" && (
+									<a
+										href={source.blacklistUrl}
+										target="_blank"
+										rel="noreferrer"
+										className="mt-1 block truncate text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+										title={source.blacklistUrl}
+									>
+										{source.blacklistUrl}
+									</a>
+								)}
 								{source.id === "mxga" && (
 									<a
 										href={MXGA_DATA_URL}
@@ -852,8 +920,8 @@ function PageHeading({
 	title,
 	description,
 }: {
-	title: string;
-	description?: string;
+	title: React.ReactNode;
+	description?: React.ReactNode;
 }) {
 	return (
 		<header className="options-page-heading">
@@ -904,7 +972,7 @@ function SettingsRow({
 	control,
 }: {
 	label: React.ReactNode;
-	description?: string;
+	description?: React.ReactNode;
 	control: React.ReactNode;
 }) {
 	return (
@@ -1246,18 +1314,26 @@ function XToggle({
 	checked,
 	onChange,
 	hint,
+	switchLabel,
 }: {
-	label: string;
+	label: React.ReactNode;
 	checked: boolean;
 	onChange: (v: boolean) => void;
-	hint?: string;
+	hint?: React.ReactNode;
+	switchLabel?: string;
 }) {
 	return (
 		<SettingsRow
 			label={label}
 			description={hint}
 			control={
-				<BinarySwitch checked={checked} label={label} onChange={onChange} />
+				<BinarySwitch
+					checked={checked}
+					label={
+						switchLabel ?? (typeof label === "string" ? label : t("x_platform"))
+					}
+					onChange={onChange}
+				/>
 			}
 		/>
 	);

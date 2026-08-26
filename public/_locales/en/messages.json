@@ -52,6 +52,10 @@
 		"placeholders": { "count": { "content": "$1" } }
 	},
 	"not_synced": { "message": "Not synced" },
+	"account_blacklist_count": {
+		"message": "$1 blacklist entries",
+		"placeholders": { "count": { "content": "$1" } }
+	},
 	"last_synced": {
 		"message": "Updated $1",
 		"placeholders": { "date": { "content": "$1" } }
@@ -86,15 +90,21 @@
 	"external_account_sources": { "message": "External account sources" },
 	"account_blacklist_title": { "message": "My account blacklist" },
 	"account_whitelist_title": { "message": "My account whitelist" },
-	"customization": { "message": "X makeover" },
+	"customization": { "message": "Makeover" },
 	"about": { "message": "About" },
-	"about_intro": {
-		"message": "An X reading tool that runs in your browser. You define the rules and the boundaries."
+	"about_intro_before_platform": { "message": "An " },
+	"about_intro_after_platform": {
+		"message": " reading tool that runs in your browser. You define the rules and the boundaries."
 	},
 	"about_idea_title": { "message": "Put the feed back in the reader's hands" },
-	"about_idea_body": {
-		"message": "X has never lacked information. What it often lacks is room for your own judgment. BlueNoise gives the filtering decisions back to you. All data and logic stay in your browser. It never touches your account, calls the X API, or collects your data. The controls are deliberately detailed because you should decide what appears in your timeline and what stops appearing there."
+	"about_idea_body_after_platform": {
+		"message": " has never lacked information. What it often lacks is room for your own judgment. BlueNoise gives the filtering decisions back to you. All data and logic stay in your browser. It never touches your account, calls the "
 	},
+	"about_idea_body_after_api": {
+		"message": " API, or collects your data. The controls are deliberately detailed because you should decide what appears in your timeline and what stops appearing there."
+	},
+	"x_platform": { "message": "X" },
+	"twitter_platform": { "message": "Twitter" },
 	"about_name_title": { "message": "Why BlueNoise" },
 	"about_name_body": {
 		"message": "Blue noise appears in image and signal processing. It spreads interference out instead of letting it gather into distracting clumps. The name does not mean eliminating every bit of noise. A good feed can still have surprise and disagreement. It just should not waste your attention on repetition, manipulation, or empty interruption."
@@ -138,7 +148,9 @@
 	"filter_automated_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as automated by X."
 	},
-	"hide_premium_promo": { "message": "Hide X Premium ads" },
+	"hide_premium_promo": { "message": "Hide Premium ads" },
+	"hide_premium_promo_before_platform": { "message": "Hide " },
+	"hide_premium_promo_after_platform": { "message": " Premium ads" },
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
 	},
@@ -161,14 +173,14 @@
 	"hide_trends_hint": {
 		"message": "Remove the \"What's happening\" trends panel from the sidebar."
 	},
-	"hide_footer": { "message": "Hide X footer" },
+	"hide_footer": { "message": "Hide footer" },
 	"hide_footer_hint": {
 		"message": "Remove the Terms / Privacy / Cookie footer from the sidebar."
 	},
 	"use_blue_bird": { "message": "Use the classic blue bird" },
-	"use_blue_bird_hint": {
-		"message": "Replace the X logo with the classic Twitter blue bird."
-	},
+	"use_blue_bird_hint_before": { "message": "Replace the " },
+	"use_blue_bird_hint_between": { "message": " logo with the classic " },
+	"use_blue_bird_hint_after": { "message": " blue bird." },
 	"hide_title_count": { "message": "Hide tab unread count" },
 	"hide_title_count_hint": {
 		"message": "Remove the unread number from the browser tab title and favicon."

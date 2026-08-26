@@ -11,9 +11,9 @@ export const KEYWORD_SOURCES: Omit<
 >[] = [
 	{
 		id: "bluenoise",
-		name: "BlueNoise Keyword Blacklist",
+		name: "BlueNoise",
 		homepageUrl: "https://github.com/rokcso/bluenoise",
-		url: "https://raw.githubusercontent.com/rokcso/bluenoise/main/data/keywords.txt",
+		url: "https://raw.githubusercontent.com/rokcso/bluenoise/refs/heads/main/data/keywords.txt",
 		allowEmpty: true,
 	},
 	{
