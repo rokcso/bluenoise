@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - 让 X 重新值得阅读" },
 	"extDescription": {
-		"message": "让 X 更清爽：在本地模糊或隐藏嘈杂回复、时间线推文和广告，并可通过 Makeover 清理页面；不读取 Cookie，也不修改账号。"
+		"message": "让 X 更清爽：在本地模糊或隐藏嘈杂回复、时间线推文和广告，并可通过界面改造清理页面；不读取 Cookie，也不修改账号。"
 	},
 	"loading": { "message": "加载中…" },
 	"tagline": { "message": "更少噪音，更多信号。" },
@@ -18,10 +18,10 @@
 	},
 	"enabled_on": { "message": "过滤已开启" },
 	"enabled_off": { "message": "过滤已关闭" },
-	"x_makeover": { "message": "X Makeover" },
-	"x_makeover_on": { "message": "X Makeover 已开启" },
-	"x_makeover_off": { "message": "X Makeover 已关闭" },
-	"makeover": { "message": "Makeover" },
+	"x_makeover": { "message": "X 界面改造" },
+	"x_makeover_on": { "message": "X 界面改造已开启" },
+	"x_makeover_off": { "message": "X 界面改造已关闭" },
+	"makeover": { "message": "界面改造" },
 	"mode_dim": { "message": "模糊" },
 	"mode_hide": { "message": "隐藏" },
 	"external_keywords": { "message": "外部关键词" },
@@ -152,7 +152,10 @@
 	"about_github": { "message": "在 GitHub 查看项目" },
 	"makeover_options": { "message": "页面改造" },
 	"makeover_layout": { "message": "布局" },
-	"makeover_distractions": { "message": "减少干扰" },
+	"makeover_distractions_tab_nav": { "message": "标签页与导航" },
+	"makeover_distractions_timeline": { "message": "时间线" },
+	"makeover_distractions_sidebar": { "message": "侧边栏" },
+	"makeover_distractions_floating": { "message": "悬浮按钮" },
 	"makeover_branding": { "message": "品牌元素" },
 	"treatment": { "message": "过滤模式" },
 	"matching": { "message": "匹配选项" },
