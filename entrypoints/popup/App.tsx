@@ -30,6 +30,7 @@ import {
 	DiagnosticsIcon,
 	DownloadIcon,
 	ExternalLinkIcon,
+	EyeOffIcon,
 	LayoutIcon,
 	ListFilterIcon,
 	LoaderIcon,
@@ -274,7 +275,7 @@ export function SettingsApp({
 							}
 						/>
 						<SettingsGroup
-							label={t("makeover_options")}
+							label={t("makeover_layout")}
 							icon={LayoutIcon}
 							labelClassName="font-normal"
 						>
@@ -285,7 +286,14 @@ export function SettingsApp({
 									checked={config.collapseSidebar}
 									onChange={(v) => update({ collapseSidebar: v })}
 								/>
-								<SettingsDivider />
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions")}
+							icon={EyeOffIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
 								<XToggle
 									label={t("hide_title_count")}
 									hint={t("hide_title_count_hint")}
@@ -322,20 +330,6 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={
-										<>
-											{t("hide_premium_promo_before_platform")}
-											<XPlatformIcon />
-											{t("hide_premium_promo_after_platform")}
-										</>
-									}
-									switchLabel={`${t("hide_premium_promo")} ${t("x_platform")}`}
-									hint={t("hide_premium_promo_hint")}
-									checked={config.hidePremiumPromo}
-									onChange={(v) => update({ hidePremiumPromo: v })}
-								/>
-								<SettingsDivider />
-								<XToggle
 									label={t("hide_trends")}
 									hint={t("hide_trends_hint")}
 									checked={config.hideTrends}
@@ -368,6 +362,28 @@ export function SettingsApp({
 									hint={t("hide_footer_hint")}
 									checked={config.hideFooter}
 									onChange={(v) => update({ hideFooter: v })}
+								/>
+								<SettingsDivider />
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_branding")}
+							icon={XPlatformIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={
+										<>
+											{t("hide_premium_promo_before_platform")}
+											<XPlatformIcon />
+											{t("hide_premium_promo_after_platform")}
+										</>
+									}
+									switchLabel={`${t("hide_premium_promo")} ${t("x_platform")}`}
+									hint={t("hide_premium_promo_hint")}
+									checked={config.hidePremiumPromo}
+									onChange={(v) => update({ hidePremiumPromo: v })}
 								/>
 								<SettingsDivider />
 								<XToggle
@@ -447,13 +463,6 @@ export function SettingsApp({
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
-								<EffectSettings
-									compact
-									description={t("filter_effect_hint")}
-									config={config}
-									update={update}
-								/>
-								<SettingsDivider />
 								<XToggle
 									label={t("show_actual_reply_count")}
 									hint={t("show_actual_reply_count_hint")}
