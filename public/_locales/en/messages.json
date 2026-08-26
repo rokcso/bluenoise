@@ -104,6 +104,10 @@
 	"filter_fan_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as fan accounts by X."
 	},
+	"filter_commentary_accounts": { "message": "Filter commentary accounts" },
+	"filter_commentary_accounts_hint": {
+		"message": "Blur or hide posts from accounts marked as commentary by X."
+	},
 	"filter_automated_accounts": { "message": "Filter automated accounts" },
 	"filter_automated_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as automated by X."

@@ -100,6 +100,10 @@
 	"filter_fan_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为粉丝账号的推文。"
 	},
+	"filter_commentary_accounts": { "message": "过滤评论账号" },
+	"filter_commentary_accounts_hint": {
+		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为评论账号的推文。"
+	},
 	"filter_automated_accounts": { "message": "过滤自动发推账号" },
 	"filter_automated_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为自动发推的账号。"

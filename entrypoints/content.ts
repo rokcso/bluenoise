@@ -363,6 +363,12 @@ function isFanAccount(article: Element): boolean {
 	return /^(粉丝账号|fan account)$/i.test(getAccountLabel(article));
 }
 
+function isCommentaryAccount(article: Element): boolean {
+	return /^(评论账号|评论性账号|commentary account)$/i.test(
+		getAccountLabel(article),
+	);
+}
+
 /** X displays this account status beside the author handle. */
 function isAutomatedAccount(article: Element): boolean {
 	const name = article.querySelector(NAME_SEL);
@@ -586,12 +592,15 @@ function evaluate(article: Element): {
 			cfg.filterAds ||
 			cfg.filterParodyAccounts ||
 			cfg.filterFanAccounts ||
+			cfg.filterCommentaryAccounts ||
 			cfg.filterAutomatedAccounts)
 	) {
 		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
 		if (cfg.filterParodyAccounts && isParodyAccount(article))
 			hit = "__parody__";
 		if (cfg.filterFanAccounts && isFanAccount(article)) hit = "__fan__";
+		if (cfg.filterCommentaryAccounts && isCommentaryAccount(article))
+			hit = "__commentary__";
 		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
 			hit = "__automated__";
 		if (hit) {
@@ -1036,6 +1045,7 @@ const MATCH_KEYS = [
 	"filterAds",
 	"filterParodyAccounts",
 	"filterFanAccounts",
+	"filterCommentaryAccounts",
 	"filterAutomatedAccounts",
 	"matchNames",
 	"ignoreSpaces",

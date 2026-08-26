@@ -350,6 +350,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("filter_commentary_accounts")}
+									hint={t("filter_commentary_accounts_hint")}
+									checked={config.filterCommentaryAccounts}
+									onChange={(v) => update({ filterCommentaryAccounts: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("filter_automated_accounts")}
 									hint={t("filter_automated_accounts_hint")}
 									checked={config.filterAutomatedAccounts}
