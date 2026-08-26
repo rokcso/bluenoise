@@ -11,7 +11,7 @@ Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
 ## Installation
 
-<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khjGJcVzh1J3I8B5oE1/aU1sJbxmQ1yCXS5MYRDu.svg" alt="Available in the Chrome Web Store" width="220"></a>
+<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="Available in the Chrome Web Store" width="220"></a>
 
 Install BlueNoise from the [Chrome Web Store](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid).
 

@@ -10,7 +10,7 @@ BlueNoise 是一款开源的浏览器扩展，可以模糊或隐藏 X（原 Twit
 
 ## 安装
 
-<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khjGJcVzh1J3I8B5oE1/aU1sJbxmQ1yCXS5MYRDu.svg" alt="在 Chrome 应用商店中获取" width="220"></a>
+<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="在 Chrome 应用商店中获取" width="220"></a>
 
 从 [Chrome 应用商店](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid)安装 BlueNoise。
 
