@@ -49,6 +49,8 @@ export interface AppConfig {
 	debugLogging: boolean;
 	/** Filter promoted/ad posts using the selected filtering mode. */
 	filterAds: boolean;
+	/** Filter posts from accounts marked as parody by X. */
+	filterParodyAccounts: boolean;
 	/** Use subscribed public account-level blacklists and whitelists. */
 	accountListEnabled: boolean;
 	/** Enable downloaded account list providers independently of local lists. */

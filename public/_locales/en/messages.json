@@ -96,6 +96,10 @@
 	"filter_ads_hint": {
 		"message": "Blur or hide posts marked as ads using your selected filtering mode."
 	},
+	"filter_parody_accounts": { "message": "Filter parody accounts" },
+	"filter_parody_accounts_hint": {
+		"message": "Blur or hide posts from accounts marked as parody by X."
+	},
 	"hide_premium_promo": { "message": "Hide X Premium ads" },
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
