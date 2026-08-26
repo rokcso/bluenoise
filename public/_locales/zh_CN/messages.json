@@ -62,6 +62,44 @@
 	},
 	"sync": { "message": "同步" },
 	"rule_backup": { "message": "规则备份" },
+	"rule_backup_title": { "message": "规则备份" },
+	"rule_export_title": { "message": "导出用户规则" },
+	"rule_export_description": {
+		"message": "将自定义的关键词和账号规则下载为备份文件。"
+	},
+	"rule_export_action": { "message": "导出" },
+	"rule_import_title": { "message": "导入用户规则" },
+	"rule_import_description": {
+		"message": "从 BlueNoise 备份文件恢复自定义的关键词和账号规则。"
+	},
+	"rule_import_action": { "message": "导入" },
+	"rule_import_success_merge": {
+		"message": "规则已合并导入，忽略 $1 条无效规则。"
+	},
+	"rule_import_success_append": {
+		"message": "规则已追加导入，忽略 $1 条无效规则。"
+	},
+	"rule_import_success_replace": {
+		"message": "规则已覆盖导入，忽略 $1 条无效规则。"
+	},
+	"rule_import_dialog_title": { "message": "选择导入模式" },
+	"rule_import_dialog_summary": {
+		"message": "已解析 $1 条规则，忽略 $2 条无效规则。"
+	},
+	"rule_import_mode_merge": { "message": "合并导入" },
+	"rule_import_mode_merge_description": {
+		"message": "保留现有规则，仅新增不重复规则。"
+	},
+	"rule_import_mode_append": { "message": "追加原样导入" },
+	"rule_import_mode_append_description": {
+		"message": "保留现有规则，并追加所有有效规则，允许重复。"
+	},
+	"rule_import_mode_replace": { "message": "覆盖导入" },
+	"rule_import_mode_replace_description": {
+		"message": "替换当前全部用户规则。"
+	},
+	"rule_import_confirm": { "message": "确认导入" },
+	"cancel": { "message": "取消" },
 	"my_keywords": { "message": "我的关键词" },
 	"my_keywords_hint": {
 		"message": "添加要触发过滤的关键词或正则表达式，每行一条。"

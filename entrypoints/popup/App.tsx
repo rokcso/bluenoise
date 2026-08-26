@@ -18,8 +18,8 @@ import { loadRuleData } from "@/src/domain/rules";
 import {
 	applyUserRulesImport,
 	exportUserRules,
-	parseUserRulesImport,
 	type ImportPreview,
+	parseUserRulesImport,
 } from "@/src/domain/user-rules-transfer";
 
 type AppConfig = SettingsConfig & RuleView;
@@ -29,6 +29,7 @@ import {
 	AppearanceIcon,
 	DatabaseIcon,
 	DiagnosticsIcon,
+	DownloadIcon,
 	ExternalLinkIcon,
 	LayoutIcon,
 	ListFilterIcon,
@@ -43,6 +44,7 @@ import {
 	SunIcon,
 	ToolbarIcon,
 	TwitterIcon,
+	UploadIcon,
 	UserSlashIcon,
 	XFillIcon,
 } from "@/src/ui/icons";
@@ -257,12 +259,9 @@ export function SettingsApp({
 
 				{activeSection === "backup" && (
 					<>
-						<PageHeading
-							title="规则备份"
-							description="导入或导出我的关键词与账号黑白名单；不会处理设置或外部来源缓存。"
-						/>
+						<PageHeading title={t("rule_backup_title")} />
 						<SettingsGroup
-							label="用户规则导入与导出"
+							label={t("rule_backup")}
 							icon={DatabaseIcon}
 							labelClassName="font-normal"
 						>
@@ -852,43 +851,62 @@ function UserRulesTransfer({
 			accountWhitelist: next.accounts.user.allow,
 		});
 		setMessage(
-			`已${mode === "replace" ? "覆盖" : mode === "append" ? "追加" : "合并"}导入${pendingImport.ignored ? `，忽略 ${pendingImport.ignored} 条无效规则` : ""}`,
+			t(
+				mode === "replace"
+					? "rule_import_success_replace"
+					: mode === "append"
+						? "rule_import_success_append"
+						: "rule_import_success_merge",
+				String(pendingImport.ignored),
+			),
 		);
 		setPendingImport(null);
 	};
 	return (
-		<div className="flex flex-col gap-3 p-3">
-			<p className="text-xs text-x-muted">
-				导出或导入我的关键词与账号黑白名单；不包含设置和外部来源缓存。
-			</p>
-			<div className="flex gap-2">
-				<button
-					type="button"
-					onClick={exportRules}
-					className="rounded-full border border-x-border px-3 py-1.5 text-xs"
-				>
-					导出规则
-				</button>
-				<button
-					type="button"
-					onClick={() => input.current?.click()}
-					className="rounded-full border border-x-border px-3 py-1.5 text-xs"
-				>
-					导入规则
-				</button>
-				<input
-					ref={input}
-					type="file"
-					accept="application/json,.json"
-					className="hidden"
-					onChange={(event) => {
-						const file = event.target.files?.[0];
-						if (file) void importRules(file);
-						event.currentTarget.value = "";
-					}}
+		<div>
+			<SettingsPanel>
+				<SettingsRow
+					label={t("rule_export_title")}
+					description={t("rule_export_description")}
+					control={
+						<button
+							type="button"
+							onClick={exportRules}
+							className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-x-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							<DownloadIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							{t("rule_export_action")}
+						</button>
+					}
 				/>
-			</div>
-			{message && <p className="text-xs text-x-muted">{message}</p>}
+				<SettingsDivider />
+				<SettingsRow
+					label={t("rule_import_title")}
+					description={t("rule_import_description")}
+					control={
+						<button
+							type="button"
+							onClick={() => input.current?.click()}
+							className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-x-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							<UploadIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							{t("rule_import_action")}
+						</button>
+					}
+				/>
+			</SettingsPanel>
+			<input
+				ref={input}
+				type="file"
+				accept="application/json,.json"
+				className="hidden"
+				onChange={(event) => {
+					const file = event.target.files?.[0];
+					if (file) void importRules(file);
+					event.currentTarget.value = "";
+				}}
+			/>
+			{message && <p className="mt-3 text-xs text-x-muted">{message}</p>}
 			{pendingImport && (
 				<ImportModeDialog
 					preview={pendingImport}
@@ -920,13 +938,18 @@ function ImportModeDialog({
 			className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
 			role="dialog"
 			aria-modal="true"
-			aria-label="选择导入模式"
+			aria-label={t("rule_import_dialog_title")}
 		>
 			<div className="w-full max-w-md rounded-xl border border-x-border bg-x-bg p-5 shadow-xl">
-				<h2 className="text-base font-semibold">选择导入模式</h2>
+				<h2 className="text-base font-semibold">
+					{t("rule_import_dialog_title")}
+				</h2>
 				<p className="mt-2 text-sm text-x-muted">
-					已解析 {total} 条规则
-					{preview.ignored ? `，忽略 ${preview.ignored} 条无效规则` : ""}。
+					{t(
+						"rule_import_dialog_summary",
+						String(total),
+						String(preview.ignored),
+					)}
 				</p>
 				<div className="mt-4 grid gap-2">
 					<button
@@ -935,9 +958,9 @@ function ImportModeDialog({
 						aria-pressed={mode === "merge"}
 						className={`rounded-lg border p-3 text-left text-sm ${mode === "merge" ? "border-x-accent bg-x-hover" : "border-x-border"}`}
 					>
-						<strong>合并导入</strong>
+						<strong>{t("rule_import_mode_merge")}</strong>
 						<span className="mt-1 block text-xs text-x-muted">
-							保留现有规则，仅新增不重复规则。
+							{t("rule_import_mode_merge_description")}
 						</span>
 					</button>
 					<button
@@ -946,20 +969,20 @@ function ImportModeDialog({
 						aria-pressed={mode === "append"}
 						className={`rounded-lg border p-3 text-left text-sm ${mode === "append" ? "border-x-accent bg-x-hover" : "border-x-border"}`}
 					>
-						<strong>追加原样导入</strong>
+						<strong>{t("rule_import_mode_append")}</strong>
 						<span className="mt-1 block text-xs text-x-muted">
-							保留现有规则，并追加所有有效规则，允许重复。
+							{t("rule_import_mode_append_description")}
 						</span>
 					</button>
 					<button
 						type="button"
 						onClick={() => setMode("replace")}
 						aria-pressed={mode === "replace"}
-						className={`rounded-lg border p-3 text-left text-sm text-x-red ${mode === "replace" ? "border-x-red bg-x-hover" : "border-x-red/40"}`}
+						className={`rounded-lg border p-3 text-left text-sm text-x-red ${mode === "replace" ? "border-x-red bg-x-hover" : "border-x-red/20"}`}
 					>
-						<strong>覆盖导入</strong>
+						<strong>{t("rule_import_mode_replace")}</strong>
 						<span className="mt-1 block text-xs text-x-muted">
-							替换当前全部用户规则。
+							{t("rule_import_mode_replace_description")}
 						</span>
 					</button>
 				</div>
@@ -969,14 +992,14 @@ function ImportModeDialog({
 						onClick={onCancel}
 						className="rounded-full px-3 py-1.5 text-sm text-x-muted hover:bg-x-hover"
 					>
-						取消
+						{t("cancel")}
 					</button>
 					<button
 						type="button"
 						onClick={() => onSelect(mode)}
 						className="rounded-full bg-x-accent px-4 py-1.5 text-sm font-medium text-x-accent-fg"
 					>
-						确认导入
+						{t("rule_import_confirm")}
 					</button>
 				</div>
 			</div>
