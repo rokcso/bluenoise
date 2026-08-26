@@ -125,6 +125,10 @@
 	"hide_new_posts_prompt_hint": {
 		"message": "Remove the new posts prompt at the top of the timeline."
 	},
+	"hide_grok_button": { "message": "Hide Grok floating button" },
+	"hide_grok_button_hint": {
+		"message": "Remove the Grok drawer button floating at the bottom-right of the page."
+	},
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
 	"language_auto": { "message": "Follow browser" },

@@ -36,6 +36,7 @@ const FOLLOW_ATTR = "data-xsf-hide-follow";
 const TITLE_COUNT_ATTR = "data-xsf-hide-title-count";
 const BADGES_ATTR = "data-xsf-hide-notification-badges";
 const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
+const GROK_ATTR = "data-xsf-hide-grok";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
@@ -391,6 +392,12 @@ function applyPageCustomizations(): void {
 				hideAncestors(pill, 0);
 		}
 	}
+	if (cfg.hideGrokButton) {
+		for (const drawer of document.querySelectorAll<HTMLElement>(
+			'[data-testid="GrokDrawer"]',
+		))
+			hideAncestors(drawer, 2);
+	}
 }
 
 function applyTitleAndFavicon(): void {
@@ -439,6 +446,8 @@ function applyStyleVars(): void {
 	if (cfg.enabled && cfg.hideNewPostsPrompt)
 		root.setAttribute(NEW_POSTS_ATTR, "");
 	else root.removeAttribute(NEW_POSTS_ATTR);
+	if (cfg.enabled && cfg.hideGrokButton) root.setAttribute(GROK_ATTR, "");
+	else root.removeAttribute(GROK_ATTR);
 
 	applyPageCustomizations();
 	if (!cfg.enabled || !active) {
