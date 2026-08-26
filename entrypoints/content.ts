@@ -53,6 +53,8 @@ const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
 const SIDEBAR_ATTR = "data-xsf-collapse-sidebar";
 const COMPOSE_ICON_MARK = "data-xsf-compose-icon";
 const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
+/** X's "Live on X" module heading, localized by X's UI language. */
+const LIVE_STREAMS_HEADING_RE = /^(?:X \u4e0a\u7684\u76f4\u64ad|live on x)$/i;
 const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
@@ -691,6 +693,42 @@ function applyPageCustomizations(): void {
 				next = next.nextElementSibling
 			)
 				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+		}
+	}
+	if (cfg.hideLiveStreams) {
+		for (const heading of document.querySelectorAll<HTMLElement>(
+			'h2[role="heading"][aria-level="2"]',
+		)) {
+			if (!LIVE_STREAMS_HEADING_RE.test(heading.textContent?.trim() ?? ""))
+				continue;
+			// The module root is the closest ancestor that also contains the live
+			// cards, identified by X's impression-tracking marker. Cap the climb so
+			// a heading rendered in its own cell can never hide the whole page.
+			let root: HTMLElement | null = heading.parentElement;
+			for (let depth = 0; root && depth < 6; depth++) {
+				if (root.querySelector('[data-testid="placementTracking"]')) break;
+				root = root.parentElement;
+			}
+			if (root?.querySelector('[data-testid="placementTracking"]'))
+				root.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			const cell = heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
+			if (!cell) {
+				// No cell wrapper: hide the heading and its direct wrappers.
+				hideAncestors(heading, 2);
+				continue;
+			}
+			cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			// Live-stream rows render as following sibling cells carrying the same
+			// marker; stop at the first cell without it so ordinary tweets after
+			// the module are never hidden.
+			for (
+				let next = cell.nextElementSibling;
+				next?.matches('[data-testid="cellInnerDiv"]');
+				next = next.nextElementSibling
+			) {
+				if (!next.querySelector('[data-testid="placementTracking"]')) break;
+				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			}
 		}
 	}
 	if (cfg.hideTrends) {

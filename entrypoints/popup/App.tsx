@@ -135,6 +135,34 @@ export function SettingsApp({
 		}
 	}, [config?.subscriptions]);
 
+	type MakeoverKey =
+		| "collapseSidebar"
+		| "hideTitleCount"
+		| "hideNotificationBadges"
+		| "hideNewPostsPrompt"
+		| "hideGrokButton"
+		| "hideMessageButton"
+		| "hideTrends"
+		| "hideFollowSuggestions"
+		| "hideTimelineFollowSuggestions"
+		| "hideDiscoverMore"
+		| "hideLiveStreams"
+		| "hideFooter"
+		| "hidePremiumPromo"
+		| "useBlueBird";
+
+	/**
+	 * Turning on any makeover sub-feature also enables the makeover master switch
+	 * (pageCleanupEnabled): sub-features are inert while the master is off, and
+	 * the master switch only lives in the popup, so users toggling a sub-feature
+	 * here would otherwise see no effect at all.
+	 */
+	const toggleMakeover = (key: MakeoverKey) => (enabled: boolean) => {
+		const patch: Partial<AppConfig> = { [key]: enabled };
+		if (enabled && !config?.pageCleanupEnabled) patch.pageCleanupEnabled = true;
+		update(patch);
+	};
+
 	if (!config) {
 		return <div className="p-4 text-sm text-x-muted">{t("loading")}</div>;
 	}
@@ -284,7 +312,7 @@ export function SettingsApp({
 									label={t("collapse_sidebar")}
 									hint={t("collapse_sidebar_hint")}
 									checked={config.collapseSidebar}
-									onChange={(v) => update({ collapseSidebar: v })}
+									onChange={toggleMakeover("collapseSidebar")}
 								/>
 							</SettingsPanel>
 						</SettingsGroup>
@@ -298,70 +326,77 @@ export function SettingsApp({
 									label={t("hide_title_count")}
 									hint={t("hide_title_count_hint")}
 									checked={config.hideTitleCount}
-									onChange={(v) => update({ hideTitleCount: v })}
+									onChange={toggleMakeover("hideTitleCount")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_notification_badges")}
 									hint={t("hide_notification_badges_hint")}
 									checked={config.hideNotificationBadges}
-									onChange={(v) => update({ hideNotificationBadges: v })}
+									onChange={toggleMakeover("hideNotificationBadges")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_new_posts_prompt")}
 									hint={t("hide_new_posts_prompt_hint")}
 									checked={config.hideNewPostsPrompt}
-									onChange={(v) => update({ hideNewPostsPrompt: v })}
+									onChange={toggleMakeover("hideNewPostsPrompt")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_grok_button")}
 									hint={t("hide_grok_button_hint")}
 									checked={config.hideGrokButton}
-									onChange={(v) => update({ hideGrokButton: v })}
+									onChange={toggleMakeover("hideGrokButton")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_message_button")}
 									hint={t("hide_message_button_hint")}
 									checked={config.hideMessageButton}
-									onChange={(v) => update({ hideMessageButton: v })}
+									onChange={toggleMakeover("hideMessageButton")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_trends")}
 									hint={t("hide_trends_hint")}
 									checked={config.hideTrends}
-									onChange={(v) => update({ hideTrends: v })}
+									onChange={toggleMakeover("hideTrends")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_follow_suggestions")}
 									hint={t("hide_follow_suggestions_hint")}
 									checked={config.hideFollowSuggestions}
-									onChange={(v) => update({ hideFollowSuggestions: v })}
+									onChange={toggleMakeover("hideFollowSuggestions")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_timeline_follow_suggestions")}
 									hint={t("hide_timeline_follow_suggestions_hint")}
 									checked={config.hideTimelineFollowSuggestions}
-									onChange={(v) => update({ hideTimelineFollowSuggestions: v })}
+									onChange={toggleMakeover("hideTimelineFollowSuggestions")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_discover_more")}
 									hint={t("hide_discover_more_hint")}
 									checked={config.hideDiscoverMore}
-									onChange={(v) => update({ hideDiscoverMore: v })}
+									onChange={toggleMakeover("hideDiscoverMore")}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_live_streams")}
+									hint={t("hide_live_streams_hint")}
+									checked={config.hideLiveStreams}
+									onChange={toggleMakeover("hideLiveStreams")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_footer")}
 									hint={t("hide_footer_hint")}
 									checked={config.hideFooter}
-									onChange={(v) => update({ hideFooter: v })}
+									onChange={toggleMakeover("hideFooter")}
 								/>
 								<SettingsDivider />
 							</SettingsPanel>
@@ -383,7 +418,7 @@ export function SettingsApp({
 									switchLabel={`${t("hide_premium_promo")} ${t("x_platform")}`}
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}
-									onChange={(v) => update({ hidePremiumPromo: v })}
+									onChange={toggleMakeover("hidePremiumPromo")}
 								/>
 								<SettingsDivider />
 								<XToggle
@@ -398,7 +433,7 @@ export function SettingsApp({
 										</>
 									}
 									checked={config.useBlueBird}
-									onChange={(v) => update({ useBlueBird: v })}
+									onChange={toggleMakeover("useBlueBird")}
 								/>
 							</SettingsPanel>
 						</SettingsGroup>
