@@ -246,6 +246,13 @@ export function SettingsApp({
 						>
 							<SettingsPanel>
 								<XToggle
+									label={t("collapse_sidebar")}
+									hint={t("collapse_sidebar_hint")}
+									checked={config.collapseSidebar}
+									onChange={(v) => update({ collapseSidebar: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("show_actual_reply_count")}
 									hint={t("show_actual_reply_count_hint")}
 									checked={config.showActualReplyCount}

@@ -122,3 +122,29 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
+
+/* X sometimes renders the desktop sidebar without its own collapse control.
+ * Force the same compact, icon-only geometry using stable navigation markers. */
+
+[data-xsf-collapse-sidebar]
+	header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])
+	> div {
+	/* biome-ignore lint/complexity/noImportantStyles: override X's inline responsive sidebar width. */
+	width: 68px !important;
+	/* biome-ignore lint/complexity/noImportantStyles: override X's inline responsive sidebar width. */
+	min-width: 68px !important;
+	/* biome-ignore lint/complexity/noImportantStyles: prevent X from animating back to its expanded width. */
+	transition: none !important;
+}
+
+[data-xsf-collapse-sidebar]
+	header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])
+	:is(
+		nav[role="navigation"],
+		[data-testid="SideNav_NewTweet_Button"],
+		[data-testid="SideNav_AccountSwitcher_Button"]
+	)
+	[dir] {
+	/* biome-ignore lint/complexity/noImportantStyles: X uses inline and generated layout styles for sidebar labels. */
+	display: none !important;
+}

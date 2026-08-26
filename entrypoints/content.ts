@@ -39,6 +39,7 @@ const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
 const GROK_ATTR = "data-xsf-hide-grok";
 const MESSAGE_ATTR = "data-xsf-hide-message";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
+const SIDEBAR_ATTR = "data-xsf-collapse-sidebar";
 const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
 const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
 
@@ -753,6 +754,8 @@ function applyStyleVars(): void {
 	else root.removeAttribute(GROK_ATTR);
 	if (cfg.enabled && cfg.hideMessageButton) root.setAttribute(MESSAGE_ATTR, "");
 	else root.removeAttribute(MESSAGE_ATTR);
+	if (cfg.enabled && cfg.collapseSidebar) root.setAttribute(SIDEBAR_ATTR, "");
+	else root.removeAttribute(SIDEBAR_ATTR);
 
 	applyPageCustomizations();
 	if (!cfg.enabled || !active) {

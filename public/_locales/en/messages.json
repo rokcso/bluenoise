@@ -184,6 +184,10 @@
 	"show_actual_reply_count_hint": {
 		"message": "On post pages, replace X's total with the loaded replies that remain after filtering."
 	},
+	"collapse_sidebar": { "message": "Collapse navigation sidebar" },
+	"collapse_sidebar_hint": {
+		"message": "Always use X's compact icon-only sidebar, including pages without a collapse button."
+	},
 	"reveal_on_hover": { "message": "Reveal around cursor" },
 	"reveal_on_hover_hint": {
 		"message": "In Blur mode, show a clear area around the cursor."
