@@ -1,8 +1,9 @@
 import { setLanguage, t } from "@/lib/i18n";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
+	DEFAULT_ACCOUNT_LIST_SOURCES,
 	normalizeAccountEntry,
-	syncAccountLists,
+	syncAccountListSource,
 } from "@/src/domain/account-list";
 import {
 	defaultConfig,
@@ -167,7 +168,9 @@ export default defineBackground(() => {
 			// replacing a successfully stored snapshot.
 			void syncMissingSubscriptions();
 		} else if (message?.type === "XSF_SYNC_ACCOUNT_LIST") {
-			syncAccounts(true)
+			const sourceId =
+				typeof message.sourceId === "string" ? message.sourceId : undefined;
+			syncAccounts(true, sourceId ? [sourceId] : undefined)
 				.then(() => sendResponse({ ok: true }))
 				.catch((error) =>
 					sendResponse({
@@ -180,47 +183,44 @@ export default defineBackground(() => {
 		return false;
 	});
 
-	async function syncAccounts(force = false): Promise<void> {
+	async function syncAccounts(
+		force = false,
+		sourceIds?: string[],
+	): Promise<void> {
 		if (!force) {
 			const { settings: current } = await readState();
 			if (!current.externalAccountListsEnabled) return;
 		}
-		try {
-			const { rules } = await readState();
-			const previous = rules.accounts.external.mxga;
-			const snapshot = await syncAccountLists(undefined, previous);
-			await chrome.storage.local.set({
-				[RULE_DATA_KEY]: {
-					...rules,
-					accounts: {
-						...rules.accounts,
-						external: { ...rules.accounts.external, mxga: snapshot },
-					},
-				},
-			});
-		} catch (error) {
-			const { rules } = await readState();
-			const previous = rules.accounts.external.mxga;
-			if (previous) {
-				await chrome.storage.local.set({
-					[RULE_DATA_KEY]: {
-						...rules,
-						accounts: {
-							...rules.accounts,
-							external: {
-								...rules.accounts.external,
-								mxga: {
-									...previous,
-									syncError: String(
-										error instanceof Error ? error.message : error,
-									),
-								},
-							},
-						},
-					},
-				});
-			}
-		}
+		const { settings, rules } = await readState();
+		const sources = DEFAULT_ACCOUNT_LIST_SOURCES.filter(
+			(source) =>
+				(!sourceIds || sourceIds.includes(source.id)) &&
+				settings.accountSourceEnabled[source.id],
+		);
+		const external = { ...rules.accounts.external };
+		await Promise.all(
+			sources.map(async (source) => {
+				try {
+					external[source.id] = await syncAccountListSource(
+						source,
+						external[source.id],
+					);
+				} catch (error) {
+					const previous = external[source.id];
+					if (previous)
+						external[source.id] = {
+							...previous,
+							syncError: String(error instanceof Error ? error.message : error),
+						};
+				}
+			}),
+		);
+		await chrome.storage.local.set({
+			[RULE_DATA_KEY]: {
+				...rules,
+				accounts: { ...rules.accounts, external },
+			},
+		});
 	}
 
 	/** Fetch and store snapshots for subscriptions that have never synced. */

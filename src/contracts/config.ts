@@ -65,6 +65,8 @@ export interface AppConfig {
 	accountListEnabled: boolean;
 	/** Enable downloaded account list providers independently of local lists. */
 	externalAccountListsEnabled: boolean;
+	/** Which external account providers participate in matching. */
+	accountSourceEnabled: Record<string, boolean>;
 }
 
 export interface KeywordSubscription {
@@ -76,6 +78,8 @@ export interface KeywordSubscription {
 	enabled: boolean;
 	keywords: string[] | null;
 	syncedAt: number;
+	/** Allow a bundled source to start empty while its maintained list grows. */
+	allowEmpty?: boolean;
 	etag?: string;
 	syncError?: string;
 }
