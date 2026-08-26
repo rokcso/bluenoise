@@ -4,8 +4,7 @@
 
 > Make X readable again.
 
-BlueNoise is an open-source browser extension that blurs or hides noisy replies on X (formerly Twitter) post-detail pages and posts on the home timeline with local, reversible keyword rules. It improves reading without calling X APIs, reading cookies, or changing your
-account state.
+BlueNoise is an open-source, privacy-first browser extension for filtering and redesigning X (formerly Twitter): locally blur or hide noisy replies, posts, and ads with reversible keyword and account rules, then hide clutter and restore a cleaner classic look. It never calls X APIs, reads cookies, or changes your account state.
 
 Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 

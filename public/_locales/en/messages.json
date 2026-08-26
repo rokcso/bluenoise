@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - Make X readable again" },
 	"extDescription": {
-		"message": "Blur or hide noisy X replies and timeline posts with local, reversible keyword rules - no APIs, cookies, or account changes."
+		"message": "Make X readable: locally blur or hide noisy replies, timeline posts, and ads; optional page cleanups; no cookies or account changes."
 	},
 	"loading": { "message": "Loading…" },
 	"tagline": { "message": "Less noise. More signal." },
