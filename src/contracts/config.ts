@@ -49,6 +49,10 @@ export interface AppConfig {
 	debugLogging: boolean;
 	/** Filter promoted/ad posts using the selected filtering mode. */
 	filterAds: boolean;
+	/** Filter promoted posts whose creative contains video or media. */
+	filterMediaAds: boolean;
+	/** Filter promoted posts containing an external website card. */
+	filterCardAds: boolean;
 	/** Filter posts from accounts marked as parody by X. */
 	filterParodyAccounts: boolean;
 	/** Filter posts from accounts marked as fan accounts by X. */

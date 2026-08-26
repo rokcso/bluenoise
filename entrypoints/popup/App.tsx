@@ -329,10 +329,17 @@ export function SettingsApp({
 						>
 							<SettingsPanel>
 								<XToggle
-									label={t("filter_ads")}
-									hint={t("filter_ads_hint")}
-									checked={config.filterAds}
-									onChange={(v) => update({ filterAds: v })}
+									label={t("filter_media_ads")}
+									hint={t("filter_media_ads_hint")}
+									checked={config.filterMediaAds}
+									onChange={(v) => update({ filterMediaAds: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("filter_card_ads")}
+									hint={t("filter_card_ads_hint")}
+									checked={config.filterCardAds}
+									onChange={(v) => update({ filterCardAds: v })}
 								/>
 								<SettingsDivider />
 								<XToggle

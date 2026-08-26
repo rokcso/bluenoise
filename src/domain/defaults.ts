@@ -44,6 +44,8 @@ export const DEFAULTS: AppConfig = {
 	caseSensitive: false,
 	debugLogging: false,
 	filterAds: false,
+	filterMediaAds: false,
+	filterCardAds: false,
 	filterParodyAccounts: false,
 	filterFanAccounts: false,
 	filterCommentaryAccounts: false,
