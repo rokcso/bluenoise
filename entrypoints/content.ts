@@ -112,6 +112,8 @@ interface DisplayedReplyCountState {
 
 /** Reply-count DOM touched by this script, so it can always be restored. */
 const displayedReplyCounts = new Set<DisplayedReplyCountState>();
+/** Counts learned from a detail page during this SPA session, keyed by tweet id. */
+const replyCountCache = new Map<string, number>();
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
@@ -406,24 +408,27 @@ function displayedReplyCount(mainTweet: Element): number | null {
 	return count;
 }
 
-function updateDisplayedReplyCount(): void {
-	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isStatusPage()) {
-		clearDisplayedReplyCounts();
-		return;
+function tweetIdOf(article: Element): string | null {
+	for (const link of article.querySelectorAll<HTMLAnchorElement>(
+		'a[href*="/status/"]',
+	)) {
+		// The timestamp link belongs to this tweet, unlike a link in quoted media.
+		if (!link.querySelector("time")) continue;
+		const id = link.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1];
+		if (id) return id;
 	}
-	const mainTweet = [...document.querySelectorAll(ARTICLE_SEL)].find(
-		isMainTweet,
-	);
-	if (!mainTweet) return;
-	const count = displayedReplyCount(mainTweet);
-	const button = mainTweet.querySelector<HTMLButtonElement>(
+	return null;
+}
+
+function renderDisplayedReplyCount(article: Element, count: number): void {
+	const button = article.querySelector<HTMLButtonElement>(
 		'button[data-testid="reply"]',
 	);
 	const container = button?.querySelector<HTMLElement>(
 		'[data-testid="app-text-transition-container"]',
 	);
 	const text = container?.firstElementChild;
-	if (count === null || !button || !(text instanceof HTMLElement)) return;
+	if (!button || !(text instanceof HTMLElement)) return;
 
 	const formatted = count.toLocaleString();
 	let state = [...displayedReplyCounts].find((item) => item.button === button);
@@ -467,6 +472,32 @@ function updateDisplayedReplyCount(): void {
 	state.injectedText = formatted;
 	state.injectedAria = aria;
 	state.injectedGroupAria = groupAria;
+}
+
+function updateDisplayedReplyCount(): void {
+	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isStatusPage()) {
+		clearDisplayedReplyCounts();
+		return;
+	}
+	const mainTweet = [...document.querySelectorAll(ARTICLE_SEL)].find(
+		isMainTweet,
+	);
+	if (!mainTweet) return;
+	const count = displayedReplyCount(mainTweet);
+	if (count === null) return;
+	const id = tweetIdOf(mainTweet);
+	if (id) replyCountCache.set(id, count);
+	renderDisplayedReplyCount(mainTweet, count);
+}
+
+function updateTimelineReplyCounts(): void {
+	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isHomeTimeline())
+		return;
+	for (const article of document.querySelectorAll(ARTICLE_SEL)) {
+		const id = tweetIdOf(article);
+		const count = id ? replyCountCache.get(id) : undefined;
+		if (count !== undefined) renderDisplayedReplyCount(article, count);
+	}
 }
 
 function applyMark(article: Element, hit: string | null): void {
@@ -961,7 +992,8 @@ function flush(): void {
 	if (logs.length) emitFilteredLogs(logs);
 	// Run after every queued reply has received its filtering mark, so the
 	// number mirrors what remains in the conversation rather than X's total.
-	updateDisplayedReplyCount();
+	if (isStatusPage()) updateDisplayedReplyCount();
+	else if (isHomeTimeline()) updateTimelineReplyCounts();
 	scheduleBadge();
 }
 
@@ -1171,8 +1203,11 @@ function teardown(): void {
 	pending.clear();
 }
 
-function refresh(options: { rebuild?: boolean } = {}): void {
+function refresh(
+	options: { rebuild?: boolean; clearReplyCountCache?: boolean } = {},
+): void {
 	if (options.rebuild) refreshMatchers();
+	if (options.rebuild || options.clearReplyCountCache) replyCountCache.clear();
 	generation++;
 	// A visual clone is owned by this script rather than X's virtualized list.
 	// It must never survive a SPA route transition.
@@ -1299,8 +1334,11 @@ function watchConfig(): void {
 			applyStyleVars();
 		}
 		if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
-		if (prev.showActualReplyCount !== cfg.showActualReplyCount)
-			updateDisplayedReplyCount();
+		if (prev.showActualReplyCount !== cfg.showActualReplyCount) {
+			if (!cfg.showActualReplyCount) clearDisplayedReplyCounts();
+			else if (isHomeTimeline()) updateTimelineReplyCounts();
+			else updateDisplayedReplyCount();
+		}
 
 		if (!prev.debugLogging && cfg.debugLogging) {
 			debugLog("Debug logging enabled", {
@@ -1321,7 +1359,7 @@ function watchConfig(): void {
 			| undefined;
 		accountIndex = next ? buildAccountListIndex(next) : undefined;
 		accountListVersion = next?.version ?? 0;
-		if (cfg.enabled && active) refresh();
+		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
 	});
 }
 
