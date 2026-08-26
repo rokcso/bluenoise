@@ -207,11 +207,18 @@ export default defineBackground(() => {
 					);
 				} catch (error) {
 					const previous = external[source.id];
-					if (previous)
-						external[source.id] = {
-							...previous,
-							syncError: String(error instanceof Error ? error.message : error),
-						};
+					external[source.id] = {
+						version: previous?.version ?? 0,
+						blacklistIds: previous?.blacklistIds ?? [],
+						blacklistHandles: previous?.blacklistHandles ?? [],
+						whitelistIds: previous?.whitelistIds ?? [],
+						whitelistHandles: previous?.whitelistHandles ?? [],
+						blacklistCount: previous?.blacklistCount ?? 0,
+						whitelistCount: previous?.whitelistCount ?? 0,
+						syncedAt: previous?.syncedAt ?? Date.now(),
+						sources: previous?.sources ?? [source.id],
+						syncError: String(error instanceof Error ? error.message : error),
+					};
 				}
 			}),
 		);

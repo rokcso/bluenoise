@@ -617,6 +617,7 @@ function AccountListSettings({
 							)
 						: t("not_synced");
 					const enabled = config.accountSourceEnabled[source.id] ?? false;
+					const metadata = snapshot?.syncError || status;
 					return (
 						<div
 							key={source.id}
@@ -636,7 +637,7 @@ function AccountListSettings({
 									/>
 								</a>
 								<span className="mt-1 block truncate text-xs text-x-muted">
-									{status}
+									{metadata}
 								</span>
 								{source.id === "mxga" && (
 									<a
