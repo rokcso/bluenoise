@@ -15,6 +15,7 @@ export const DEFAULTS: AppConfig = {
 	hideTitleCount: true,
 	hideNotificationBadges: true,
 	hideNewPostsPrompt: true,
+	hideGrokButton: true,
 	subscriptions: [
 		{
 			id: "x-spam-filter",

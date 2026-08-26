@@ -267,6 +267,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("hide_grok_button")}
+									hint={t("hide_grok_button_hint")}
+									checked={config.hideGrokButton}
+									onChange={(v) => update({ hideGrokButton: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("hide_premium_promo")}
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}

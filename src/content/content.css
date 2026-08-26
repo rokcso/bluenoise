@@ -112,3 +112,8 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 		var(--xsf-reveal-radius) at var(--xsf-reveal-x) var(--xsf-reveal-y)
 	);
 }
+
+[data-xsf-hide-grok] [data-testid="GrokDrawer"] {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
