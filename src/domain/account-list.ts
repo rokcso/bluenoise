@@ -30,11 +30,11 @@ export interface AccountListSource {
 export const DEFAULT_ACCOUNT_LIST_SOURCES: AccountListSource[] = [
 	{
 		id: "bluenoise",
-		name: "BlueNoise Account Blacklist",
+		name: "BlueNoise",
 		homepageUrl:
 			"https://github.com/rokcso/bluenoise/blob/main/data/accounts.txt",
 		blacklistUrl:
-			"https://raw.githubusercontent.com/rokcso/bluenoise/main/data/accounts.txt",
+			"https://raw.githubusercontent.com/rokcso/bluenoise/refs/heads/main/data/accounts.txt",
 		format: "one-per-line",
 	},
 	{

@@ -27,6 +27,8 @@ export {
 	RiSettings3Line as SettingsIcon,
 	RiShieldCheckLine as ShieldCheckIcon,
 	RiSunLine as SunIcon,
+	RiTwitterFill as TwitterIcon,
+	RiTwitterXFill as XFillIcon,
 	RiTwitterXLine as XIcon,
 	RiUser3Fill as UsersFillIcon,
 	RiUser3Line as UsersIcon,

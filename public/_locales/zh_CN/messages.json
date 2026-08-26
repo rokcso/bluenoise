@@ -52,6 +52,10 @@
 		"placeholders": { "count": { "content": "$1" } }
 	},
 	"not_synced": { "message": "未同步" },
+	"account_blacklist_count": {
+		"message": "黑名单 $1 条",
+		"placeholders": { "count": { "content": "$1" } }
+	},
 	"last_synced": {
 		"message": "更新于 $1",
 		"placeholders": { "date": { "content": "$1" } }
@@ -82,15 +86,21 @@
 	"external_account_sources": { "message": "外部账号来源" },
 	"account_blacklist_title": { "message": "我的账号黑名单" },
 	"account_whitelist_title": { "message": "我的账号白名单" },
-	"customization": { "message": "X 变身" },
+	"customization": { "message": "变身" },
 	"about": { "message": "关于" },
-	"about_intro": {
-		"message": "一个在浏览器本地运行的 X 阅读工具。规则由你定义，边界也由你定义。"
+	"about_intro_before_platform": { "message": "一个在浏览器本地运行的" },
+	"about_intro_after_platform": {
+		"message": "阅读工具。规则由你定义，边界也由你定义。"
 	},
 	"about_idea_title": { "message": "把信息流还给正在阅读的人" },
-	"about_idea_body": {
-		"message": "X 上从来不缺信息，缺的是自己做判断的空间。BlueNoise 把筛选权交还给你。所有数据和逻辑都留在浏览器里，不直接触碰账号，不与 X API 交互，也不收集你的数据。我们把控制做得足够细，是因为你应该能决定时间线里出现什么，也能决定哪些东西不再出现。"
+	"about_idea_body_after_platform": {
+		"message": "上从来不缺信息，缺的是自己做判断的空间。BlueNoise 把筛选权交还给你。所有数据和逻辑都留在浏览器里，不直接触碰账号，不与"
 	},
+	"about_idea_body_after_api": {
+		"message": " API 交互，也不收集你的数据。我们把控制做得足够细，是因为你应该能决定时间线里出现什么，也能决定哪些东西不再出现。"
+	},
+	"x_platform": { "message": "X" },
+	"twitter_platform": { "message": "Twitter" },
 	"about_name_title": { "message": "为什么叫 BlueNoise" },
 	"about_name_body": {
 		"message": "蓝噪声常用于图像和信号处理中。它把干扰分散开，不让它们聚成刺眼的斑块。这个名字并不意味着要消灭一切噪声。好的信息流仍然可以有意外和分歧，只是没必要把注意力浪费在重复、诱导和无意义的打扰上。"
@@ -134,7 +144,9 @@
 	"filter_automated_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为自动发推的账号。"
 	},
-	"hide_premium_promo": { "message": "隐藏 X Premium 订阅广告" },
+	"hide_premium_promo": { "message": "隐藏 Premium 订阅广告" },
+	"hide_premium_promo_before_platform": { "message": "隐藏" },
+	"hide_premium_promo_after_platform": { "message": "Premium 订阅广告" },
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"
 	},
@@ -155,14 +167,14 @@
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"
 	},
-	"hide_footer": { "message": "隐藏 X 页脚" },
+	"hide_footer": { "message": "隐藏页脚" },
 	"hide_footer_hint": {
 		"message": "移除侧边栏中的「条款 / 隐私 / Cookie」页脚。"
 	},
 	"use_blue_bird": { "message": "使用经典蓝鸟 logo" },
-	"use_blue_bird_hint": {
-		"message": "将 X 的 logo 替换为经典的 Twitter 蓝鸟。"
-	},
+	"use_blue_bird_hint_before": { "message": "将" },
+	"use_blue_bird_hint_between": { "message": "的 logo 替换为经典的" },
+	"use_blue_bird_hint_after": { "message": "蓝鸟。" },
 	"hide_title_count": { "message": "隐藏 Tab 未读数字" },
 	"hide_title_count_hint": {
 		"message": "移除浏览器标签页标题和图标上的未读数字。"

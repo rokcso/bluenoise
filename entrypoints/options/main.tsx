@@ -10,14 +10,13 @@ import {
 	FilterIcon,
 	InformationFillIcon,
 	InformationIcon,
-	LayoutFillIcon,
-	LayoutIcon,
 	ListFilterFillIcon,
 	ListFilterIcon,
 	SettingsFillIcon,
 	SettingsIcon,
 	UsersFillIcon,
 	UsersIcon,
+	XFillIcon,
 	XIcon,
 } from "@/src/ui/icons";
 
@@ -54,8 +53,8 @@ const navigation: {
 	{
 		id: "customization",
 		label: "customization",
-		lineIcon: LayoutIcon,
-		fillIcon: LayoutFillIcon,
+		lineIcon: XFillIcon,
+		fillIcon: XFillIcon,
 	},
 	{
 		id: "about",
