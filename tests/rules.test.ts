@@ -28,4 +28,8 @@ describe("rule data", () => {
 				.block,
 		).toEqual([]);
 	});
+
+	it("enables the bundled keyword provider by default", () => {
+		expect(defaultConfig().keywordSourceEnabled.bluenoise).toBe(true);
+	});
 });

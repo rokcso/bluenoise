@@ -87,7 +87,7 @@ export function parseKeywordText(text: string): string[] {
 
 	for (const line of String(text || "").split(/\r?\n/)) {
 		const keyword = line.trim();
-		if (!keyword || seen.has(keyword)) continue;
+		if (!keyword || keyword.startsWith("#") || seen.has(keyword)) continue;
 		seen.add(keyword);
 		keywords.push(keyword);
 	}

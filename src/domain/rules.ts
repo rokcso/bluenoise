@@ -10,6 +10,13 @@ export const KEYWORD_SOURCES: Omit<
 	"enabled" | "keywords" | "syncedAt" | "etag" | "syncError"
 >[] = [
 	{
+		id: "bluenoise",
+		name: "BlueNoise Keyword Blacklist",
+		homepageUrl: "https://github.com/rokcso/bluenoise",
+		url: "https://raw.githubusercontent.com/rokcso/bluenoise/main/data/keywords.txt",
+		allowEmpty: true,
+	},
+	{
 		id: "x-spam-filter",
 		name: "X Spam Filter",
 		homepageUrl: "https://github.com/ZPVIP/x-spam-filter",

@@ -21,7 +21,11 @@ export const DEFAULTS: AppConfig = {
 	hideNewPostsPrompt: true,
 	hideGrokButton: true,
 	hideMessageButton: true,
-	keywordSourceEnabled: { "x-spam-filter": true, community: true },
+	keywordSourceEnabled: {
+		bluenoise: true,
+		"x-spam-filter": true,
+		community: true,
+	},
 	matchNames: false,
 	ignoreSpaces: true,
 	caseSensitive: false,
