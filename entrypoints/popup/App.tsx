@@ -343,6 +343,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("filter_fan_accounts")}
+									hint={t("filter_fan_accounts_hint")}
+									checked={config.filterFanAccounts}
+									onChange={(v) => update({ filterFanAccounts: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("filter_automated_accounts")}
 									hint={t("filter_automated_accounts_hint")}
 									checked={config.filterAutomatedAccounts}

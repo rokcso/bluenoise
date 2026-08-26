@@ -344,13 +344,23 @@ function isPromotedPost(article: Element): boolean {
 	return Boolean(cell?.querySelector('[data-testid="placementTracking"]'));
 }
 
-/** X links its official parody-account badge to the authenticity policy. */
-function isParodyAccount(article: Element): boolean {
-	return Boolean(
-		article.querySelector(
-			'a[href="https://help.x.com/rules-and-policies/authenticity"]',
-		) || article.querySelector('img[src*="/parody-mask."]'),
+/** Read X's localized account label from its official authenticity link. */
+function getAccountLabel(article: Element): string {
+	return (
+		article
+			.querySelector(
+				'a[href="https://help.x.com/rules-and-policies/authenticity"]',
+			)
+			?.textContent?.trim() ?? ""
 	);
+}
+
+function isParodyAccount(article: Element): boolean {
+	return /^(戏仿账号|parody account)$/i.test(getAccountLabel(article));
+}
+
+function isFanAccount(article: Element): boolean {
+	return /^(粉丝账号|fan account)$/i.test(getAccountLabel(article));
 }
 
 /** X displays this account status beside the author handle. */
@@ -575,11 +585,13 @@ function evaluate(article: Element): {
 			accountListsActive ||
 			cfg.filterAds ||
 			cfg.filterParodyAccounts ||
+			cfg.filterFanAccounts ||
 			cfg.filterAutomatedAccounts)
 	) {
 		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
 		if (cfg.filterParodyAccounts && isParodyAccount(article))
 			hit = "__parody__";
+		if (cfg.filterFanAccounts && isFanAccount(article)) hit = "__fan__";
 		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
 			hit = "__automated__";
 		if (hit) {
@@ -1023,6 +1035,7 @@ const MATCH_KEYS = [
 	"enabled",
 	"filterAds",
 	"filterParodyAccounts",
+	"filterFanAccounts",
 	"filterAutomatedAccounts",
 	"matchNames",
 	"ignoreSpaces",
