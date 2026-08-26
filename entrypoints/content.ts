@@ -344,6 +344,15 @@ function isPromotedPost(article: Element): boolean {
 	return Boolean(cell?.querySelector('[data-testid="placementTracking"]'));
 }
 
+/** X links its official parody-account badge to the authenticity policy. */
+function isParodyAccount(article: Element): boolean {
+	return Boolean(
+		article.querySelector(
+			'a[href="https://help.x.com/rules-and-policies/authenticity"]',
+		) || article.querySelector('img[src*="/parody-mask."]'),
+	);
+}
+
 function syncMarkedRowsInteractivity(): void {
 	for (const row of document.querySelectorAll(`.${HIT_CLASS}`)) {
 		setRowInert(row, cfg.mode === "hide");
@@ -556,9 +565,14 @@ function evaluate(article: Element): {
 
 	if (
 		!mainTweet &&
-		(matchers.count > 0 || accountListsActive || cfg.filterAds)
+		(matchers.count > 0 ||
+			accountListsActive ||
+			cfg.filterAds ||
+			cfg.filterParodyAccounts)
 	) {
 		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
+		if (cfg.filterParodyAccounts && isParodyAccount(article))
+			hit = "__parody__";
 		if (hit) {
 			state.set(article, { sig, hit, log });
 			applyMark(article, hit);
@@ -999,6 +1013,7 @@ function loadStoredConfig(): Promise<void> {
 const MATCH_KEYS = [
 	"enabled",
 	"filterAds",
+	"filterParodyAccounts",
 	"matchNames",
 	"ignoreSpaces",
 	"caseSensitive",

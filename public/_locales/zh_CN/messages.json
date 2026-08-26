@@ -92,6 +92,10 @@
 	"filter_ads_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏标记为广告的推文。"
 	},
+	"filter_parody_accounts": { "message": "过滤戏仿账号" },
+	"filter_parody_accounts_hint": {
+		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为戏仿账号的推文。"
+	},
 	"hide_premium_promo": { "message": "隐藏 X Premium 订阅广告" },
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"

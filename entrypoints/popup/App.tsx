@@ -334,6 +334,13 @@ export function SettingsApp({
 									checked={config.filterAds}
 									onChange={(v) => update({ filterAds: v })}
 								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("filter_parody_accounts")}
+									hint={t("filter_parody_accounts_hint")}
+									checked={config.filterParodyAccounts}
+									onChange={(v) => update({ filterParodyAccounts: v })}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup
