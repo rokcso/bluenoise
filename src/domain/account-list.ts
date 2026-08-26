@@ -8,8 +8,6 @@
  * storage.onChanged. Matching keeps the compact strings only (no per-entry
  * object expansion), so a tab's resident set is small.
  */
-export const ACCOUNT_LIST_KEY = "account-list";
-
 export const MXGA_META_URL = "https://x.zuoluo.tv/v1/list/meta";
 export const MXGA_BASE_URL = "https://x.zuoluo.tv";
 export const MXGA_WHITELIST_URL = `${MXGA_BASE_URL}/v1/whitelist`;

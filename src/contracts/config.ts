@@ -1,5 +1,5 @@
 /**
- * Global app config. Stored in storage.local under the single key "config".
+ * Behavioral settings stored in chrome.storage.local under "settings".
  */
 export interface AppConfig {
 	/** "auto" follows the OS color scheme; "light"/"dark" force one. Popup-only. */
@@ -37,16 +37,8 @@ export interface AppConfig {
 	hideNewPostsPrompt: boolean;
 	hideGrokButton: boolean;
 	hideMessageButton: boolean;
-	/** User-controlled external keyword subscriptions. */
-	subscriptions: KeywordSubscription[];
-	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */
-	userKeywords: string[];
-	/**
-	 * Whitelist: rules listed here never match. Both keyword lists are read-only
-	 * (sync overwrites them), so "false positives" are handled here, not by
-	 * editing the lists.
-	 */
-	whitelist: string[];
+	/** Which built-in external keyword sources participate in matching. */
+	keywordSourceEnabled: Record<string, boolean>;
 	/** Besides body text, also match the display name and @handle. */
 	matchNames: boolean;
 	/** Strip whitespace and zero-width chars before matching to catch evasive forms. */
@@ -73,10 +65,6 @@ export interface AppConfig {
 	accountListEnabled: boolean;
 	/** Enable downloaded account list providers independently of local lists. */
 	externalAccountListsEnabled: boolean;
-	/** Local account IDs or @handles that should always be allowed. */
-	accountWhitelist: string[];
-	/** Local account IDs or @handles that should always be filtered. */
-	accountBlacklist: string[];
 }
 
 export interface KeywordSubscription {
@@ -91,6 +79,38 @@ export interface KeywordSubscription {
 	etag?: string;
 	syncError?: string;
 }
+
+/** Download state for one external keyword source. Source metadata lives in code. */
+export interface KeywordSourceSnapshot {
+	keywords: string[] | null;
+	syncedAt: number;
+	etag?: string;
+	syncError?: string;
+}
+
+/** Persisted rules, deliberately separate from behavioral settings. */
+export interface RuleData {
+	keywords: {
+		user: { block: string[]; allow: string[] };
+		external: Record<string, KeywordSourceSnapshot>;
+	};
+	accounts: {
+		user: { allow: string[]; block: string[] };
+		external: Record<
+			string,
+			import("@/src/domain/account-list").AccountListSnapshot
+		>;
+	};
+}
+
+/** UI/runtime projection; never persist this merged shape. */
+export type RuleView = Pick<AppConfig, "keywordSourceEnabled"> & {
+	userKeywords: string[];
+	whitelist: string[];
+	accountWhitelist: string[];
+	accountBlacklist: string[];
+	subscriptions: KeywordSubscription[];
+};
 
 /** A rule to compile. Plain keywords are merged into big regexes; /regex/ compile separately. */
 export interface Rule {
@@ -128,5 +148,6 @@ export const IGNORABLE_SRC =
 
 export const REGEX_ESCAPE_RE = /[.*+?^${}()|[\]\\]/g;
 
-/** storage.local key used to persist the config. */
-export const CONFIG_KEY = "config";
+/** storage.local keys used to persist behavioral settings and rule snapshots. */
+export const SETTINGS_KEY = "settings";
+export const RULE_DATA_KEY = "rule-data";

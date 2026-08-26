@@ -2,17 +2,25 @@ import "../src/content/content.css";
 import { setLanguage } from "@/lib/i18n";
 import { readFiberUserId } from "@/src/content/fiber";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
-import type { AppConfig, Matchers } from "@/src/contracts/config";
-import { CONFIG_KEY } from "@/src/contracts/config";
+import type {
+	AppConfig,
+	Matchers,
+	RuleData,
+	RuleView,
+} from "@/src/contracts/config";
+import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
-	ACCOUNT_LIST_KEY,
 	type AccountListIndex,
-	type AccountListSnapshot,
 	buildAccountListIndex,
 	matchAccountIndex,
 } from "@/src/domain/account-list";
-import { loadConfig } from "@/src/domain/defaults";
+import {
+	defaultConfig,
+	defaultRuleData,
+	loadConfig,
+} from "@/src/domain/defaults";
 import { buildMatchers, matchAny, matchDetail } from "@/src/domain/matcher";
+import { createRuleView, loadRuleData } from "@/src/domain/rules";
 
 const ARTICLE_SEL = 'article[data-testid="tweet"], article[role="article"]';
 const CELL_SEL = 'div[data-testid="cellInnerDiv"]';
@@ -40,6 +48,7 @@ const GROK_ATTR = "data-xsf-hide-grok";
 const MESSAGE_ATTR = "data-xsf-hide-message";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
 const SIDEBAR_ATTR = "data-xsf-collapse-sidebar";
+const COMPOSE_ICON_MARK = "data-xsf-compose-icon";
 const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
 const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
 
@@ -90,6 +99,8 @@ export default defineContentScript({
 // ==================== State ====================
 
 let cfg: AppConfig = loadConfig(undefined);
+let rules: RuleData = defaultRuleData();
+let ruleView: RuleView = createRuleView(cfg, rules);
 let matchers: Matchers = {
 	plain: [],
 	normalization: { caseSensitive: false, ignoreSpaces: true },
@@ -111,6 +122,10 @@ interface DisplayedReplyCountState {
 	injectedGroupAria: string | null;
 }
 
+interface ComposeIconState {
+	originalChildren: DocumentFragment;
+}
+
 /** Reply-count DOM touched by this script, so it can always be restored. */
 const displayedReplyCounts = new Set<DisplayedReplyCountState>();
 /** Counts learned from a detail page during this SPA session, keyed by tweet id. */
@@ -122,6 +137,9 @@ const replyCountCache = new Map<string, number>();
  */
 const replyLedgers = new Map<string, Map<string, boolean>>();
 const MAX_CACHED_REPLY_THREADS = 50;
+const composeOriginalChildren = new Map<HTMLElement, ComposeIconState>();
+/** Inline styles owned by the compact-sidebar feature, restored on disable. */
+const sidebarOriginalStyles = new Map<HTMLElement, string>();
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
@@ -168,7 +186,8 @@ function debugLog(message: string, details: Record<string, unknown>): void {
 }
 
 function refreshMatchers(): void {
-	matchers = buildMatchers(cfg);
+	ruleView = createRuleView(cfg, rules);
+	matchers = buildMatchers({ ...cfg, ...ruleView });
 }
 
 function clearAllMarks(): void {
@@ -726,6 +745,169 @@ function applyTitleAndFavicon(): void {
 	}
 }
 
+function createComposeIcon(): SVGSVGElement {
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("aria-hidden", "true");
+	svg.setAttribute("class", "xsf-compose-icon");
+	svg.setAttribute(COMPOSE_ICON_MARK, "");
+	const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+	for (const [pathData, fillRule] of [
+		[
+			"M10.938 4.5H9.9c-1.136 0-1.929 0-2.546.05-.605.05-.953.143-1.216.277-.564.288-1.023.747-1.31 1.31-.135.264-.228.612-.277 1.218C4.5 7.97 4.5 8.765 4.5 9.9v4.2c0 1.136 0 1.929.05 2.546.05.605.143.953.277 1.216.288.565.747 1.023 1.31 1.31.264.135.612.228 1.217.277.617.05 1.41.051 2.546.051h4.2c1.136 0 1.929 0 2.545-.05.606-.05.954-.143 1.217-.277.565-.288 1.023-.746 1.31-1.31.135-.264.228-.612.277-1.217.05-.617.051-1.41.051-2.546v-1.037h2V14.1c0 1.103.001 1.992-.058 2.709-.06.728-.185 1.368-.487 1.96-.48.941-1.245 1.707-2.185 2.186-.593.302-1.233.428-1.961.488-.718.058-1.606.057-2.71.057H9.9c-1.103 0-1.991.001-2.709-.058-.728-.06-1.368-.185-1.96-.487-.941-.48-1.707-1.245-2.186-2.185-.302-.593-.428-1.233-.487-1.961-.059-.718-.058-1.606-.058-2.71V9.9c0-1.103-.001-1.991.058-2.709.06-.728.185-1.368.487-1.96.48-.941 1.245-1.707 2.185-2.186.593-.302 1.233-.428 1.961-.487.718-.059 1.606-.058 2.71-.058h1.037v2z",
+			undefined,
+		],
+		[
+			"M16.293 3.293c1.219-1.219 3.195-1.219 4.414 0 1.219 1.219 1.219 3.195 0 4.414l-5.491 5.491c-.533.533-.89.896-1.31 1.179-.356.24-.742.433-1.148.574-.478.167-.983.234-1.729.341l-2.708.387.387-2.708c.107-.746.174-1.25.34-1.729.142-.405.335-.792.575-1.148.283-.42.646-.777 1.179-1.31l5.491-5.491zm3 1.414c-.438-.438-1.148-.438-1.586 0l-5.491 5.491c-.587.587-.784.79-.934 1.013-.144.214-.26.445-.345.688-.088.254-.131.533-.248 1.354l-.01.067.068-.008c.82-.118 1.1-.161 1.354-.25.243-.084.474-.2.688-.344.223-.15.426-.347 1.013-.934l5.491-5.491c.438-.438.438-1.148 0-1.586z",
+			"evenodd",
+		],
+	] as const) {
+		const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+		path.setAttribute("d", pathData);
+		if (fillRule) {
+			path.setAttribute("clip-rule", fillRule);
+			path.setAttribute("fill-rule", fillRule);
+		}
+		group.append(path);
+	}
+	svg.append(group);
+	return svg;
+}
+
+function restoreSidebarComposeIcons(): void {
+	for (const [content, state] of composeOriginalChildren) {
+		if (
+			content.isConnected &&
+			content.querySelector(`[${COMPOSE_ICON_MARK}]`)
+		) {
+			content.replaceChildren();
+			content.append(state.originalChildren);
+		}
+	}
+	composeOriginalChildren.clear();
+	for (const button of document.querySelectorAll<HTMLElement>(
+		"[data-xsf-compact-compose]",
+	))
+		button.removeAttribute("data-xsf-compact-compose");
+}
+
+function setSidebarStyle(element: HTMLElement, cssText: string): void {
+	if (sidebarOriginalStyles.has(element)) return;
+	sidebarOriginalStyles.set(element, element.style.cssText);
+	element.style.cssText += `;${cssText}`;
+}
+
+function restoreSidebarStyles(): void {
+	for (const [element, cssText] of sidebarOriginalStyles)
+		if (element.isConnected) element.style.cssText = cssText;
+	sidebarOriginalStyles.clear();
+}
+
+function applyCompactComposeClasses(button: HTMLAnchorElement): void {
+	button.setAttribute("data-xsf-compact-compose", "");
+	setSidebarStyle(
+		button,
+		"width:52px !important; min-width:52px !important; height:52px !important; min-height:52px !important; border-radius:9999px !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 !important",
+	);
+	const container = button.parentElement;
+	if (container instanceof HTMLElement)
+		setSidebarStyle(
+			container,
+			"width:52px !important; min-width:52px !important; max-width:52px !important; margin-left:0 !important; margin-right:0 !important; align-self:flex-start !important",
+		);
+}
+
+/** Apply compact geometry using stable semantic elements, not X build class names. */
+function applySidebarCompactLayout(): void {
+	if (!cfg.enabled || !cfg.collapseSidebar) {
+		restoreSidebarStyles();
+		return;
+	}
+	for (const header of document.querySelectorAll<HTMLElement>(
+		'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
+	)) {
+		const widthContainer = header.querySelector<HTMLElement>(":scope > div");
+		if (widthContainer)
+			setSidebarStyle(
+				widthContainer,
+				"width:68px !important; min-width:68px !important; max-width:68px !important; transition:none !important",
+			);
+		const nav = header.querySelector<HTMLElement>('nav[role="navigation"]');
+		if (nav) {
+			setSidebarStyle(
+				nav,
+				"width:52px !important; min-width:52px !important; max-width:52px !important; flex:none !important",
+			);
+			for (const control of nav.querySelectorAll<HTMLElement>(
+				":scope > a, :scope > button",
+			))
+				setSidebarStyle(
+					control,
+					"box-sizing:border-box !important; width:52px !important; min-width:52px !important; max-width:52px !important; flex:none !important",
+				);
+		}
+		const accountButton = header.querySelector<HTMLElement>(
+			'[data-testid="SideNav_AccountSwitcher_Button"]',
+		);
+		if (accountButton)
+			setSidebarStyle(
+				accountButton,
+				"box-sizing:border-box !important; width:52px !important; min-width:52px !important; max-width:52px !important; flex:none !important",
+			);
+	}
+}
+
+/** The expanded sidebar has no compose SVG, so reproduce X's compact DOM. */
+function applySidebarComposeIcons(): void {
+	if (!cfg.enabled || !cfg.collapseSidebar) {
+		restoreSidebarComposeIcons();
+		return;
+	}
+	for (const button of document.querySelectorAll<HTMLAnchorElement>(
+		'a[data-testid="SideNav_NewTweet_Button"]',
+	)) {
+		if (
+			!button.closest(
+				'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
+			)
+		)
+			continue;
+		const content = button.querySelector<HTMLElement>(":scope > div[dir]");
+		if (!content) continue;
+		const injectedIcon = content.querySelector<SVGSVGElement>(
+			`:scope > svg[${COMPOSE_ICON_MARK}]`,
+		);
+		const nativeIcon = [...content.querySelectorAll(":scope > svg")].find(
+			(svg) => svg !== injectedIcon,
+		);
+		// X can append its compact SVG after a partial expanded render. When that
+		// happens, discard our temporary icon and preserve X's native one.
+		if (nativeIcon) {
+			const spacer = injectedIcon?.nextElementSibling;
+			injectedIcon?.remove();
+			if (spacer?.hasAttribute("data-xsf-compose-spacer")) spacer.remove();
+			composeOriginalChildren.delete(content);
+			continue;
+		}
+		if (injectedIcon) {
+			applyCompactComposeClasses(button);
+			continue;
+		}
+		const originalChildren = document.createDocumentFragment();
+		while (content.firstChild) originalChildren.append(content.firstChild);
+		composeOriginalChildren.set(content, {
+			originalChildren,
+		});
+		applyCompactComposeClasses(button);
+		content.append(createComposeIcon());
+		const spacer = document.createElement("div");
+		spacer.setAttribute("data-xsf-compose-spacer", "");
+		const emptyLabel = document.createElement("span");
+		spacer.append(emptyLabel);
+		content.append(spacer);
+	}
+}
+
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
 function applyStyleVars(): void {
 	const root = document.documentElement;
@@ -756,6 +938,8 @@ function applyStyleVars(): void {
 	else root.removeAttribute(MESSAGE_ATTR);
 	if (cfg.enabled && cfg.collapseSidebar) root.setAttribute(SIDEBAR_ATTR, "");
 	else root.removeAttribute(SIDEBAR_ATTR);
+	applySidebarCompactLayout();
+	applySidebarComposeIcons();
 
 	applyPageCustomizations();
 	if (!cfg.enabled || !active) {
@@ -844,8 +1028,8 @@ function evaluate(article: Element): {
 	const accountListsActive =
 		cfg.accountListEnabled &&
 		(cfg.externalAccountListsEnabled ||
-			cfg.accountWhitelist.length > 0 ||
-			cfg.accountBlacklist.length > 0);
+			ruleView.accountWhitelist.length > 0 ||
+			ruleView.accountBlacklist.length > 0);
 
 	if (
 		!mainTweet &&
@@ -882,8 +1066,8 @@ function evaluate(article: Element): {
 			? matchAccountIndex(
 					cfg.externalAccountListsEnabled ? accountIndex : undefined,
 					identity,
-					cfg.accountWhitelist,
-					cfg.accountBlacklist,
+					ruleView.accountWhitelist,
+					ruleView.accountBlacklist,
 				)
 			: null;
 		if (accountMatch === "blacklist") {
@@ -1085,6 +1269,8 @@ function onMutations(records: MutationRecord[]): void {
 	// The header logo applies on every X page and X re-renders it on SPA
 	// navigation, so re-apply before the filterable-page guard below.
 	applyLogo();
+	applySidebarCompactLayout();
+	applySidebarComposeIcons();
 	applyPageCustomizations();
 	for (const node of records.flatMap((record) => [...record.addedNodes]))
 		if (node.nodeType === Node.ELEMENT_NODE) applyPageCustomizations();
@@ -1238,6 +1424,8 @@ function teardown(): void {
 	window.removeEventListener("popstate", onUrlChange);
 	window.removeEventListener("pageshow", onPageShow);
 	document.removeEventListener("visibilitychange", onVisibility);
+	restoreSidebarComposeIcons();
+	restoreSidebarStyles();
 	hideReveal();
 	pending.clear();
 }
@@ -1316,8 +1504,10 @@ function hookHistory(): void {
 
 function loadStoredConfig(): Promise<void> {
 	return new Promise((resolve) => {
-		chrome.storage.local.get(CONFIG_KEY, (result) => {
-			cfg = loadConfig(result.config);
+		chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
+			cfg = loadConfig(result[SETTINGS_KEY] ?? defaultConfig());
+			rules = loadRuleData(result[RULE_DATA_KEY] ?? defaultRuleData());
+			refreshMatchers();
 			setLanguage(cfg.language);
 			resolve();
 		});
@@ -1337,42 +1527,35 @@ const MATCH_KEYS = [
 	"ignoreSpaces",
 	"caseSensitive",
 ] as const;
-const MATCH_LIST_KEYS = ["userKeywords", "subscriptions", "whitelist"] as const;
-
-function listSignature(value: unknown): string {
-	return Array.isArray(value) ? value.join("\n") : `factory${SEP}`;
-}
 
 function matchingChanged(prev: AppConfig, next: AppConfig): boolean {
 	for (const key of MATCH_KEYS) {
 		if (prev[key] !== next[key]) return true;
 	}
-	for (const key of MATCH_LIST_KEYS) {
-		if (listSignature(prev[key]) !== listSignature(next[key])) return true;
-	}
 	if (prev.accountListEnabled !== next.accountListEnabled) return true;
 	if (prev.externalAccountListsEnabled !== next.externalAccountListsEnabled)
 		return true;
-	for (const key of ["accountWhitelist", "accountBlacklist"] as const) {
-		if (listSignature(prev[key]) !== listSignature(next[key])) return true;
-	}
 	return false;
 }
 
 function watchConfig(): void {
 	chrome.storage.onChanged.addListener((changes, area) => {
-		if (area !== "local" || !changes.config) return;
+		if (area !== "local" || (!changes[SETTINGS_KEY] && !changes[RULE_DATA_KEY]))
+			return;
 		const prev = cfg;
-		cfg = loadConfig(changes.config.newValue);
-		setLanguage(cfg.language);
-		applyLogo();
-
-		if (matchingChanged(prev, cfg)) {
-			refresh({ rebuild: true });
-		} else {
-			applyStyleVars();
-		}
-		if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
+		const rulesChanged = Boolean(changes[RULE_DATA_KEY]);
+		chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
+			cfg = loadConfig(result[SETTINGS_KEY] ?? defaultConfig());
+			rules = loadRuleData(result[RULE_DATA_KEY] ?? defaultRuleData());
+			setLanguage(cfg.language);
+			applyLogo();
+			if (rulesChanged || matchingChanged(prev, cfg)) {
+				refresh({ rebuild: true });
+			} else {
+				applyStyleVars();
+			}
+			if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
+		});
 		if (prev.showActualReplyCount !== cfg.showActualReplyCount) {
 			if (!cfg.showActualReplyCount) clearDisplayedReplyCounts();
 			else if (isHomeTimeline()) updateTimelineReplyCounts();
@@ -1392,10 +1575,9 @@ function watchConfig(): void {
 		}
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {
-		if (area !== "local" || !changes[ACCOUNT_LIST_KEY]) return;
-		const next = changes[ACCOUNT_LIST_KEY].newValue as
-			| AccountListSnapshot
-			| undefined;
+		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
+		const next = (changes[RULE_DATA_KEY].newValue as RuleData | undefined)
+			?.accounts.external.mxga;
 		accountIndex = next ? buildAccountListIndex(next) : undefined;
 		accountListVersion = next?.version ?? 0;
 		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
@@ -1421,7 +1603,7 @@ async function init(): Promise<void> {
 		filtering: active,
 		enabled: cfg.enabled,
 		matcherCount: matchers.count,
-		userKeywordCount: cfg.userKeywords.length,
+		userKeywordCount: ruleView.userKeywords.length,
 	});
 	if (cfg.enabled && active) start();
 	else applyStyleVars();
@@ -1434,8 +1616,8 @@ function onVisibility(): void {
 }
 
 async function loadAccountList(): Promise<void> {
-	const result = await chrome.storage.local.get(ACCOUNT_LIST_KEY);
-	const snapshot = result[ACCOUNT_LIST_KEY] as AccountListSnapshot | undefined;
+	const result = await chrome.storage.local.get(RULE_DATA_KEY);
+	const snapshot = loadRuleData(result[RULE_DATA_KEY]).accounts.external.mxga;
 	accountIndex = snapshot ? buildAccountListIndex(snapshot) : undefined;
 	accountListVersion = snapshot?.version ?? 0;
 }
