@@ -45,6 +45,7 @@ export const DEFAULTS: AppConfig = {
 	debugLogging: false,
 	filterAds: false,
 	filterParodyAccounts: false,
+	filterFanAccounts: false,
 	filterAutomatedAccounts: false,
 	accountListEnabled: true,
 	externalAccountListsEnabled: false,

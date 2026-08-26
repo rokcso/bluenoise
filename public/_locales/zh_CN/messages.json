@@ -96,6 +96,10 @@
 	"filter_parody_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为戏仿账号的推文。"
 	},
+	"filter_fan_accounts": { "message": "过滤粉丝账号" },
+	"filter_fan_accounts_hint": {
+		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为粉丝账号的推文。"
+	},
 	"filter_automated_accounts": { "message": "过滤自动发推账号" },
 	"filter_automated_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为自动发推的账号。"
