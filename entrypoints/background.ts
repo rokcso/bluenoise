@@ -170,7 +170,7 @@ export default defineBackground(() => {
 		} else if (message?.type === "XSF_SYNC_ACCOUNT_LIST") {
 			const sourceId =
 				typeof message.sourceId === "string" ? message.sourceId : undefined;
-			syncAccounts(true, sourceId ? [sourceId] : undefined)
+			syncAccounts(sourceId ? [sourceId] : undefined)
 				.then(() => sendResponse({ ok: true }))
 				.catch((error) =>
 					sendResponse({
@@ -183,14 +183,7 @@ export default defineBackground(() => {
 		return false;
 	});
 
-	async function syncAccounts(
-		force = false,
-		sourceIds?: string[],
-	): Promise<void> {
-		if (!force) {
-			const { settings: current } = await readState();
-			if (!current.externalAccountListsEnabled) return;
-		}
+	async function syncAccounts(sourceIds?: string[]): Promise<void> {
 		const { settings, rules } = await readState();
 		const sources = DEFAULT_ACCOUNT_LIST_SOURCES.filter(
 			(source) =>

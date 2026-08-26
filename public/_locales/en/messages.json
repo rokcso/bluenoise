@@ -25,11 +25,6 @@
 	"mode_dim": { "message": "Blur" },
 	"mode_hide": { "message": "Hide" },
 	"external_keywords": { "message": "External keywords" },
-	"account_lists_enabled": { "message": "Enable account filtering" },
-	"account_lists_enabled_hint": {
-		"message": "Apply both local account rules and enabled external account sources."
-	},
-	"external_account_lists": { "message": "Use external account sources" },
 	"account_source_link": { "message": "View public data and audit history" },
 	"account_blacklist_hint": {
 		"message": "Local account blacklist. Enter one numeric X ID or @handle per line."

@@ -25,7 +25,6 @@ import {
 type AppConfig = SettingsConfig & RuleView;
 
 import {
-	AccountFilterIcon,
 	AppearanceIcon,
 	DatabaseIcon,
 	DiagnosticsIcon,
@@ -213,19 +212,6 @@ export function SettingsApp({
 				{activeSection === "accounts" && (
 					<>
 						<PageHeading title={t("accounts")} />
-						<SettingsGroup
-							label={t("account_filtering")}
-							icon={AccountFilterIcon}
-							labelClassName="font-normal"
-						>
-							<SettingsPanel>
-								<AccountListSettings
-									section="controls"
-									config={config}
-									update={update}
-								/>
-							</SettingsPanel>
-						</SettingsGroup>
 						<SettingsGroup
 							label={t("account_blacklist_title")}
 							icon={UserSlashIcon}
@@ -604,7 +590,7 @@ function AccountListSettings({
 	config,
 	update,
 }: {
-	section: "controls" | "localBlacklist" | "localWhitelist" | "source";
+	section: "localBlacklist" | "localWhitelist" | "source";
 	config: AppConfig;
 	update: (p: Partial<AppConfig>) => void;
 }) {
@@ -672,21 +658,10 @@ function AccountListSettings({
 			</div>
 		);
 	}
-	if (section === "controls") {
-		return (
-			<XToggle
-				label={t("account_lists_enabled")}
-				hint={t("account_lists_enabled_hint")}
-				checked={config.accountListEnabled}
-				onChange={(v) => update({ accountListEnabled: v })}
-			/>
-		);
-	}
-
 	const sources = DEFAULT_ACCOUNT_LIST_SOURCES;
 
 	return (
-		<div className={config.externalAccountListsEnabled ? "" : "opacity-70"}>
+		<div>
 			{sources
 				.map((source) => {
 					const snapshot = snapshots[source.id];

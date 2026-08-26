@@ -25,11 +25,6 @@
 	"mode_dim": { "message": "模糊" },
 	"mode_hide": { "message": "隐藏" },
 	"external_keywords": { "message": "外部关键词" },
-	"account_lists_enabled": { "message": "启用账号过滤" },
-	"account_lists_enabled_hint": {
-		"message": "同时应用本地账号规则和已启用的外部账号名单。"
-	},
-	"external_account_lists": { "message": "使用外部账号名单" },
 	"account_source_link": { "message": "查看公开数据与审计历史" },
 	"account_blacklist_hint": {
 		"message": "本地账号黑名单。每行填写一个 X 数字 ID 或 @用户名。"

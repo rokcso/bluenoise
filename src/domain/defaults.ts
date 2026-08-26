@@ -38,8 +38,6 @@ export const DEFAULTS: AppConfig = {
 	filterFanAccounts: false,
 	filterCommentaryAccounts: false,
 	filterAutomatedAccounts: false,
-	accountListEnabled: true,
-	externalAccountListsEnabled: false,
 	accountSourceEnabled: { bluenoise: true, mxga: true },
 };
 

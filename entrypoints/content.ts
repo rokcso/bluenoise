@@ -1107,11 +1107,13 @@ function evaluate(article: Element): {
 
 	// Account matching needs the numeric user id (React internals); keyword
 	// matching only needs the @handle from the DOM.
+	const externalAccountSourcesActive = Object.values(
+		cfg.accountSourceEnabled,
+	).some(Boolean);
 	const accountListsActive =
-		cfg.accountListEnabled &&
-		(cfg.externalAccountListsEnabled ||
-			ruleView.accountWhitelist.length > 0 ||
-			ruleView.accountBlacklist.length > 0);
+		externalAccountSourcesActive ||
+		ruleView.accountWhitelist.length > 0 ||
+		ruleView.accountBlacklist.length > 0;
 
 	if (
 		!mainTweet &&
@@ -1144,14 +1146,12 @@ function evaluate(article: Element): {
 			return { fresh: true, log };
 		}
 		const identity = readAuthorIdentity(article, accountListsActive);
-		const accountMatch = cfg.accountListEnabled
-			? matchAccountIndex(
-					cfg.externalAccountListsEnabled ? accountIndex : undefined,
-					identity,
-					ruleView.accountWhitelist,
-					ruleView.accountBlacklist,
-				)
-			: null;
+		const accountMatch = matchAccountIndex(
+			externalAccountSourcesActive ? accountIndex : undefined,
+			identity,
+			ruleView.accountWhitelist,
+			ruleView.accountBlacklist,
+		);
 		if (accountMatch === "blacklist") {
 			hit = "account:blacklist";
 			log = {
@@ -1685,9 +1685,6 @@ function matchingChanged(prev: AppConfig, next: AppConfig): boolean {
 	for (const key of MATCH_KEYS) {
 		if (prev[key] !== next[key]) return true;
 	}
-	if (prev.accountListEnabled !== next.accountListEnabled) return true;
-	if (prev.externalAccountListsEnabled !== next.externalAccountListsEnabled)
-		return true;
 	if (
 		JSON.stringify(prev.accountSourceEnabled) !==
 		JSON.stringify(next.accountSourceEnabled)

@@ -63,10 +63,6 @@ export interface AppConfig {
 	filterCommentaryAccounts: boolean;
 	/** Filter posts from accounts marked as automated by X. */
 	filterAutomatedAccounts: boolean;
-	/** Use subscribed public account-level blacklists and whitelists. */
-	accountListEnabled: boolean;
-	/** Enable downloaded account list providers independently of local lists. */
-	externalAccountListsEnabled: boolean;
 	/** Which external account providers participate in matching. */
 	accountSourceEnabled: Record<string, boolean>;
 }
