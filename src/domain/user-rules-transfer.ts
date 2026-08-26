@@ -113,7 +113,11 @@ export function applyUserRulesImport(
 	mode: "merge" | "replace" | "append",
 ): RuleData {
 	const merge = (a: string[], b: string[]) =>
-		mode === "replace" ? b : mode === "append" ? [...a, ...b] : [...new Set([...a, ...b])];
+		mode === "replace"
+			? b
+			: mode === "append"
+				? [...a, ...b]
+				: [...new Set([...a, ...b])];
 	return {
 		...current,
 		keywords: {
