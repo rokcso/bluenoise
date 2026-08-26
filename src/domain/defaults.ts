@@ -4,6 +4,7 @@ export const DEFAULTS: AppConfig = {
 	theme: "auto",
 	language: "auto",
 	enabled: true,
+	pageCleanupEnabled: true,
 	mode: "dim",
 	revealOnHover: true,
 	showBadgeCount: true,

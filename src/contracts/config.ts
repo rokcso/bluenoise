@@ -8,6 +8,8 @@ export interface AppConfig {
 	language: "auto" | "en" | "zh_CN";
 	/** Master switch: turning it off instantly restores all replies. */
 	enabled: boolean;
+	/** Master switch for X's own interface cleanup, independent of content filtering. */
+	pageCleanupEnabled: boolean;
 	/** "dim" = fade the whole reply; "hide" = make it disappear. Mutually exclusive. */
 	mode: "dim" | "hide";
 	/** In Blur mode, reveal a circular area around the cursor while hovering a filtered reply. */
