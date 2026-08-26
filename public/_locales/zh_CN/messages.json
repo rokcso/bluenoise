@@ -77,6 +77,7 @@
 	"extension": { "message": "工具栏" },
 	"keywords": { "message": "关键词" },
 	"accounts": { "message": "账号" },
+	"filtering": { "message": "过滤" },
 	"account_filtering": { "message": "账号过滤" },
 	"external_account_sources": { "message": "外部账号来源" },
 	"account_blacklist_title": { "message": "我的账号黑名单" },
@@ -108,6 +109,16 @@
 	"use_blue_bird_hint": {
 		"message": "将 X 的 logo 替换为经典的 Twitter 蓝鸟。"
 	},
+	"hide_title_count": { "message": "隐藏 Tab 未读数字" },
+	"hide_title_count_hint": {
+		"message": "移除浏览器标签页标题和图标上的未读数字。"
+	},
+	"hide_notification_badges": { "message": "隐藏通知红点" },
+	"hide_notification_badges_hint": {
+		"message": "移除导航栏上的彩色通知圆点和数字。"
+	},
+	"hide_new_posts_prompt": { "message": "隐藏新帖提示" },
+	"hide_new_posts_prompt_hint": { "message": "移除时间线顶部的新帖提示。" },
 	"language": { "message": "语言" },
 	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
 	"language_auto": { "message": "跟随浏览器" },

@@ -246,6 +246,27 @@ export function SettingsApp({
 						>
 							<SettingsPanel>
 								<XToggle
+									label={t("hide_title_count")}
+									hint={t("hide_title_count_hint")}
+									checked={config.hideTitleCount}
+									onChange={(v) => update({ hideTitleCount: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_notification_badges")}
+									hint={t("hide_notification_badges_hint")}
+									checked={config.hideNotificationBadges}
+									onChange={(v) => update({ hideNotificationBadges: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_new_posts_prompt")}
+									hint={t("hide_new_posts_prompt_hint")}
+									checked={config.hideNewPostsPrompt}
+									onChange={(v) => update({ hideNewPostsPrompt: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("hide_premium_promo")}
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}

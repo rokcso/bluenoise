@@ -24,6 +24,9 @@ export interface AppConfig {
 	hideTrends: boolean;
 	/** Hide X's "Who to follow" recommendations panel. */
 	hideFollowSuggestions: boolean;
+	hideTitleCount: boolean;
+	hideNotificationBadges: boolean;
+	hideNewPostsPrompt: boolean;
 	/** User-controlled external keyword subscriptions. */
 	subscriptions: KeywordSubscription[];
 	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */

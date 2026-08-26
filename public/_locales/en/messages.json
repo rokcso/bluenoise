@@ -113,6 +113,18 @@
 	"use_blue_bird_hint": {
 		"message": "Replace the X logo with the classic Twitter blue bird."
 	},
+	"hide_title_count": { "message": "Hide tab unread count" },
+	"hide_title_count_hint": {
+		"message": "Remove the unread number from the browser tab title and favicon."
+	},
+	"hide_notification_badges": { "message": "Hide notification badges" },
+	"hide_notification_badges_hint": {
+		"message": "Remove the colored notification dots and numbers from navigation."
+	},
+	"hide_new_posts_prompt": { "message": "Hide new posts prompt" },
+	"hide_new_posts_prompt_hint": {
+		"message": "Remove the new posts prompt at the top of the timeline."
+	},
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
 	"language_auto": { "message": "Follow browser" },
