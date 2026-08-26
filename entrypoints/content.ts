@@ -140,6 +140,8 @@ const MAX_CACHED_REPLY_THREADS = 50;
 const composeOriginalChildren = new Map<HTMLElement, ComposeIconState>();
 /** Inline styles owned by the compact-sidebar feature, restored on disable. */
 const sidebarOriginalStyles = new Map<HTMLElement, string>();
+/** Original classes for the structural nodes switched to X's native compact form. */
+const sidebarOriginalClasses = new Map<HTMLElement, string>();
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
@@ -803,6 +805,40 @@ function restoreSidebarStyles(): void {
 	sidebarOriginalStyles.clear();
 }
 
+function setSidebarClasses(
+	element: HTMLElement,
+	remove: string[],
+	add: string[],
+): void {
+	if (!sidebarOriginalClasses.has(element))
+		sidebarOriginalClasses.set(element, element.className);
+	element.classList.remove(...remove);
+	element.classList.add(...add);
+}
+
+function restoreSidebarClasses(): void {
+	for (const [element, className] of sidebarOriginalClasses)
+		if (element.isConnected) element.className = className;
+	sidebarOriginalClasses.clear();
+}
+
+/** Remove width declarations written by earlier versions of this feature. */
+function clearLegacySidebarGeometry(element: HTMLElement): void {
+	for (const property of [
+		"width",
+		"min-width",
+		"max-width",
+		"margin-left",
+		"margin-right",
+		"box-sizing",
+		"flex",
+		"transition",
+	]) {
+		if (element.style.getPropertyPriority(property) === "important")
+			element.style.removeProperty(property);
+	}
+}
+
 function applyCompactComposeClasses(button: HTMLAnchorElement): void {
 	button.setAttribute("data-xsf-compact-compose", "");
 	setSidebarStyle(
@@ -817,43 +853,62 @@ function applyCompactComposeClasses(button: HTMLAnchorElement): void {
 		);
 }
 
-/** Apply compact geometry using stable semantic elements, not X build class names. */
+/**
+ * Switch the expanded sidebar shell to the same classes X uses when it renders
+ * compact navigation itself. Elements are located solely by stable structure.
+ */
 function applySidebarCompactLayout(): void {
 	if (!cfg.enabled || !cfg.collapseSidebar) {
 		restoreSidebarStyles();
+		restoreSidebarClasses();
 		return;
 	}
 	for (const header of document.querySelectorAll<HTMLElement>(
 		'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
 	)) {
 		const widthContainer = header.querySelector<HTMLElement>(":scope > div");
+		const layoutContainer = header.querySelector<HTMLElement>(
+			":scope > div > div > div",
+		);
+		const sidebarColumn = layoutContainer?.querySelector<HTMLElement>(
+			":scope > div",
+		);
 		if (widthContainer)
-			setSidebarStyle(
-				widthContainer,
-				"width:68px !important; min-width:68px !important; max-width:68px !important; transition:none !important",
-			);
+			clearLegacySidebarGeometry(widthContainer);
+		if (layoutContainer)
+			clearLegacySidebarGeometry(layoutContainer);
+		if (sidebarColumn)
+			clearLegacySidebarGeometry(sidebarColumn);
+		if (widthContainer)
+			setSidebarClasses(widthContainer, ["r-o96wvk"], ["r-1gymjhz"]);
+		if (layoutContainer)
+			setSidebarClasses(layoutContainer, ["r-o96wvk"], ["r-1gymjhz"]);
+		if (sidebarColumn)
+			setSidebarClasses(sidebarColumn, ["r-1habvwh"], ["r-1awozwy"]);
 		const nav = header.querySelector<HTMLElement>('nav[role="navigation"]');
 		if (nav) {
-			setSidebarStyle(
-				nav,
-				"width:52px !important; min-width:52px !important; max-width:52px !important; flex:none !important",
-			);
+			const navContainer = nav.parentElement;
+			if (navContainer instanceof HTMLElement) {
+				clearLegacySidebarGeometry(navContainer);
+				setSidebarClasses(
+					navContainer,
+					["r-1habvwh"],
+					["r-1awozwy"],
+				);
+			}
+			clearLegacySidebarGeometry(nav);
+			setSidebarClasses(nav, ["r-1habvwh"], ["r-1awozwy"]);
 			for (const control of nav.querySelectorAll<HTMLElement>(
 				":scope > a, :scope > button",
-			))
-				setSidebarStyle(
+			)) {
+				clearLegacySidebarGeometry(control);
+				setSidebarClasses(
 					control,
-					"box-sizing:border-box !important; width:52px !important; min-width:52px !important; max-width:52px !important; flex:none !important",
+					["r-1habvwh"],
+					["r-cnw61z", "r-1awozwy"],
 				);
+			}
 		}
-		const accountButton = header.querySelector<HTMLElement>(
-			'[data-testid="SideNav_AccountSwitcher_Button"]',
-		);
-		if (accountButton)
-			setSidebarStyle(
-				accountButton,
-				"box-sizing:border-box !important; width:52px !important; min-width:52px !important; max-width:52px !important; flex:none !important",
-			);
 	}
 }
 
@@ -1426,6 +1481,7 @@ function teardown(): void {
 	document.removeEventListener("visibilitychange", onVisibility);
 	restoreSidebarComposeIcons();
 	restoreSidebarStyles();
+	restoreSidebarClasses();
 	hideReveal();
 	pending.clear();
 }
@@ -1577,7 +1633,7 @@ function watchConfig(): void {
 	chrome.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
 		const next = (changes[RULE_DATA_KEY].newValue as RuleData | undefined)
-			?.accounts.external.mxga;
+			?.accounts.external.combined;
 		accountIndex = next ? buildAccountListIndex(next) : undefined;
 		accountListVersion = next?.version ?? 0;
 		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
@@ -1617,7 +1673,7 @@ function onVisibility(): void {
 
 async function loadAccountList(): Promise<void> {
 	const result = await chrome.storage.local.get(RULE_DATA_KEY);
-	const snapshot = loadRuleData(result[RULE_DATA_KEY]).accounts.external.mxga;
+	const snapshot = loadRuleData(result[RULE_DATA_KEY]).accounts.external.combined;
 	accountIndex = snapshot ? buildAccountListIndex(snapshot) : undefined;
 	accountListVersion = snapshot?.version ?? 0;
 }
