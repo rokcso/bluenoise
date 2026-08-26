@@ -421,6 +421,18 @@ function applyPageCustomizations(): void {
 		))
 			hideAncestors(aside, 2);
 	}
+	if (cfg.hideTimelineFollowSuggestions) {
+		const primary = document.querySelector('[data-testid="primaryColumn"]');
+		const hasTimelineHeading = [
+			...(primary?.querySelectorAll("h2") ?? []),
+		].some((h) => /推荐关注|who to follow/i.test(h.textContent ?? ""));
+		if (hasTimelineHeading) {
+			for (const cell of primary?.querySelectorAll<HTMLElement>(
+				`[data-testid="${"cellInnerDiv"}"]:has([data-testid="UserCell"]), [data-testid="cellInnerDiv"]:has(a[href^="/i/connect_people"])`,
+			) ?? [])
+				cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+		}
+	}
 	if (cfg.hideTrends) {
 		for (const section of document.querySelectorAll<HTMLElement>(
 			'section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"])',

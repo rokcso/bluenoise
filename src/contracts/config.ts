@@ -24,6 +24,8 @@ export interface AppConfig {
 	hideTrends: boolean;
 	/** Hide X's "Who to follow" recommendations panel. */
 	hideFollowSuggestions: boolean;
+	/** Hide follow recommendations embedded in the home timeline. */
+	hideTimelineFollowSuggestions: boolean;
 	hideTitleCount: boolean;
 	hideNotificationBadges: boolean;
 	hideNewPostsPrompt: boolean;

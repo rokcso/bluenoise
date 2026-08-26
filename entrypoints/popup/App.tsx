@@ -302,6 +302,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("hide_timeline_follow_suggestions")}
+									hint={t("hide_timeline_follow_suggestions_hint")}
+									checked={config.hideTimelineFollowSuggestions}
+									onChange={(v) => update({ hideTimelineFollowSuggestions: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("hide_footer")}
 									hint={t("hide_footer_hint")}
 									checked={config.hideFooter}

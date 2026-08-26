@@ -125,6 +125,10 @@
 	"hide_follow_suggestions_hint": {
 		"message": "移除侧边栏中的「推荐关注」面板。"
 	},
+	"hide_timeline_follow_suggestions": { "message": "隐藏时间线推荐关注" },
+	"hide_timeline_follow_suggestions_hint": {
+		"message": "移除时间线中的「推荐关注」推荐模块。"
+	},
 	"hide_trends": { "message": "隐藏当前趋势" },
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"
