@@ -33,6 +33,9 @@ const FOOTER_ATTR = "data-xsf-hide-footer";
 const TRENDS_ATTR = "data-xsf-hide-trends";
 /** When present, hides X's "Who to follow" panel (CSS-driven). */
 const FOLLOW_ATTR = "data-xsf-hide-follow";
+const TITLE_COUNT_ATTR = "data-xsf-hide-title-count";
+const BADGES_ATTR = "data-xsf-hide-notification-badges";
+const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
@@ -40,6 +43,10 @@ const LOGO_SEL = 'a[aria-label="X"] svg';
 /** Marker attribute set on an <svg> while it shows the Twitter blue bird. */
 const BIRD_MARK = "data-xsf-bird";
 let birdData: { viewBox: string; fill: string; path: string } | undefined;
+const TITLE_COUNT_RE = /^\(\d+\+?\)\s*/;
+let titleBeforeCount = "";
+const originalFavicons = new Map<HTMLLinkElement, string>();
+const CLEAN_FAVICON = "https://x.com/favicon.ico";
 
 function getBirdData(): { viewBox: string; fill: string; path: string } {
 	if (birdData) return birdData;
@@ -339,6 +346,8 @@ function applyPageCustomizations(): void {
 	const enabled = cfg.enabled;
 	for (const el of document.querySelectorAll(`[${CUSTOM_HIDDEN_ATTR}]`))
 		el.removeAttribute(CUSTOM_HIDDEN_ATTR);
+	// Title/favicon state must also be restored when the master switch is off.
+	applyTitleAndFavicon();
 	if (!enabled) return;
 
 	const hideAncestors = (element: Element, levels: number): void => {
@@ -367,6 +376,43 @@ function applyPageCustomizations(): void {
 		))
 			hideAncestors(nav, 1);
 	}
+	if (cfg.hideNotificationBadges) {
+		for (const badge of document.querySelectorAll<HTMLElement>(
+			'[data-testid="AppTabBar_Home_Link"] svg + div[aria-label], [data-testid="AppTabBar_Notifications_Link"] svg + div[aria-label]',
+		))
+			badge.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+	}
+	if (cfg.hideNewPostsPrompt) {
+		for (const label of document.querySelectorAll<HTMLElement>(
+			'[data-testid="primaryColumn"] [data-testid="pillLabel"]',
+		)) {
+			const pill = label.parentElement;
+			if (pill?.querySelector(':scope > [data-testid="userAvatars"]'))
+				hideAncestors(pill, 0);
+		}
+	}
+}
+
+function applyTitleAndFavicon(): void {
+	const hide = cfg.enabled && cfg.hideTitleCount;
+	if (hide && document.title && TITLE_COUNT_RE.test(document.title)) {
+		titleBeforeCount ||= document.title;
+		document.title = document.title.replace(TITLE_COUNT_RE, "");
+	} else if (!hide && titleBeforeCount) {
+		if (!TITLE_COUNT_RE.test(document.title)) document.title = titleBeforeCount;
+		titleBeforeCount = "";
+	}
+	const links = document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]');
+	if (hide) {
+		for (const link of links) {
+			if (!originalFavicons.has(link)) originalFavicons.set(link, link.href);
+			link.href = CLEAN_FAVICON;
+		}
+	} else {
+		for (const [link, href] of originalFavicons)
+			if (link.isConnected) link.href = href;
+		originalFavicons.clear();
+	}
 }
 
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
@@ -384,6 +430,15 @@ function applyStyleVars(): void {
 	if (cfg.enabled && cfg.hideFollowSuggestions)
 		root.setAttribute(FOLLOW_ATTR, "");
 	else root.removeAttribute(FOLLOW_ATTR);
+	if (cfg.enabled && cfg.hideTitleCount)
+		root.setAttribute(TITLE_COUNT_ATTR, "");
+	else root.removeAttribute(TITLE_COUNT_ATTR);
+	if (cfg.enabled && cfg.hideNotificationBadges)
+		root.setAttribute(BADGES_ATTR, "");
+	else root.removeAttribute(BADGES_ATTR);
+	if (cfg.enabled && cfg.hideNewPostsPrompt)
+		root.setAttribute(NEW_POSTS_ATTR, "");
+	else root.removeAttribute(NEW_POSTS_ATTR);
 
 	applyPageCustomizations();
 	if (!cfg.enabled || !active) {

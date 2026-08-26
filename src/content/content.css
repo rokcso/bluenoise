@@ -33,6 +33,18 @@
 	display: none !important;
 }
 
+[data-xsf-hide-notification-badges]
+	[data-testid="AppTabBar_Home_Link"]
+	svg
+	+ div[aria-label],
+[data-xsf-hide-notification-badges]
+	[data-testid="AppTabBar_Notifications_Link"]
+	svg
+	+ div[aria-label] {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
 /* Keep the CSS fallback aligned with the current-trends region structure. */
 [data-xsf-hide-trends]
 section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"]) {
