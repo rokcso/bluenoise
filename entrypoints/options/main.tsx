@@ -6,9 +6,9 @@ import "../popup/style.css";
 import "./style.css";
 import { setLanguage, t } from "@/lib/i18n";
 import {
+	DatabaseIcon,
 	FilterFillIcon,
 	FilterIcon,
-	DatabaseIcon,
 	InformationFillIcon,
 	InformationIcon,
 	ListFilterFillIcon,

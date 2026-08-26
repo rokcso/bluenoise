@@ -55,9 +55,16 @@ describe("user rule transfers", () => {
 		const current = defaultRuleData();
 		current.keywords.user.block = ["same"];
 		const incoming = parseUserRulesImport(
-			JSON.stringify({ schema: 1, kind: "bluenoise-user-rules", keywords: { block: ["same", "same"], allow: [] }, accounts: { block: [], allow: [] } }),
+			JSON.stringify({
+				schema: 1,
+				kind: "bluenoise-user-rules",
+				keywords: { block: ["same", "same"], allow: [] },
+				accounts: { block: [], allow: [] },
+			}),
 			{ preserveDuplicates: true },
 		).rules;
-		expect(applyUserRulesImport(current, incoming, "append").keywords.user.block).toEqual(["same", "same", "same"]);
+		expect(
+			applyUserRulesImport(current, incoming, "append").keywords.user.block,
+		).toEqual(["same", "same", "same"]);
 	});
 });
