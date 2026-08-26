@@ -46,6 +46,7 @@ export const DEFAULTS: AppConfig = {
 	filterAds: false,
 	filterParodyAccounts: false,
 	filterFanAccounts: false,
+	filterCommentaryAccounts: false,
 	filterAutomatedAccounts: false,
 	accountListEnabled: true,
 	externalAccountListsEnabled: false,

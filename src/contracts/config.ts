@@ -53,6 +53,8 @@ export interface AppConfig {
 	filterParodyAccounts: boolean;
 	/** Filter posts from accounts marked as fan accounts by X. */
 	filterFanAccounts: boolean;
+	/** Filter posts from accounts marked as commentary by X. */
+	filterCommentaryAccounts: boolean;
 	/** Filter posts from accounts marked as automated by X. */
 	filterAutomatedAccounts: boolean;
 	/** Use subscribed public account-level blacklists and whitelists. */
