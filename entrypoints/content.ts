@@ -180,6 +180,7 @@ let flushScheduled = false;
 let rafId = 0;
 let flushTimer = 0;
 let observer: MutationObserver | null = null;
+let cleanupObserver: MutationObserver | null = null;
 let lastUrl = typeof location !== "undefined" ? location.href : "";
 const rescanTimers: number[] = [];
 let badgeTimer = 0;
@@ -1359,14 +1360,6 @@ function fullScan(): void {
 // ==================== Incremental observation ====================
 
 function onMutations(records: MutationRecord[]): void {
-	// The header logo applies on every X page and X re-renders it on SPA
-	// navigation, so re-apply before the filterable-page guard below.
-	applyLogo();
-	applySidebarCompactLayout();
-	applySidebarComposeIcons();
-	applyPageCustomizations();
-	for (const node of records.flatMap((record) => [...record.addedNodes]))
-		if (node.nodeType === Node.ELEMENT_NODE) applyPageCustomizations();
 	// Content scripts run in an isolated world, so wrapping history.pushState is
 	// not sufficient to observe X's own SPA navigation. Any route change also
 	// changes the page DOM; notice it before processing stale rows.
@@ -1397,6 +1390,18 @@ function onMutations(records: MutationRecord[]): void {
 	if (pending.size || conversationChanged) schedule();
 }
 
+/** Page cleanup has its own observer so filtering mutations do not run global
+ * header/sidebar queries on the content-filtering hot path. */
+function onCleanupMutations(): void {
+	if (!cfg.pageCleanupEnabled) return;
+	applyLogo();
+	applySidebarCompactLayout();
+	applySidebarComposeIcons();
+	applyPageCustomizations();
+	// Also catch route changes made by X without relying solely on history hooks.
+	refreshForUrlChange();
+}
+
 function startObserving(): void {
 	if (observer) return;
 	observer = new MutationObserver(onMutations);
@@ -1405,6 +1410,20 @@ function startObserving(): void {
 		characterData: true,
 		subtree: true,
 	});
+}
+
+function startCleanupObserving(): void {
+	if (cleanupObserver || !cfg.pageCleanupEnabled || !document.body) return;
+	cleanupObserver = new MutationObserver(onCleanupMutations);
+	cleanupObserver.observe(document.body, {
+		childList: true,
+		subtree: true,
+	});
+}
+
+function stopCleanupObserving(): void {
+	cleanupObserver?.disconnect();
+	cleanupObserver = null;
 }
 
 // ==================== Badge count ====================
@@ -1511,6 +1530,8 @@ function teardown(): void {
 	badgeTimer = 0;
 	observer?.disconnect();
 	observer = null;
+	cleanupObserver?.disconnect();
+	cleanupObserver = null;
 	document.removeEventListener("pointermove", onPointerMove);
 	window.removeEventListener("scroll", hideReveal, { capture: true });
 	window.removeEventListener("resize", hideReveal);
@@ -1658,6 +1679,8 @@ function watchConfig(): void {
 			accountListVersion = accountSnapshotValue?.version ?? 0;
 			setLanguage(cfg.language);
 			applyLogo();
+			if (cfg.pageCleanupEnabled) startCleanupObserving();
+			else stopCleanupObserving();
 			if (rulesChanged || matchingChanged(prev, cfg)) {
 				refresh({ rebuild: true });
 			} else {
@@ -1703,6 +1726,7 @@ async function init(): Promise<void> {
 	// Keep the observer alive off status pages as well. It is the reliable
 	// fallback that notices a later X SPA transition back to a status page.
 	startObserving();
+	startCleanupObserving();
 	applyLogo();
 
 	active = isFilterablePage();
