@@ -88,6 +88,10 @@
 	"matching": { "message": "匹配选项" },
 	"diagnostics": { "message": "诊断" },
 	"ads": { "message": "广告" },
+	"filter_ads": { "message": "过滤广告推文" },
+	"filter_ads_hint": {
+		"message": "按照当前选择的过滤模式模糊或隐藏标记为广告的推文。"
+	},
 	"hide_premium_promo": { "message": "隐藏 X Premium 订阅广告" },
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"

@@ -43,6 +43,7 @@ export const DEFAULTS: AppConfig = {
 	ignoreSpaces: true,
 	caseSensitive: false,
 	debugLogging: false,
+	filterAds: false,
 	accountListEnabled: true,
 	externalAccountListsEnabled: false,
 	accountWhitelist: [],

@@ -338,6 +338,12 @@ function applyMark(article: Element, hit: string | null): void {
 	}
 }
 
+/** X wraps promoted posts in an impression-tracking container. */
+function isPromotedPost(article: Element): boolean {
+	const cell = article.closest(CELL_SEL);
+	return Boolean(cell?.querySelector('[data-testid="placementTracking"]'));
+}
+
 function syncMarkedRowsInteractivity(): void {
 	for (const row of document.querySelectorAll(`.${HIT_CLASS}`)) {
 		setRowInert(row, cfg.mode === "hide");
@@ -548,7 +554,16 @@ function evaluate(article: Element): {
 			cfg.accountWhitelist.length > 0 ||
 			cfg.accountBlacklist.length > 0);
 
-	if (!mainTweet && (matchers.count > 0 || accountListsActive)) {
+	if (
+		!mainTweet &&
+		(matchers.count > 0 || accountListsActive || cfg.filterAds)
+	) {
+		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
+		if (hit) {
+			state.set(article, { sig, hit, log });
+			applyMark(article, hit);
+			return { fresh: true, log };
+		}
 		const identity = readAuthorIdentity(article, accountListsActive);
 		const accountMatch = cfg.accountListEnabled
 			? matchAccountIndex(
@@ -983,6 +998,7 @@ function loadStoredConfig(): Promise<void> {
 
 const MATCH_KEYS = [
 	"enabled",
+	"filterAds",
 	"matchNames",
 	"ignoreSpaces",
 	"caseSensitive",

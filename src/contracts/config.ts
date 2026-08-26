@@ -47,6 +47,8 @@ export interface AppConfig {
 	caseSensitive: boolean;
 	/** Emit local diagnostic messages in the page DevTools console. */
 	debugLogging: boolean;
+	/** Filter promoted/ad posts using the selected filtering mode. */
+	filterAds: boolean;
 	/** Use subscribed public account-level blacklists and whitelists. */
 	accountListEnabled: boolean;
 	/** Enable downloaded account list providers independently of local lists. */
