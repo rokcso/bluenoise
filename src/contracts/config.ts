@@ -14,6 +14,8 @@ export interface AppConfig {
 	revealOnHover: boolean;
 	/** Show the number of filtered replies on the browser toolbar icon. */
 	showBadgeCount: boolean;
+	/** Replace X's total with the loaded, unfiltered reply count on post pages. */
+	showActualReplyCount: boolean;
 	/** Hide X's in-timeline "Subscribe to Premium" upsell ad card. */
 	hidePremiumPromo: boolean;
 	/** Hide X's site footer (Terms / Privacy / Cookie links, copyright). */

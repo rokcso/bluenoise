@@ -39,6 +39,8 @@ const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
 const GROK_ATTR = "data-xsf-hide-grok";
 const MESSAGE_ATTR = "data-xsf-hide-message";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
+const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
+const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
 const LOGO_SEL = 'a[aria-label="X"] svg';
@@ -95,6 +97,21 @@ let matchers: Matchers = {
 };
 let accountIndex: AccountListIndex | undefined;
 let accountListVersion = 0;
+
+interface DisplayedReplyCountState {
+	button: HTMLButtonElement;
+	text: HTMLElement;
+	originalText: string;
+	injectedText: string;
+	originalAria: string | null;
+	injectedAria: string | null;
+	group: HTMLElement | null;
+	originalGroupAria: string | null;
+	injectedGroupAria: string | null;
+}
+
+/** Reply-count DOM touched by this script, so it can always be restored. */
+const displayedReplyCounts = new Set<DisplayedReplyCountState>();
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
@@ -323,6 +340,133 @@ function isMainTweet(article: Element): boolean {
 
 function rowOf(article: Element): Element {
 	return article.closest(CELL_SEL) ?? article;
+}
+
+/** Replace only X's leading metric in an accessible action label. */
+function replaceLabelCount(label: string | null, count: string): string | null {
+	return label?.replace(COUNT_PREFIX_RE, `$1${count} `) ?? null;
+}
+
+function clearDisplayedReplyCounts(): void {
+	for (const state of displayedReplyCounts) {
+		if (state.text.isConnected && state.text.textContent === state.injectedText)
+			state.text.textContent = state.originalText;
+		if (
+			state.button.isConnected &&
+			state.button.getAttribute("aria-label") === state.injectedAria
+		) {
+			if (state.originalAria === null)
+				state.button.removeAttribute("aria-label");
+			else state.button.setAttribute("aria-label", state.originalAria);
+		}
+		if (
+			state.group?.isConnected &&
+			state.group.getAttribute("aria-label") === state.injectedGroupAria
+		) {
+			if (state.originalGroupAria === null)
+				state.group.removeAttribute("aria-label");
+			else state.group.setAttribute("aria-label", state.originalGroupAria);
+		}
+	}
+	displayedReplyCounts.clear();
+}
+
+function isNestedArticle(article: Element): boolean {
+	return Boolean(article.parentElement?.closest(ARTICLE_SEL));
+}
+
+function isAfter(first: Node, second: Node): boolean {
+	return Boolean(
+		first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
+	);
+}
+
+/**
+ * Count only loaded top-level replies in the current conversation. X also puts
+ * promoted and "Discover more" content in this region, so neither can count.
+ */
+function displayedReplyCount(mainTweet: Element): number | null {
+	const conversation = mainTweet.closest('section[role="region"]');
+	if (!conversation) return null;
+	const discoverMore = [...conversation.querySelectorAll("h1, h2, h3")].find(
+		(heading) => DISCOVER_MORE_RE.test(heading.textContent?.trim() ?? ""),
+	);
+	let count = 0;
+	for (const article of conversation.querySelectorAll(ARTICLE_SEL)) {
+		if (
+			article === mainTweet ||
+			isNestedArticle(article) ||
+			!isAfter(mainTweet, article) ||
+			(discoverMore && isAfter(discoverMore, article)) ||
+			isPromotedPost(article)
+		)
+			continue;
+		if (!rowOf(article).classList.contains(HIT_CLASS)) count++;
+	}
+	return count;
+}
+
+function updateDisplayedReplyCount(): void {
+	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isStatusPage()) {
+		clearDisplayedReplyCounts();
+		return;
+	}
+	const mainTweet = [...document.querySelectorAll(ARTICLE_SEL)].find(
+		isMainTweet,
+	);
+	if (!mainTweet) return;
+	const count = displayedReplyCount(mainTweet);
+	const button = mainTweet.querySelector<HTMLButtonElement>(
+		'button[data-testid="reply"]',
+	);
+	const container = button?.querySelector<HTMLElement>(
+		'[data-testid="app-text-transition-container"]',
+	);
+	const text = container?.firstElementChild;
+	if (count === null || !button || !(text instanceof HTMLElement)) return;
+
+	const formatted = count.toLocaleString();
+	let state = [...displayedReplyCounts].find((item) => item.button === button);
+	if (!state) {
+		const group = button.closest<HTMLElement>('[role="group"]');
+		state = {
+			button,
+			text,
+			originalText: text.textContent ?? "",
+			injectedText: "",
+			originalAria: button.getAttribute("aria-label"),
+			injectedAria: null,
+			group,
+			originalGroupAria: group?.getAttribute("aria-label") ?? null,
+			injectedGroupAria: null,
+		};
+		displayedReplyCounts.add(state);
+	} else {
+		// A React update can replace X's server count in place; retain that latest
+		// value so disabling the extension restores the correct native metric.
+		if (text.textContent !== state.injectedText)
+			state.originalText = text.textContent ?? "";
+		const aria = button.getAttribute("aria-label");
+		if (aria !== state.injectedAria) state.originalAria = aria;
+		const groupAria = state.group?.getAttribute("aria-label") ?? null;
+		if (groupAria !== state.injectedGroupAria)
+			state.originalGroupAria = groupAria;
+	}
+
+	const aria = replaceLabelCount(state.originalAria, formatted);
+	const groupAria = replaceLabelCount(state.originalGroupAria, formatted);
+	if (text.textContent !== formatted) text.textContent = formatted;
+	if (aria !== null && button.getAttribute("aria-label") !== aria)
+		button.setAttribute("aria-label", aria);
+	if (
+		state.group &&
+		groupAria !== null &&
+		state.group.getAttribute("aria-label") !== groupAria
+	)
+		state.group.setAttribute("aria-label", groupAria);
+	state.injectedText = formatted;
+	state.injectedAria = aria;
+	state.injectedGroupAria = groupAria;
 }
 
 function applyMark(article: Element, hit: string | null): void {
@@ -815,6 +959,9 @@ function flush(): void {
 		filteredCount: document.querySelectorAll(`.${HIT_CLASS}`).length,
 	});
 	if (logs.length) emitFilteredLogs(logs);
+	// Run after every queued reply has received its filtering mark, so the
+	// number mirrors what remains in the conversation rather than X's total.
+	updateDisplayedReplyCount();
 	scheduleBadge();
 }
 
@@ -879,6 +1026,7 @@ function onMutations(records: MutationRecord[]): void {
 		fullScan();
 		return;
 	}
+	let conversationChanged = false;
 	for (const rec of records) {
 		for (const node of rec.addedNodes) queueArticle(node);
 		const target = rec.target;
@@ -890,8 +1038,13 @@ function onMutations(records: MutationRecord[]): void {
 				: target.parentElement;
 		const article = targetElement?.closest(ARTICLE_SEL);
 		if (article) pending.add(article);
+		if (
+			rec.type === "childList" &&
+			targetElement?.closest('section[role="region"]')
+		)
+			conversationChanged = true;
 	}
-	if (pending.size) schedule();
+	if (pending.size || conversationChanged) schedule();
 }
 
 function startObserving(): void {
@@ -983,6 +1136,7 @@ function stop(): void {
 	clearRescanTimers();
 	pending.clear();
 	clearAllMarks();
+	clearDisplayedReplyCounts();
 	applyStyleVars();
 	scheduleBadge();
 }
@@ -1024,6 +1178,7 @@ function refresh(options: { rebuild?: boolean } = {}): void {
 	// It must never survive a SPA route transition.
 	hideReveal();
 	pending.clear();
+	clearDisplayedReplyCounts();
 	active = isFilterablePage();
 
 	if (!cfg.enabled || !active) {
@@ -1144,6 +1299,8 @@ function watchConfig(): void {
 			applyStyleVars();
 		}
 		if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
+		if (prev.showActualReplyCount !== cfg.showActualReplyCount)
+			updateDisplayedReplyCount();
 
 		if (!prev.debugLogging && cfg.debugLogging) {
 			debugLog("Debug logging enabled", {

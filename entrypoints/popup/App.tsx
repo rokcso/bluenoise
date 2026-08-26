@@ -246,6 +246,13 @@ export function SettingsApp({
 						>
 							<SettingsPanel>
 								<XToggle
+									label={t("show_actual_reply_count")}
+									hint={t("show_actual_reply_count_hint")}
+									checked={config.showActualReplyCount}
+									onChange={(v) => update({ showActualReplyCount: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("hide_title_count")}
 									hint={t("hide_title_count_hint")}
 									checked={config.hideTitleCount}

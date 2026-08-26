@@ -180,6 +180,10 @@
 	"show_badge_count_hint": {
 		"message": "Show the number of filtered replies and posts on the BlueNoise toolbar icon."
 	},
+	"show_actual_reply_count": { "message": "Show actual reply count" },
+	"show_actual_reply_count_hint": {
+		"message": "On post pages, replace X's total with the loaded replies that remain after filtering."
+	},
 	"reveal_on_hover": { "message": "Reveal around cursor" },
 	"reveal_on_hover_hint": {
 		"message": "In Blur mode, show a clear area around the cursor."

@@ -172,6 +172,10 @@
 	"show_badge_count_hint": {
 		"message": "在 BlueNoise 工具栏图标上显示当前已过滤的回复与推文数量。"
 	},
+	"show_actual_reply_count": { "message": "显示实际评论数量" },
+	"show_actual_reply_count_hint": {
+		"message": "在帖子详情页中，用当前已加载且过滤后保留的评论数替换 X 的总回复数。"
+	},
 	"reveal_on_hover": { "message": "在光标附近显示内容" },
 	"reveal_on_hover_hint": {
 		"message": "在模糊模式下，以光标为中心显示清晰区域。"
