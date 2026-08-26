@@ -341,6 +341,13 @@ export function SettingsApp({
 									checked={config.filterParodyAccounts}
 									onChange={(v) => update({ filterParodyAccounts: v })}
 								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("filter_automated_accounts")}
+									hint={t("filter_automated_accounts_hint")}
+									checked={config.filterAutomatedAccounts}
+									onChange={(v) => update({ filterAutomatedAccounts: v })}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup

@@ -51,6 +51,8 @@ export interface AppConfig {
 	filterAds: boolean;
 	/** Filter posts from accounts marked as parody by X. */
 	filterParodyAccounts: boolean;
+	/** Filter posts from accounts marked as automated by X. */
+	filterAutomatedAccounts: boolean;
 	/** Use subscribed public account-level blacklists and whitelists. */
 	accountListEnabled: boolean;
 	/** Enable downloaded account list providers independently of local lists. */

@@ -353,6 +353,12 @@ function isParodyAccount(article: Element): boolean {
 	);
 }
 
+/** X displays this account status beside the author handle. */
+function isAutomatedAccount(article: Element): boolean {
+	const name = article.querySelector(NAME_SEL);
+	return /自动发推|automated account/i.test(name?.textContent ?? "");
+}
+
 function syncMarkedRowsInteractivity(): void {
 	for (const row of document.querySelectorAll(`.${HIT_CLASS}`)) {
 		setRowInert(row, cfg.mode === "hide");
@@ -568,11 +574,14 @@ function evaluate(article: Element): {
 		(matchers.count > 0 ||
 			accountListsActive ||
 			cfg.filterAds ||
-			cfg.filterParodyAccounts)
+			cfg.filterParodyAccounts ||
+			cfg.filterAutomatedAccounts)
 	) {
 		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
 		if (cfg.filterParodyAccounts && isParodyAccount(article))
 			hit = "__parody__";
+		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
+			hit = "__automated__";
 		if (hit) {
 			state.set(article, { sig, hit, log });
 			applyMark(article, hit);
@@ -1014,6 +1023,7 @@ const MATCH_KEYS = [
 	"enabled",
 	"filterAds",
 	"filterParodyAccounts",
+	"filterAutomatedAccounts",
 	"matchNames",
 	"ignoreSpaces",
 	"caseSensitive",
