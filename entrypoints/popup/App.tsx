@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
 import type {
 	KeywordSubscription,
@@ -12,8 +12,15 @@ import {
 	MXGA_DATA_URL,
 	MXGA_REPO_URL,
 } from "@/src/domain/account-list";
+import { defaultRuleData } from "@/src/domain/defaults";
 import { fetchKeywordSource } from "@/src/domain/keywords";
 import { loadRuleData } from "@/src/domain/rules";
+import {
+	applyUserRulesImport,
+	exportUserRules,
+	parseUserRulesImport,
+	type ImportPreview,
+} from "@/src/domain/user-rules-transfer";
 
 type AppConfig = SettingsConfig & RuleView;
 
@@ -97,6 +104,7 @@ export type SettingsSection =
 	| "general"
 	| "keywords"
 	| "accounts"
+	| "backup"
 	| "filtering"
 	| "customization"
 	| "about";
@@ -243,6 +251,22 @@ export function SettingsApp({
 									update={update}
 								/>
 							</SettingsPanel>
+						</SettingsGroup>
+					</>
+				)}
+
+				{activeSection === "backup" && (
+					<>
+						<PageHeading
+							title="规则备份"
+							description="导入或导出我的关键词与账号黑白名单；不会处理设置或外部来源缓存。"
+						/>
+						<SettingsGroup
+							label="用户规则导入与导出"
+							icon={DatabaseIcon}
+							labelClassName="font-normal"
+						>
+							<UserRulesTransfer config={config} update={update} />
 						</SettingsGroup>
 					</>
 				)}
@@ -763,6 +787,199 @@ function AccountListSettings({
 						{node}
 					</div>
 				))}
+		</div>
+	);
+}
+
+function UserRulesTransfer({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	const input = useRef<HTMLInputElement>(null);
+	const [message, setMessage] = useState("");
+	const [pendingImport, setPendingImport] = useState<ImportPreview | null>(
+		null,
+	);
+	const exportRules = () => {
+		const rules = defaultRuleData();
+		rules.keywords.user = {
+			block: config.userKeywords,
+			allow: config.whitelist,
+		};
+		rules.accounts.user = {
+			block: config.accountBlacklist,
+			allow: config.accountWhitelist,
+		};
+		const blob = new Blob([JSON.stringify(exportUserRules(rules), null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `bluenoise-user-rules-${new Date().toISOString().slice(0, 10)}.json`;
+		link.click();
+		URL.revokeObjectURL(url);
+	};
+	const importRules = async (file: File) => {
+		try {
+			const preview = parseUserRulesImport(await file.text(), {
+				preserveDuplicates: true,
+			});
+			setPendingImport(preview);
+		} catch (error) {
+			setMessage(error instanceof Error ? error.message : String(error));
+		}
+	};
+	const applyImport = (mode: "replace" | "merge" | "append") => {
+		if (!pendingImport) return;
+		const current = defaultRuleData();
+		current.keywords.user = {
+			block: config.userKeywords,
+			allow: config.whitelist,
+		};
+		current.accounts.user = {
+			block: config.accountBlacklist,
+			allow: config.accountWhitelist,
+		};
+		const next = applyUserRulesImport(current, pendingImport.rules, mode);
+		update({
+			userKeywords: next.keywords.user.block,
+			whitelist: next.keywords.user.allow,
+			accountBlacklist: next.accounts.user.block,
+			accountWhitelist: next.accounts.user.allow,
+		});
+		setMessage(
+			`已${mode === "replace" ? "覆盖" : mode === "append" ? "追加" : "合并"}导入${pendingImport.ignored ? `，忽略 ${pendingImport.ignored} 条无效规则` : ""}`,
+		);
+		setPendingImport(null);
+	};
+	return (
+		<div className="flex flex-col gap-3 p-3">
+			<p className="text-xs text-x-muted">
+				导出或导入我的关键词与账号黑白名单；不包含设置和外部来源缓存。
+			</p>
+			<div className="flex gap-2">
+				<button
+					type="button"
+					onClick={exportRules}
+					className="rounded-full border border-x-border px-3 py-1.5 text-xs"
+				>
+					导出规则
+				</button>
+				<button
+					type="button"
+					onClick={() => input.current?.click()}
+					className="rounded-full border border-x-border px-3 py-1.5 text-xs"
+				>
+					导入规则
+				</button>
+				<input
+					ref={input}
+					type="file"
+					accept="application/json,.json"
+					className="hidden"
+					onChange={(event) => {
+						const file = event.target.files?.[0];
+						if (file) void importRules(file);
+						event.currentTarget.value = "";
+					}}
+				/>
+			</div>
+			{message && <p className="text-xs text-x-muted">{message}</p>}
+			{pendingImport && (
+				<ImportModeDialog
+					preview={pendingImport}
+					onCancel={() => setPendingImport(null)}
+					onSelect={applyImport}
+				/>
+			)}
+		</div>
+	);
+}
+
+function ImportModeDialog({
+	preview,
+	onCancel,
+	onSelect,
+}: {
+	preview: ImportPreview;
+	onCancel: () => void;
+	onSelect: (mode: "replace" | "merge" | "append") => void;
+}) {
+	const [mode, setMode] = useState<"replace" | "merge" | "append">("merge");
+	const total =
+		preview.rules.keywords.block.length +
+		preview.rules.keywords.allow.length +
+		preview.rules.accounts.block.length +
+		preview.rules.accounts.allow.length;
+	return (
+		<div
+			className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
+			role="dialog"
+			aria-modal="true"
+			aria-label="选择导入模式"
+		>
+			<div className="w-full max-w-md rounded-xl border border-x-border bg-x-bg p-5 shadow-xl">
+				<h2 className="text-base font-semibold">选择导入模式</h2>
+				<p className="mt-2 text-sm text-x-muted">
+					已解析 {total} 条规则
+					{preview.ignored ? `，忽略 ${preview.ignored} 条无效规则` : ""}。
+				</p>
+				<div className="mt-4 grid gap-2">
+					<button
+						type="button"
+						onClick={() => setMode("merge")}
+						aria-pressed={mode === "merge"}
+						className={`rounded-lg border p-3 text-left text-sm ${mode === "merge" ? "border-x-accent bg-x-hover" : "border-x-border"}`}
+					>
+						<strong>合并导入</strong>
+						<span className="mt-1 block text-xs text-x-muted">
+							保留现有规则，仅新增不重复规则。
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setMode("append")}
+						aria-pressed={mode === "append"}
+						className={`rounded-lg border p-3 text-left text-sm ${mode === "append" ? "border-x-accent bg-x-hover" : "border-x-border"}`}
+					>
+						<strong>追加原样导入</strong>
+						<span className="mt-1 block text-xs text-x-muted">
+							保留现有规则，并追加所有有效规则，允许重复。
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setMode("replace")}
+						aria-pressed={mode === "replace"}
+						className={`rounded-lg border p-3 text-left text-sm text-x-red ${mode === "replace" ? "border-x-red bg-x-hover" : "border-x-red/40"}`}
+					>
+						<strong>覆盖导入</strong>
+						<span className="mt-1 block text-xs text-x-muted">
+							替换当前全部用户规则。
+						</span>
+					</button>
+				</div>
+				<div className="mt-4 flex justify-end gap-2">
+					<button
+						type="button"
+						onClick={onCancel}
+						className="rounded-full px-3 py-1.5 text-sm text-x-muted hover:bg-x-hover"
+					>
+						取消
+					</button>
+					<button
+						type="button"
+						onClick={() => onSelect(mode)}
+						className="rounded-full bg-x-accent px-4 py-1.5 text-sm font-medium text-x-accent-fg"
+					>
+						确认导入
+					</button>
+				</div>
+			</div>
 		</div>
 	);
 }

@@ -61,6 +61,7 @@
 		"placeholders": { "date": { "content": "$1" } }
 	},
 	"sync": { "message": "同步" },
+	"rule_backup": { "message": "规则备份" },
 	"my_keywords": { "message": "我的关键词" },
 	"my_keywords_hint": {
 		"message": "添加要触发过滤的关键词或正则表达式，每行一条。"

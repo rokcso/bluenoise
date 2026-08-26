@@ -8,6 +8,7 @@ import { setLanguage, t } from "@/lib/i18n";
 import {
 	FilterFillIcon,
 	FilterIcon,
+	DatabaseIcon,
 	InformationFillIcon,
 	InformationIcon,
 	ListFilterFillIcon,
@@ -43,6 +44,12 @@ const navigation: {
 		label: "accounts",
 		lineIcon: UsersIcon,
 		fillIcon: UsersFillIcon,
+	},
+	{
+		id: "backup",
+		label: "rule_backup",
+		lineIcon: DatabaseIcon,
+		fillIcon: DatabaseIcon,
 	},
 	{
 		id: "filtering",
