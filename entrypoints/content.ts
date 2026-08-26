@@ -14,8 +14,8 @@ import {
 	type AccountListSnapshot,
 	buildAccountListIndex,
 	DEFAULT_ACCOUNT_LIST_SOURCES,
-	mergeAccountListSnapshots,
 	matchAccountIndex,
+	mergeAccountListSnapshots,
 } from "@/src/domain/account-list";
 import {
 	defaultConfig,
@@ -877,15 +877,11 @@ function applySidebarCompactLayout(): void {
 		const layoutContainer = header.querySelector<HTMLElement>(
 			":scope > div > div > div",
 		);
-		const sidebarColumn = layoutContainer?.querySelector<HTMLElement>(
-			":scope > div",
-		);
-		if (widthContainer)
-			clearLegacySidebarGeometry(widthContainer);
-		if (layoutContainer)
-			clearLegacySidebarGeometry(layoutContainer);
-		if (sidebarColumn)
-			clearLegacySidebarGeometry(sidebarColumn);
+		const sidebarColumn =
+			layoutContainer?.querySelector<HTMLElement>(":scope > div");
+		if (widthContainer) clearLegacySidebarGeometry(widthContainer);
+		if (layoutContainer) clearLegacySidebarGeometry(layoutContainer);
+		if (sidebarColumn) clearLegacySidebarGeometry(sidebarColumn);
 		if (widthContainer)
 			setSidebarClasses(widthContainer, ["r-o96wvk"], ["r-1gymjhz"]);
 		if (layoutContainer)
@@ -897,11 +893,7 @@ function applySidebarCompactLayout(): void {
 			const navContainer = nav.parentElement;
 			if (navContainer instanceof HTMLElement) {
 				clearLegacySidebarGeometry(navContainer);
-				setSidebarClasses(
-					navContainer,
-					["r-1habvwh"],
-					["r-1awozwy"],
-				);
+				setSidebarClasses(navContainer, ["r-1habvwh"], ["r-1awozwy"]);
 			}
 			clearLegacySidebarGeometry(nav);
 			setSidebarClasses(nav, ["r-1habvwh"], ["r-1awozwy"]);
@@ -909,11 +901,7 @@ function applySidebarCompactLayout(): void {
 				":scope > a, :scope > button",
 			)) {
 				clearLegacySidebarGeometry(control);
-				setSidebarClasses(
-					control,
-					["r-1habvwh"],
-					["r-cnw61z", "r-1awozwy"],
-				);
+				setSidebarClasses(control, ["r-1habvwh"], ["r-cnw61z", "r-1awozwy"]);
 			}
 		}
 		const accountButton = header.querySelector<HTMLElement>(
@@ -923,11 +911,7 @@ function applySidebarCompactLayout(): void {
 			accountButton.setAttribute("data-xsf-compact-account", "");
 			const accountContainer = accountButton.parentElement;
 			if (accountContainer instanceof HTMLElement)
-				setSidebarClasses(
-					accountContainer,
-					["r-1habvwh"],
-					["r-1awozwy"],
-				);
+				setSidebarClasses(accountContainer, ["r-1habvwh"], ["r-1awozwy"]);
 			setSidebarClasses(accountButton, ["r-1habvwh"], ["r-1awozwy"]);
 		}
 	}
@@ -1580,15 +1564,19 @@ function hookHistory(): void {
 // ==================== Config ====================
 
 function loadStoredConfig(): Promise<void> {
-	return new Promise((resolve) => {
-		chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
-			cfg = loadConfig(result[SETTINGS_KEY] ?? defaultConfig());
-			rules = loadRuleData(result[RULE_DATA_KEY] ?? defaultRuleData());
-			refreshMatchers();
-			setLanguage(cfg.language);
-			resolve();
-		});
+	return readStoredState().then(() => {
+		refreshMatchers();
+		setLanguage(cfg.language);
 	});
+}
+
+async function readStoredState(): Promise<void> {
+	const [synced, local] = await Promise.all([
+		chrome.storage.sync.get(SETTINGS_KEY),
+		chrome.storage.local.get(RULE_DATA_KEY),
+	]);
+	cfg = loadConfig(synced[SETTINGS_KEY] ?? defaultConfig());
+	rules = loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData());
 }
 
 const MATCH_KEYS = [
@@ -1622,13 +1610,14 @@ function matchingChanged(prev: AppConfig, next: AppConfig): boolean {
 
 function watchConfig(): void {
 	chrome.storage.onChanged.addListener((changes, area) => {
-		if (area !== "local" || (!changes[SETTINGS_KEY] && !changes[RULE_DATA_KEY]))
+		if (
+			(area !== "sync" || !changes[SETTINGS_KEY]) &&
+			(area !== "local" || !changes[RULE_DATA_KEY])
+		)
 			return;
 		const prev = cfg;
 		const rulesChanged = Boolean(changes[RULE_DATA_KEY]);
-		chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
-			cfg = loadConfig(result[SETTINGS_KEY] ?? defaultConfig());
-			rules = loadRuleData(result[RULE_DATA_KEY] ?? defaultRuleData());
+		void readStoredState().then(() => {
 			const accountSnapshotValue = accountSnapshot(rules);
 			accountIndex = accountSnapshotValue
 				? buildAccountListIndex(accountSnapshotValue)
@@ -1663,9 +1652,7 @@ function watchConfig(): void {
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
-		const next = accountSnapshot(
-			loadRuleData(changes[RULE_DATA_KEY].newValue),
-		);
+		const next = accountSnapshot(loadRuleData(changes[RULE_DATA_KEY].newValue));
 		accountIndex = next ? buildAccountListIndex(next) : undefined;
 		accountListVersion = next?.version ?? 0;
 		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });

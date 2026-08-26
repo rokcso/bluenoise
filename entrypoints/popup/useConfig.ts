@@ -11,9 +11,9 @@ import { createRuleView, loadRuleData } from "@/src/domain/rules";
 
 type ViewConfig = AppConfig & RuleView;
 
-function read(result: Record<string, unknown>): ViewConfig {
-	const settings = loadConfig(result[SETTINGS_KEY] ?? defaultConfig());
-	const rules = loadRuleData(result[RULE_DATA_KEY] ?? defaultRuleData());
+function read(settingsValue: unknown, rulesValue: unknown): ViewConfig {
+	const settings = loadConfig(settingsValue ?? defaultConfig());
+	const rules = loadRuleData(rulesValue ?? defaultRuleData());
 	return { ...settings, ...createRuleView(settings, rules) };
 }
 
@@ -22,25 +22,26 @@ export function useConfig() {
 	const [config, setConfig] = useState<ViewConfig | null>(null);
 
 	useEffect(() => {
-		chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
-			const next = read(result);
-			setLanguage(next.language);
-			setConfig(next);
-		});
+		const reload = () =>
+			Promise.all([
+				chrome.storage.sync.get(SETTINGS_KEY),
+				chrome.storage.local.get(RULE_DATA_KEY),
+			]).then(([synced, local]) => {
+				const next = read(synced[SETTINGS_KEY], local[RULE_DATA_KEY]);
+				setLanguage(next.language);
+				setConfig(next);
+			});
+		void reload();
 		const onChange = (
 			changes: { [key: string]: chrome.storage.StorageChange },
 			area: string,
 		) => {
 			if (
-				area !== "local" ||
-				(!changes[SETTINGS_KEY] && !changes[RULE_DATA_KEY])
+				(area !== "sync" || !changes[SETTINGS_KEY]) &&
+				(area !== "local" || !changes[RULE_DATA_KEY])
 			)
 				return;
-			chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
-				const next = read(result);
-				setLanguage(next.language);
-				setConfig(next);
-			});
+			void reload();
 		};
 		chrome.storage.onChanged.addListener(onChange);
 		return () => chrome.storage.onChanged.removeListener(onChange);
@@ -84,10 +85,10 @@ export function useConfig() {
 					external: current.accounts.external,
 				},
 			};
-			chrome.storage.local.set({
-				[SETTINGS_KEY]: settings,
-				[RULE_DATA_KEY]: rules,
-			});
+			void Promise.all([
+				chrome.storage.sync.set({ [SETTINGS_KEY]: settings }),
+				chrome.storage.local.set({ [RULE_DATA_KEY]: rules }),
+			]);
 		});
 		// Apply locally immediately to avoid flicker while waiting for the storage callback.
 		setConfig(next);

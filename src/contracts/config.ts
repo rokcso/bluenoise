@@ -1,5 +1,5 @@
 /**
- * Behavioral settings stored in chrome.storage.local under "settings".
+ * Behavioral settings stored in chrome.storage.sync under "settings".
  */
 export interface AppConfig {
 	/** "auto" follows the OS color scheme; "light"/"dark" force one. Popup-only. */
@@ -152,6 +152,6 @@ export const IGNORABLE_SRC =
 
 export const REGEX_ESCAPE_RE = /[.*+?^${}()|[\]\\]/g;
 
-/** storage.local keys used to persist behavioral settings and rule snapshots. */
+/** Keys for synced behavioral settings and local rule snapshots. */
 export const SETTINGS_KEY = "settings";
 export const RULE_DATA_KEY = "rule-data";

@@ -17,13 +17,13 @@ export default defineBackground(() => {
 	let syncInFlight = false;
 
 	async function readState() {
-		const stored = await chrome.storage.local.get([
-			SETTINGS_KEY,
-			RULE_DATA_KEY,
+		const [synced, local] = await Promise.all([
+			chrome.storage.sync.get(SETTINGS_KEY),
+			chrome.storage.local.get(RULE_DATA_KEY),
 		]);
 		return {
-			settings: loadConfig(stored[SETTINGS_KEY] ?? defaultConfig()),
-			rules: loadRuleData(stored[RULE_DATA_KEY] ?? defaultRuleData()),
+			settings: loadConfig(synced[SETTINGS_KEY] ?? defaultConfig()),
+			rules: loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData()),
 		};
 	}
 
@@ -37,14 +37,14 @@ export default defineBackground(() => {
 			delayInMinutes: 2,
 			periodInMinutes: 360,
 		});
-		void syncAccounts();
 		if (details.reason !== "install") return;
 
 		const state = await readState();
-		await chrome.storage.local.set({
-			[SETTINGS_KEY]: state.settings,
-			[RULE_DATA_KEY]: state.rules,
-		});
+		await Promise.all([
+			chrome.storage.sync.set({ [SETTINGS_KEY]: state.settings }),
+			chrome.storage.local.set({ [RULE_DATA_KEY]: state.rules }),
+		]);
+		void syncAccounts();
 
 		// The community list isn't bundled; fetch it on install. If it fails, the
 		// popup will retry when opened.
