@@ -8,6 +8,8 @@ import { setLanguage, t } from "@/lib/i18n";
 import {
 	FilterFillIcon,
 	FilterIcon,
+	InformationFillIcon,
+	InformationIcon,
 	LayoutFillIcon,
 	LayoutIcon,
 	ListFilterFillIcon,
@@ -54,6 +56,12 @@ const navigation: {
 		label: "customization",
 		lineIcon: LayoutIcon,
 		fillIcon: LayoutFillIcon,
+	},
+	{
+		id: "about",
+		label: "about",
+		lineIcon: InformationIcon,
+		fillIcon: InformationFillIcon,
 	},
 ];
 
