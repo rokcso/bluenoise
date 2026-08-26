@@ -65,5 +65,9 @@ export function loadConfig(partial: unknown): AppConfig {
 			...DEFAULTS.keywordSourceEnabled,
 			...stored.keywordSourceEnabled,
 		},
+		accountSourceEnabled: {
+			...DEFAULTS.accountSourceEnabled,
+			...stored.accountSourceEnabled,
+		},
 	};
 }
