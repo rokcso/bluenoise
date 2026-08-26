@@ -30,13 +30,15 @@ import {
 	DiagnosticsIcon,
 	DownloadIcon,
 	ExternalLinkIcon,
-	EyeOffIcon,
 	LayoutIcon,
+	LayoutRightIcon,
 	ListFilterIcon,
 	LoaderIcon,
+	MessageIcon,
 	MonitorIcon,
 	MoonIcon,
 	RefreshIcon,
+	RssIcon,
 	SearchIcon,
 	SettingsIcon,
 	ShieldCheckIcon,
@@ -46,6 +48,7 @@ import {
 	TwitterIcon,
 	UploadIcon,
 	UserSlashIcon,
+	WindowIcon,
 	XFillIcon,
 } from "@/src/ui/icons";
 import { useConfig } from "./useConfig";
@@ -317,8 +320,8 @@ export function SettingsApp({
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup
-							label={t("makeover_distractions")}
-							icon={EyeOffIcon}
+							label={t("makeover_distractions_tab_nav")}
+							icon={WindowIcon}
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
@@ -335,7 +338,14 @@ export function SettingsApp({
 									checked={config.hideNotificationBadges}
 									onChange={toggleMakeover("hideNotificationBadges")}
 								/>
-								<SettingsDivider />
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_timeline")}
+							icon={RssIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
 								<XToggle
 									label={t("hide_new_posts_prompt")}
 									hint={t("hide_new_posts_prompt_hint")}
@@ -344,17 +354,31 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={t("hide_grok_button")}
-									hint={t("hide_grok_button_hint")}
-									checked={config.hideGrokButton}
-									onChange={toggleMakeover("hideGrokButton")}
+									label={t("hide_timeline_follow_suggestions")}
+									hint={t("hide_timeline_follow_suggestions_hint")}
+									checked={config.hideTimelineFollowSuggestions}
+									onChange={toggleMakeover("hideTimelineFollowSuggestions")}
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={t("hide_message_button")}
-									hint={t("hide_message_button_hint")}
-									checked={config.hideMessageButton}
-									onChange={toggleMakeover("hideMessageButton")}
+									label={t("hide_discover_more")}
+									hint={t("hide_discover_more_hint")}
+									checked={config.hideDiscoverMore}
+									onChange={toggleMakeover("hideDiscoverMore")}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_sidebar")}
+							icon={LayoutRightIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("hide_live_streams")}
+									hint={t("hide_live_streams_hint")}
+									checked={config.hideLiveStreams}
+									onChange={toggleMakeover("hideLiveStreams")}
 								/>
 								<SettingsDivider />
 								<XToggle
@@ -372,33 +396,32 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={t("hide_timeline_follow_suggestions")}
-									hint={t("hide_timeline_follow_suggestions_hint")}
-									checked={config.hideTimelineFollowSuggestions}
-									onChange={toggleMakeover("hideTimelineFollowSuggestions")}
-								/>
-								<SettingsDivider />
-								<XToggle
-									label={t("hide_discover_more")}
-									hint={t("hide_discover_more_hint")}
-									checked={config.hideDiscoverMore}
-									onChange={toggleMakeover("hideDiscoverMore")}
-								/>
-								<SettingsDivider />
-								<XToggle
-									label={t("hide_live_streams")}
-									hint={t("hide_live_streams_hint")}
-									checked={config.hideLiveStreams}
-									onChange={toggleMakeover("hideLiveStreams")}
-								/>
-								<SettingsDivider />
-								<XToggle
 									label={t("hide_footer")}
 									hint={t("hide_footer_hint")}
 									checked={config.hideFooter}
 									onChange={toggleMakeover("hideFooter")}
 								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_floating")}
+							icon={MessageIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("hide_grok_button")}
+									hint={t("hide_grok_button_hint")}
+									checked={config.hideGrokButton}
+									onChange={toggleMakeover("hideGrokButton")}
+								/>
 								<SettingsDivider />
+								<XToggle
+									label={t("hide_message_button")}
+									hint={t("hide_message_button_hint")}
+									checked={config.hideMessageButton}
+									onChange={toggleMakeover("hideMessageButton")}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup
