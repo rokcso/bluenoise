@@ -97,9 +97,10 @@ export default function App() {
 					<MasterSwitch config={config} update={update} />
 				</div>
 				<EffectSettings compact config={config} update={update} />
-				<div className="flex items-center justify-between gap-4 border-t border-x-border pt-3">
-					<span className="text-sm font-medium text-x-fg">
-						{t("page_cleanup_label")}
+				<div className="flex items-center justify-between gap-4">
+					<span className="flex items-center gap-1.5 text-sm font-medium text-x-fg">
+						<XFillIcon aria-label={t("x_platform")} className="h-4 w-4" />
+						{t("makeover")}
 					</span>
 					<PageCleanupSwitch config={config} update={update} />
 				</div>
@@ -114,7 +115,7 @@ export type SettingsSection =
 	| "accounts"
 	| "backup"
 	| "filtering"
-	| "customization"
+	| "makeover"
 	| "about";
 
 /** Full configuration screen rendered from the extension's Options page. */
@@ -276,17 +277,17 @@ export function SettingsApp({
 					</>
 				)}
 
-				{activeSection === "customization" && (
+				{activeSection === "makeover" && (
 					<>
 						<PageHeading
 							title={
 								<>
-									<XPlatformIcon /> {t("customization")}
+									<XPlatformIcon /> {t("makeover")}
 								</>
 							}
 						/>
 						<SettingsGroup
-							label={t("customization_options")}
+							label={t("makeover_options")}
 							icon={LayoutIcon}
 							labelClassName="font-normal"
 						>
@@ -296,13 +297,6 @@ export function SettingsApp({
 									hint={t("collapse_sidebar_hint")}
 									checked={config.collapseSidebar}
 									onChange={(v) => update({ collapseSidebar: v })}
-								/>
-								<SettingsDivider />
-								<XToggle
-									label={t("show_actual_reply_count")}
-									hint={t("show_actual_reply_count_hint")}
-									checked={config.showActualReplyCount}
-									onChange={(v) => update({ showActualReplyCount: v })}
 								/>
 								<SettingsDivider />
 								<XToggle
@@ -471,6 +465,13 @@ export function SettingsApp({
 									description={t("filter_effect_hint")}
 									config={config}
 									update={update}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("show_actual_reply_count")}
+									hint={t("show_actual_reply_count_hint")}
+									checked={config.showActualReplyCount}
+									onChange={(v) => update({ showActualReplyCount: v })}
 								/>
 								{config.mode === "dim" && (
 									<>
@@ -1058,7 +1059,7 @@ function PageCleanupSwitch({
 		<BinarySwitch
 			checked={config.pageCleanupEnabled}
 			label={
-				config.pageCleanupEnabled ? t("page_cleanup_on") : t("page_cleanup_off")
+				config.pageCleanupEnabled ? t("x_makeover_on") : t("x_makeover_off")
 			}
 			onChange={(pageCleanupEnabled) => update({ pageCleanupEnabled })}
 		/>

@@ -58,8 +58,8 @@ const navigation: {
 		fillIcon: FilterFillIcon,
 	},
 	{
-		id: "customization",
-		label: "customization",
+		id: "makeover",
+		label: "makeover",
 		lineIcon: XFillIcon,
 		fillIcon: XFillIcon,
 	},
