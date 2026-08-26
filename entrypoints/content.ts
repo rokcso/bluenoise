@@ -37,6 +37,7 @@ const TITLE_COUNT_ATTR = "data-xsf-hide-title-count";
 const BADGES_ATTR = "data-xsf-hide-notification-badges";
 const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
 const GROK_ATTR = "data-xsf-hide-grok";
+const MESSAGE_ATTR = "data-xsf-hide-message";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
@@ -398,6 +399,12 @@ function applyPageCustomizations(): void {
 		))
 			hideAncestors(drawer, 2);
 	}
+	if (cfg.hideMessageButton) {
+		for (const drawer of document.querySelectorAll<HTMLElement>(
+			'[data-testid="chat-drawer-root"]',
+		))
+			hideAncestors(drawer, 2);
+	}
 }
 
 function applyTitleAndFavicon(): void {
@@ -448,6 +455,8 @@ function applyStyleVars(): void {
 	else root.removeAttribute(NEW_POSTS_ATTR);
 	if (cfg.enabled && cfg.hideGrokButton) root.setAttribute(GROK_ATTR, "");
 	else root.removeAttribute(GROK_ATTR);
+	if (cfg.enabled && cfg.hideMessageButton) root.setAttribute(MESSAGE_ATTR, "");
+	else root.removeAttribute(MESSAGE_ATTR);
 
 	applyPageCustomizations();
 	if (!cfg.enabled || !active) {

@@ -123,6 +123,10 @@
 	"hide_grok_button_hint": {
 		"message": "移除页面右下角悬浮的 Grok 抽屉按钮。"
 	},
+	"hide_message_button": { "message": "隐藏消息浮层按钮" },
+	"hide_message_button_hint": {
+		"message": "移除页面右下角悬浮的消息抽屉按钮。"
+	},
 	"language": { "message": "语言" },
 	"language_hint": { "message": "选择 BlueNoise 使用的语言。" },
 	"language_auto": { "message": "跟随浏览器" },
