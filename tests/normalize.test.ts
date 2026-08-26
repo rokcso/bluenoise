@@ -4,6 +4,7 @@ import {
 	asRegex,
 	buildWhitelistIndex,
 	escapeRegExp,
+	isSafeCustomRegex,
 	looseRegex,
 	normalizeKeyword,
 	parseKeywordText,
@@ -41,6 +42,20 @@ describe("asRegex", () => {
 	it("识别 /正则/flags", () => {
 		expect(asRegex("/\\d{4}/i")).not.toBeNull();
 		expect(asRegex("普通词")).toBeNull();
+	});
+});
+
+describe("isSafeCustomRegex", () => {
+	it("接受常见的简单正则", () => {
+		expect(isSafeCustomRegex("/\\d{4,}/i")).toBe(true);
+	});
+	it("拒绝嵌套量词和超长规则", () => {
+		expect(isSafeCustomRegex("/(a+)+$/")).toBe(false);
+		expect(isSafeCustomRegex(`/${"a".repeat(513)}/`)).toBe(false);
+	});
+	it("允许兼容性 flags，但拒绝不必要的高级 flags", () => {
+		expect(isSafeCustomRegex("/foo/g")).toBe(true);
+		expect(isSafeCustomRegex("/foo/v")).toBe(false);
 	});
 });
 
