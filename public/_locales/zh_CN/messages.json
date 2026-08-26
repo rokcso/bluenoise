@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - 让 X 重新值得阅读" },
 	"extDescription": {
-		"message": "使用本地、可逆的关键词规则模糊或隐藏嘈杂的 X 回复与时间线推文；不调用 API、不读取 Cookie，也不修改账号。"
+		"message": "让 X 更清爽：在本地模糊或隐藏嘈杂回复、时间线推文和广告，并可通过 Makeover 清理页面；不读取 Cookie，也不修改账号。"
 	},
 	"loading": { "message": "加载中…" },
 	"tagline": { "message": "更少噪音，更多信号。" },
