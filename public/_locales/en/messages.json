@@ -129,6 +129,12 @@
 	"hide_follow_suggestions_hint": {
 		"message": "Remove the \"Who to follow\" recommendations panel from the sidebar."
 	},
+	"hide_timeline_follow_suggestions": {
+		"message": "Hide timeline follow suggestions"
+	},
+	"hide_timeline_follow_suggestions_hint": {
+		"message": "Remove the \"Who to follow\" recommendation block from the timeline."
+	},
 	"hide_trends": { "message": "Hide current trends" },
 	"hide_trends_hint": {
 		"message": "Remove the \"What's happening\" trends panel from the sidebar."
