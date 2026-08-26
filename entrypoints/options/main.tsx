@@ -15,6 +15,7 @@ import {
 	ListFilterIcon,
 	SettingsFillIcon,
 	SettingsIcon,
+	SlidersIcon,
 	UsersFillIcon,
 	UsersIcon,
 	XFillIcon,
@@ -56,6 +57,12 @@ const navigation: {
 		label: "filtering",
 		lineIcon: FilterIcon,
 		fillIcon: FilterFillIcon,
+	},
+	{
+		id: "advanced",
+		label: "advanced",
+		lineIcon: SlidersIcon,
+		fillIcon: SlidersIcon,
 	},
 	{
 		id: "makeover",

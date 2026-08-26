@@ -120,6 +120,8 @@
 	"keywords": { "message": "关键词" },
 	"accounts": { "message": "账号" },
 	"filtering": { "message": "过滤" },
+	"advanced": { "message": "高级设置" },
+	"content_filters": { "message": "内容过滤" },
 	"account_filtering": { "message": "账号过滤" },
 	"external_account_sources": { "message": "外部账号来源" },
 	"account_blacklist_title": { "message": "我的账号黑名单" },
