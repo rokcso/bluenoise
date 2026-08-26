@@ -3,8 +3,9 @@ import type { AppConfig } from "@/src/contracts/config";
 import { CONFIG_KEY } from "@/src/contracts/config";
 import {
 	ACCOUNT_LIST_KEY,
+	accountIdentityToStored,
+	addAccountToList,
 	type AccountListSnapshot,
-	normalizeAccountEntry,
 	syncAccountLists,
 } from "@/src/domain/account-list";
 import { defaultConfig } from "@/src/domain/defaults";
@@ -108,18 +109,12 @@ export default defineBackground(() => {
 			void chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
 				const latest = (config ?? defaultConfig()) as AppConfig;
 				// Accept a numeric X user id or an @handle; anything else is ignored.
-				const entry = normalizeAccountEntry(selection);
-				if (!entry) return;
-				const already = latest.accountBlacklist.some(
-					(item) => normalizeAccountEntry(item) === entry,
-				);
-				if (already) return;
-				const stored = /^\d+$/.test(entry) ? entry : `@${entry}`;
+				const stored = accountIdentityToStored({ handle: selection });
+				if (!stored) return;
+				const next = addAccountToList(latest.accountBlacklist, stored);
+				if (next === null) return; // already present
 				return chrome.storage.local.set({
-					config: {
-						...latest,
-						accountBlacklist: [...latest.accountBlacklist, stored],
-					},
+					config: { ...latest, accountBlacklist: next },
 				});
 			});
 		}
