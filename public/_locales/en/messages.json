@@ -87,6 +87,24 @@
 	"account_blacklist_title": { "message": "My account blacklist" },
 	"account_whitelist_title": { "message": "My account whitelist" },
 	"customization": { "message": "X makeover" },
+	"about": { "message": "About" },
+	"about_intro": {
+		"message": "An X reading tool that runs in your browser. You define the rules and the boundaries."
+	},
+	"about_idea_title": { "message": "Put the feed back in the reader's hands" },
+	"about_idea_body": {
+		"message": "X has never lacked information. What it often lacks is room for your own judgment. BlueNoise gives the filtering decisions back to you. All data and logic stay in your browser. It never touches your account, calls the X API, or collects your data. The controls are deliberately detailed because you should decide what appears in your timeline and what stops appearing there."
+	},
+	"about_name_title": { "message": "Why BlueNoise" },
+	"about_name_body": {
+		"message": "Blue noise appears in image and signal processing. It spreads interference out instead of letting it gather into distracting clumps. The name does not mean eliminating every bit of noise. A good feed can still have surprise and disagreement. It just should not waste your attention on repetition, manipulation, or empty interruption."
+	},
+	"about_open_title": { "message": "You should be able to see what it does" },
+	"about_open_body": {
+		"message": "BlueNoise is open source. You can inspect the code, ask questions, and help improve it. We do not think you should have to trust an extension before you are allowed to use it. Its behavior should be clear in its features and code, not buried in permission text or vague promises."
+	},
+	"about_links_label": { "message": "BlueNoise links" },
+	"about_github": { "message": "View on GitHub" },
 	"customization_options": { "message": "Page tweaks" },
 	"treatment": { "message": "Filtering mode" },
 	"matching": { "message": "Match options" },

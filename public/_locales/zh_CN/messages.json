@@ -83,6 +83,24 @@
 	"account_blacklist_title": { "message": "我的账号黑名单" },
 	"account_whitelist_title": { "message": "我的账号白名单" },
 	"customization": { "message": "X 变身" },
+	"about": { "message": "关于" },
+	"about_intro": {
+		"message": "一个在浏览器本地运行的 X 阅读工具。规则由你定义，边界也由你定义。"
+	},
+	"about_idea_title": { "message": "把信息流还给正在阅读的人" },
+	"about_idea_body": {
+		"message": "X 上从来不缺信息，缺的是自己做判断的空间。BlueNoise 把筛选权交还给你。所有数据和逻辑都留在浏览器里，不直接触碰账号，不与 X API 交互，也不收集你的数据。我们把控制做得足够细，是因为你应该能决定时间线里出现什么，也能决定哪些东西不再出现。"
+	},
+	"about_name_title": { "message": "为什么叫 BlueNoise" },
+	"about_name_body": {
+		"message": "蓝噪声常用于图像和信号处理中。它把干扰分散开，不让它们聚成刺眼的斑块。这个名字并不意味着要消灭一切噪声。好的信息流仍然可以有意外和分歧，只是没必要把注意力浪费在重复、诱导和无意义的打扰上。"
+	},
+	"about_open_title": { "message": "你应该看得懂它在做什么" },
+	"about_open_body": {
+		"message": "BlueNoise 是开源项目。你可以检查代码、提出问题，也可以参与改进。我们不认为用户需要先信任一个扩展，才有资格使用它。扩展会做什么，应当由功能和代码清楚地说明，而不是藏在权限说明或模糊的承诺里。"
+	},
+	"about_links_label": { "message": "BlueNoise 链接" },
+	"about_github": { "message": "在 GitHub 查看项目" },
 	"customization_options": { "message": "页面改造" },
 	"treatment": { "message": "过滤模式" },
 	"matching": { "message": "匹配选项" },

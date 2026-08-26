@@ -96,7 +96,8 @@ export type SettingsSection =
 	| "keywords"
 	| "accounts"
 	| "filtering"
-	| "customization";
+	| "customization"
+	| "about";
 
 /** Full configuration screen rendered from the extension's Options page. */
 export function SettingsApp({
@@ -456,8 +457,60 @@ export function SettingsApp({
 						</SettingsGroup>
 					</>
 				)}
+
+				{activeSection === "about" && <AboutPage />}
 			</div>
 		</main>
+	);
+}
+
+function AboutPage() {
+	return (
+		<>
+			<PageHeading title={t("about")} description={t("about_intro")} />
+			<section className="about-hero" aria-labelledby="about-idea-title">
+				<img
+					src="/icons/icon-128.png"
+					alt=""
+					aria-hidden="true"
+					className="h-12 w-12 shrink-0 rounded-[14px]"
+				/>
+				<div>
+					<h2 id="about-idea-title">{t("about_idea_title")}</h2>
+					<p>{t("about_idea_body")}</p>
+				</div>
+			</section>
+			<div className="about-grid">
+				<section className="about-card" aria-labelledby="about-name-title">
+					<h2 id="about-name-title">{t("about_name_title")}</h2>
+					<p>{t("about_name_body")}</p>
+				</section>
+				<section className="about-card" aria-labelledby="about-open-title">
+					<h2 id="about-open-title">{t("about_open_title")}</h2>
+					<p>{t("about_open_body")}</p>
+				</section>
+			</div>
+			<nav className="about-actions" aria-label={t("about_links_label")}>
+				<a
+					href="https://github.com/rokcso/bluenoise"
+					target="_blank"
+					rel="noreferrer"
+					className="about-action about-action-primary"
+				>
+					{t("about_github")}
+					<ExternalLinkIcon aria-hidden="true" />
+				</a>
+				<a
+					href="https://x.com/intent/follow?screen_name=rokcso"
+					target="_blank"
+					rel="noreferrer"
+					className="about-action"
+				>
+					{t("follow_maker")}
+					<ExternalLinkIcon aria-hidden="true" />
+				</a>
+			</nav>
+		</>
 	);
 }
 
@@ -470,22 +523,24 @@ function AccountListSettings({
 	config: AppConfig;
 	update: (p: Partial<AppConfig>) => void;
 }) {
-	const [snapshot, setSnapshot] = useState<AccountListSnapshot | undefined>();
-	const [syncing, setSyncing] = useState(false);
+	const [snapshots, setSnapshots] = useState<
+		Record<string, AccountListSnapshot>
+	>({});
+	const [syncingSource, setSyncingSource] = useState<string | null>(null);
 
 	useEffect(() => {
 		let active = true;
 		chrome.storage.local.get(RULE_DATA_KEY).then((result) => {
 			if (active)
-				setSnapshot(loadRuleData(result[RULE_DATA_KEY]).accounts.external.mxga);
+				setSnapshots(loadRuleData(result[RULE_DATA_KEY]).accounts.external);
 		});
 		const onChanged = (
 			changes: { [key: string]: chrome.storage.StorageChange },
 			area: string,
 		) => {
 			if (area === "local" && changes[RULE_DATA_KEY]) {
-				setSnapshot(
-					loadRuleData(changes[RULE_DATA_KEY].newValue).accounts.external.mxga,
+				setSnapshots(
+					loadRuleData(changes[RULE_DATA_KEY].newValue).accounts.external,
 				);
 			}
 		};
