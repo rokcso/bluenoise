@@ -61,6 +61,7 @@
 		"placeholders": { "date": { "content": "$1" } }
 	},
 	"sync": { "message": "Sync" },
+	"rule_backup": { "message": "Rule backup" },
 	"my_keywords": { "message": "My keywords" },
 	"my_keywords_hint": {
 		"message": "Add words or regular expressions that should trigger filtering. Use one rule per line."
