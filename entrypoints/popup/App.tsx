@@ -274,6 +274,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("hide_message_button")}
+									hint={t("hide_message_button_hint")}
+									checked={config.hideMessageButton}
+									onChange={(v) => update({ hideMessageButton: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("hide_premium_promo")}
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}

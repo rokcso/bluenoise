@@ -117,3 +117,8 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
+
+[data-xsf-hide-message] [data-testid="chat-drawer-root"] {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}

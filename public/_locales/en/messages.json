@@ -129,6 +129,10 @@
 	"hide_grok_button_hint": {
 		"message": "Remove the Grok drawer button floating at the bottom-right of the page."
 	},
+	"hide_message_button": { "message": "Hide message floating button" },
+	"hide_message_button_hint": {
+		"message": "Remove the Messages drawer button floating at the bottom-right of the page."
+	},
 	"language": { "message": "Language" },
 	"language_hint": { "message": "Choose the language used by BlueNoise." },
 	"language_auto": { "message": "Follow browser" },

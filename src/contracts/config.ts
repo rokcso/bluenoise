@@ -28,6 +28,7 @@ export interface AppConfig {
 	hideNotificationBadges: boolean;
 	hideNewPostsPrompt: boolean;
 	hideGrokButton: boolean;
+	hideMessageButton: boolean;
 	/** User-controlled external keyword subscriptions. */
 	subscriptions: KeywordSubscription[];
 	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */
