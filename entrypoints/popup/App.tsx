@@ -496,26 +496,17 @@ function AccountListSettings({
 		};
 	}, []);
 
-	async function sync() {
-		setSyncing(true);
+	async function sync(sourceId: string) {
+		setSyncingSource(sourceId);
 		try {
-			await chrome.runtime.sendMessage({ type: "XSF_SYNC_ACCOUNT_LIST" });
+			await chrome.runtime.sendMessage({
+				type: "XSF_SYNC_ACCOUNT_LIST",
+				sourceId,
+			});
 		} finally {
-			setSyncing(false);
+			setSyncingSource(null);
 		}
 	}
-
-	const status = snapshot
-		? t(
-				"account_status",
-				String(snapshot.blacklistCount),
-				String(snapshot.whitelistCount),
-				new Intl.DateTimeFormat(undefined, {
-					dateStyle: "medium",
-					timeStyle: "short",
-				}).format(snapshot.syncedAt),
-			)
-		: t("not_synced");
 	if (section === "localBlacklist" || section === "localWhitelist") {
 		const isBlacklist = section === "localBlacklist";
 		return (
@@ -552,61 +543,102 @@ function AccountListSettings({
 		);
 	}
 
-	const source = DEFAULT_ACCOUNT_LIST_SOURCES[0];
+	const sources = DEFAULT_ACCOUNT_LIST_SOURCES;
 
 	return (
 		<div className={config.externalAccountListsEnabled ? "" : "opacity-70"}>
-			<div className="flex items-center justify-between gap-4 py-3">
-				<div className="min-w-0 flex-1">
-					<a
-						href={MXGA_REPO_URL}
-						target="_blank"
-						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-sm font-medium transition-colors hover:text-x-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-					>
-						{source.name}
-						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-					</a>
-					<span className="mt-1 block truncate text-xs text-x-muted">
-						{status}
-					</span>
-					<a
-						href={MXGA_DATA_URL}
-						target="_blank"
-						rel="noreferrer"
-						className="mt-1 block truncate text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-						title={t("account_source_link")}
-					>
-						{t("account_source_link")}
-					</a>
-				</div>
-				<div className="flex shrink-0 items-center gap-1">
-					<button
-						type="button"
-						onClick={sync}
-						disabled={syncing}
-						className="flex cursor-pointer items-center gap-1 rounded-full border border-x-border px-2.5 py-1 text-xs text-x-fg hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-					>
-						{syncing ? (
-							<LoaderIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
-						) : (
-							<RefreshIcon aria-hidden="true" className="h-3 w-3" />
-						)}
-						{t("sync")}
-					</button>
-					<BinarySwitch
-						checked={config.externalAccountListsEnabled}
-						label={source.name}
-						onChange={(v) => {
-							update({ externalAccountListsEnabled: v });
-							if (v)
-								void chrome.runtime.sendMessage({
-									type: "XSF_SYNC_ACCOUNT_LIST",
-								});
-						}}
-					/>
-				</div>
-			</div>
+			{sources
+				.map((source) => {
+					const snapshot = snapshots[source.id];
+					const status = snapshot
+						? t(
+								"account_status",
+								String(snapshot.blacklistCount),
+								String(snapshot.whitelistCount),
+								new Intl.DateTimeFormat(undefined, {
+									dateStyle: "medium",
+									timeStyle: "short",
+								}).format(snapshot.syncedAt),
+							)
+						: t("not_synced");
+					const enabled = config.accountSourceEnabled[source.id] ?? false;
+					return (
+						<div
+							key={source.id}
+							className="flex items-center justify-between gap-4 py-3"
+						>
+							<div className="min-w-0 flex-1">
+								<a
+									href={source.homepageUrl ?? MXGA_REPO_URL}
+									target="_blank"
+									rel="noreferrer"
+									className="inline-flex w-fit items-center gap-1 text-sm font-medium transition-colors hover:text-x-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+								>
+									{source.name}
+									<ExternalLinkIcon
+										className="h-3.5 w-3.5"
+										aria-hidden="true"
+									/>
+								</a>
+								<span className="mt-1 block truncate text-xs text-x-muted">
+									{status}
+								</span>
+								{source.id === "mxga" && (
+									<a
+										href={MXGA_DATA_URL}
+										target="_blank"
+										rel="noreferrer"
+										className="mt-1 block truncate text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+										title={t("account_source_link")}
+									>
+										{t("account_source_link")}
+									</a>
+								)}
+							</div>
+							<div className="flex shrink-0 items-center gap-1">
+								<button
+									type="button"
+									onClick={() => void sync(source.id)}
+									disabled={syncingSource !== null}
+									className="flex cursor-pointer items-center gap-1 rounded-full border border-x-border px-2.5 py-1 text-xs text-x-fg hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									{syncingSource === source.id ? (
+										<LoaderIcon
+											aria-hidden="true"
+											className="h-3 w-3 animate-spin"
+										/>
+									) : (
+										<RefreshIcon aria-hidden="true" className="h-3 w-3" />
+									)}
+									{t("sync")}
+								</button>
+								<BinarySwitch
+									checked={enabled}
+									label={source.name}
+									onChange={(v) => {
+										update({
+											accountSourceEnabled: {
+												...config.accountSourceEnabled,
+												[source.id]: v,
+											},
+										});
+										if (v)
+											void chrome.runtime.sendMessage({
+												type: "XSF_SYNC_ACCOUNT_LIST",
+												sourceId: source.id,
+											});
+									}}
+								/>
+							</div>
+						</div>
+					);
+				})
+				.map((node, i) => (
+					<div key={sources[i].id}>
+						{i > 0 && <SettingsDivider />}
+						{node}
+					</div>
+				))}
 		</div>
 	);
 }

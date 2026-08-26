@@ -1,0 +1,2 @@
+# BlueNoise maintained account blacklist.
+# Add one numeric X user ID or @handle per line.

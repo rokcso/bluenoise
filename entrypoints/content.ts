@@ -11,7 +11,10 @@ import type {
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
 	type AccountListIndex,
+	type AccountListSnapshot,
 	buildAccountListIndex,
+	DEFAULT_ACCOUNT_LIST_SOURCES,
+	mergeAccountListSnapshots,
 	matchAccountIndex,
 } from "@/src/domain/account-list";
 import {
@@ -820,6 +823,10 @@ function restoreSidebarClasses(): void {
 	for (const [element, className] of sidebarOriginalClasses)
 		if (element.isConnected) element.className = className;
 	sidebarOriginalClasses.clear();
+	for (const button of document.querySelectorAll<HTMLElement>(
+		"[data-xsf-compact-account]",
+	))
+		button.removeAttribute("data-xsf-compact-account");
 }
 
 /** Remove width declarations written by earlier versions of this feature. */
@@ -908,6 +915,20 @@ function applySidebarCompactLayout(): void {
 					["r-cnw61z", "r-1awozwy"],
 				);
 			}
+		}
+		const accountButton = header.querySelector<HTMLElement>(
+			'[data-testid="SideNav_AccountSwitcher_Button"]',
+		);
+		if (accountButton) {
+			accountButton.setAttribute("data-xsf-compact-account", "");
+			const accountContainer = accountButton.parentElement;
+			if (accountContainer instanceof HTMLElement)
+				setSidebarClasses(
+					accountContainer,
+					["r-1habvwh"],
+					["r-1awozwy"],
+				);
+			setSidebarClasses(accountButton, ["r-1habvwh"], ["r-1awozwy"]);
 		}
 	}
 }
@@ -1591,6 +1612,11 @@ function matchingChanged(prev: AppConfig, next: AppConfig): boolean {
 	if (prev.accountListEnabled !== next.accountListEnabled) return true;
 	if (prev.externalAccountListsEnabled !== next.externalAccountListsEnabled)
 		return true;
+	if (
+		JSON.stringify(prev.accountSourceEnabled) !==
+		JSON.stringify(next.accountSourceEnabled)
+	)
+		return true;
 	return false;
 }
 
@@ -1603,6 +1629,11 @@ function watchConfig(): void {
 		chrome.storage.local.get([SETTINGS_KEY, RULE_DATA_KEY], (result) => {
 			cfg = loadConfig(result[SETTINGS_KEY] ?? defaultConfig());
 			rules = loadRuleData(result[RULE_DATA_KEY] ?? defaultRuleData());
+			const accountSnapshotValue = accountSnapshot(rules);
+			accountIndex = accountSnapshotValue
+				? buildAccountListIndex(accountSnapshotValue)
+				: undefined;
+			accountListVersion = accountSnapshotValue?.version ?? 0;
 			setLanguage(cfg.language);
 			applyLogo();
 			if (rulesChanged || matchingChanged(prev, cfg)) {
@@ -1632,8 +1663,9 @@ function watchConfig(): void {
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
-		const next = (changes[RULE_DATA_KEY].newValue as RuleData | undefined)
-			?.accounts.external.combined;
+		const next = accountSnapshot(
+			loadRuleData(changes[RULE_DATA_KEY].newValue),
+		);
 		accountIndex = next ? buildAccountListIndex(next) : undefined;
 		accountListVersion = next?.version ?? 0;
 		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
@@ -1673,7 +1705,17 @@ function onVisibility(): void {
 
 async function loadAccountList(): Promise<void> {
 	const result = await chrome.storage.local.get(RULE_DATA_KEY);
-	const snapshot = loadRuleData(result[RULE_DATA_KEY]).accounts.external.combined;
+	const snapshot = accountSnapshot(loadRuleData(result[RULE_DATA_KEY]));
 	accountIndex = snapshot ? buildAccountListIndex(snapshot) : undefined;
 	accountListVersion = snapshot?.version ?? 0;
+}
+
+function accountSnapshot(data: RuleData): AccountListSnapshot | undefined {
+	return mergeAccountListSnapshots(
+		DEFAULT_ACCOUNT_LIST_SOURCES.filter(
+			(source) => cfg.accountSourceEnabled[source.id],
+		)
+			.map((source) => data.accounts.external[source.id])
+			.filter((snapshot): snapshot is AccountListSnapshot => Boolean(snapshot)),
+	);
 }

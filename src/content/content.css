@@ -135,6 +135,12 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	display: none;
 }
 
+/* Native compact account menus retain only the avatar container. */
+[data-xsf-compact-account] > div:not(:first-child) {
+	/* biome-ignore lint/complexity/noImportantStyles: override X's expanded account details. */
+	display: none !important;
+}
+
 [data-xsf-collapse-sidebar]
 	header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])
 	:is(nav[role="navigation"], [data-testid="SideNav_AccountSwitcher_Button"])

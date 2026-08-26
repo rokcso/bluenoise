@@ -4,7 +4,9 @@ import {
 	type AccountListSource,
 	buildAccountListIndex,
 	matchAccountIndex,
+	mergeAccountListSnapshots,
 	normalizeAccountHandle,
+	parseAccountText,
 	syncAccountListSource,
 	syncAccountLists,
 } from "@/src/domain/account-list";
@@ -41,6 +43,48 @@ function liteRows(n: number, prefix = "100000"): [string, string, string][] {
 describe("account list providers", () => {
 	it("normalizes handles", () => {
 		expect(normalizeAccountHandle(" @Spam_Bot ")).toBe("spam_bot");
+	});
+
+	it("parses one-per-line account lists with comments and duplicates", () => {
+		expect(
+			parseAccountText(
+				"# maintained list\n123\n@Spam_Bot\nspam_bot\ninvalid handle!\n",
+			),
+		).toEqual({ ids: ["123"], handles: ["spam_bot"] });
+	});
+
+	it("syncs a one-per-line provider without a whitelist", async () => {
+		const source: AccountListSource = {
+			id: "text",
+			name: "Text list",
+			blacklistUrl: "https://example.test/accounts.txt",
+			format: "one-per-line",
+		};
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response("# comment\n123\n@Spam_Bot\n")),
+		);
+		const result = await syncAccountListSource(source);
+		expect(result.blacklistIds).toEqual(["123"]);
+		expect(result.blacklistHandles).toEqual(["spam_bot"]);
+		expect(result.whitelistIds).toEqual([]);
+		expect(result.sources).toEqual(["text"]);
+		vi.unstubAllGlobals();
+	});
+
+	it("merges enabled provider snapshots without changing their precedence", () => {
+		const combined = mergeAccountListSnapshots([
+			snapshot,
+			{
+				...snapshot,
+				version: 2,
+				blacklistIds: ["789"],
+				blacklistHandles: ["another_bot"],
+				sources: ["text"],
+			},
+		]);
+		expect(combined?.blacklistIds).toEqual(["123", "789"]);
+		expect(combined?.sources).toEqual(["text"]);
 	});
 
 	it("gives whitelist precedence over blacklist", () => {

@@ -35,6 +35,7 @@ export const DEFAULTS: AppConfig = {
 	filterAutomatedAccounts: false,
 	accountListEnabled: true,
 	externalAccountListsEnabled: false,
+	accountSourceEnabled: { bluenoise: true, mxga: true },
 };
 
 export const DEFAULT_RULE_DATA: RuleData = {
