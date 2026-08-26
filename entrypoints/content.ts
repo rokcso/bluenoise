@@ -87,6 +87,9 @@ const REVEAL_RADIUS = 40;
 const RESCAN_DELAYS = [0, 250, 800, 1800, 3500];
 /** Beyond this many mutation records per callback, fall back to a full scan. */
 const MUTATION_BURST = 800;
+/** Keep filtering work below a frame budget so X remains responsive. */
+const FLUSH_BUDGET_MS = 8;
+const FLUSH_MAX_ARTICLES = 50;
 
 export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
@@ -1259,10 +1262,17 @@ function flush(): void {
 		pending.clear();
 		return;
 	}
-	const queuedCount = pending.size;
+	// Take a snapshot so mutations caused while evaluating do not get lost when
+	// the current batch is cleared. Any unfinished work is put back below.
+	const queue = [...pending];
+	pending.clear();
+	const queuedCount = queue.length;
 	const logs: FilteredLog[] = [];
 	let evaluatedCount = 0;
-	for (const article of pending) {
+	const startedAt = performance.now();
+	let processed = 0;
+	for (let i = 0; i < queue.length; i++) {
+		const article = queue[i];
 		if (!article.isConnected) continue;
 		try {
 			const result = evaluate(article);
@@ -1271,14 +1281,31 @@ function flush(): void {
 		} catch (error) {
 			console.error("[BlueNoise] Failed to process an item:", error);
 		}
+		processed++;
+		// Always make progress on at least one article, even if one unusually
+		// complex rule consumes the whole budget by itself.
+		if (
+			processed >= FLUSH_MAX_ARTICLES ||
+			(processed > 0 && performance.now() - startedAt >= FLUSH_BUDGET_MS)
+		) {
+			for (let rest = i + 1; rest < queue.length; rest++)
+				pending.add(queue[rest]);
+			break;
+		}
 	}
-	pending.clear();
 	debugLog("Scan completed", {
 		queuedArticleCount: queuedCount,
 		evaluatedCount,
+		processedArticleCount: processed,
+		remainingArticleCount: pending.size,
+		durationMs: Math.round(performance.now() - startedAt),
 		filteredCount: document.querySelectorAll(`.${HIT_CLASS}`).length,
 	});
 	if (logs.length) emitFilteredLogs(logs);
+	if (pending.size) {
+		schedule();
+		return;
+	}
 	// Run after every queued reply has received its filtering mark, so the
 	// number mirrors what remains in the conversation rather than X's total.
 	if (isStatusPage()) updateDisplayedReplyCount();
