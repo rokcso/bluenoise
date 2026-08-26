@@ -34,6 +34,8 @@ export interface AppConfig {
 	hideTimelineFollowSuggestions: boolean;
 	/** Hide the Discover more recommendations at the bottom of a post page. */
 	hideDiscoverMore: boolean;
+	/** Hide the "Live on X" live-stream cards on the home timeline. */
+	hideLiveStreams: boolean;
 	hideTitleCount: boolean;
 	hideNotificationBadges: boolean;
 	hideNewPostsPrompt: boolean;

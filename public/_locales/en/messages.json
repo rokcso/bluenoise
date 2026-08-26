@@ -211,6 +211,10 @@
 	"hide_discover_more_hint": {
 		"message": "Remove the Discover more recommendations at the bottom of a post page."
 	},
+	"hide_live_streams": { "message": "Hide Live on X" },
+	"hide_live_streams_hint": {
+		"message": "Remove the \"Live on X\" live-stream cards from the timeline."
+	},
 	"hide_trends": { "message": "Hide current trends" },
 	"hide_trends_hint": {
 		"message": "Remove the \"What's happening\" trends panel from the sidebar."

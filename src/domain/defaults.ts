@@ -17,6 +17,7 @@ export const DEFAULTS: AppConfig = {
 	hideFollowSuggestions: false,
 	hideTimelineFollowSuggestions: false,
 	hideDiscoverMore: false,
+	hideLiveStreams: false,
 	hideTitleCount: false,
 	hideNotificationBadges: false,
 	hideNewPostsPrompt: false,

@@ -205,6 +205,10 @@
 	"hide_discover_more_hint": {
 		"message": "移除帖子详情页评论区底部的「发现更多」推荐模块。"
 	},
+	"hide_live_streams": { "message": "隐藏 X 上的直播" },
+	"hide_live_streams_hint": {
+		"message": "从时间线中移除「X 上的直播」直播卡片。"
+	},
 	"hide_trends": { "message": "隐藏当前趋势" },
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"
