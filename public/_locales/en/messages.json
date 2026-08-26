@@ -135,6 +135,10 @@
 	"hide_timeline_follow_suggestions_hint": {
 		"message": "Remove the \"Who to follow\" recommendation block from the timeline."
 	},
+	"hide_discover_more": { "message": "Hide Discover more" },
+	"hide_discover_more_hint": {
+		"message": "Remove the Discover more recommendations at the bottom of a post page."
+	},
 	"hide_trends": { "message": "Hide current trends" },
 	"hide_trends_hint": {
 		"message": "Remove the \"What's happening\" trends panel from the sidebar."

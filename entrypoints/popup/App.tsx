@@ -309,6 +309,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("hide_discover_more")}
+									hint={t("hide_discover_more_hint")}
+									checked={config.hideDiscoverMore}
+									onChange={(v) => update({ hideDiscoverMore: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("hide_footer")}
 									hint={t("hide_footer_hint")}
 									checked={config.hideFooter}

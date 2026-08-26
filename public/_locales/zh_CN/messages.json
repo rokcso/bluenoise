@@ -129,6 +129,10 @@
 	"hide_timeline_follow_suggestions_hint": {
 		"message": "移除时间线中的「推荐关注」推荐模块。"
 	},
+	"hide_discover_more": { "message": "隐藏发现更多" },
+	"hide_discover_more_hint": {
+		"message": "移除帖子详情页评论区底部的「发现更多」推荐模块。"
+	},
 	"hide_trends": { "message": "隐藏当前趋势" },
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"

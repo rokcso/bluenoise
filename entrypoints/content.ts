@@ -433,6 +433,24 @@ function applyPageCustomizations(): void {
 				cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
 		}
 	}
+	if (cfg.hideDiscoverMore && isStatusPage()) {
+		for (const heading of document.querySelectorAll<HTMLElement>(
+			'h2[role="heading"][aria-level="2"]',
+		)) {
+			if (!/发现更多|discover more/i.test(heading.textContent ?? "")) continue;
+			const cell = heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
+			if (!cell) continue;
+			cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			// Discover more is the final recommendation block on a status page;
+			// its virtualized content is rendered as following sibling cells.
+			for (
+				let next = cell.nextElementSibling;
+				next?.matches('[data-testid="cellInnerDiv"]');
+				next = next.nextElementSibling
+			)
+				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+		}
+	}
 	if (cfg.hideTrends) {
 		for (const section of document.querySelectorAll<HTMLElement>(
 			'section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"])',
