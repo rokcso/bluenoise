@@ -114,6 +114,7 @@ export type SettingsSection =
 	| "accounts"
 	| "backup"
 	| "filtering"
+	| "advanced"
 	| "makeover"
 	| "about";
 
@@ -392,7 +393,7 @@ export function SettingsApp({
 					<>
 						<PageHeading title={t("filtering")} />
 						<SettingsGroup
-							label={t("ads")}
+							label={t("content_filters")}
 							icon={SlidersIcon}
 							labelClassName="font-normal"
 						>
@@ -472,6 +473,12 @@ export function SettingsApp({
 								)}
 							</SettingsPanel>
 						</SettingsGroup>
+					</>
+				)}
+
+				{activeSection === "advanced" && (
+					<>
+						<PageHeading title={t("advanced")} />
 						<SettingsGroup
 							label={t("matching")}
 							icon={SearchIcon}

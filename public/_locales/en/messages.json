@@ -124,6 +124,8 @@
 	"keywords": { "message": "Keywords" },
 	"accounts": { "message": "Accounts" },
 	"filtering": { "message": "Filtering" },
+	"advanced": { "message": "Advanced" },
+	"content_filters": { "message": "Content filters" },
 	"account_filtering": { "message": "Account filtering" },
 	"external_account_sources": { "message": "External account sources" },
 	"account_blacklist_title": { "message": "My account blacklist" },
