@@ -92,6 +92,10 @@
 	"matching": { "message": "Match options" },
 	"diagnostics": { "message": "Diagnostics" },
 	"ads": { "message": "Ads" },
+	"filter_ads": { "message": "Filter promoted posts" },
+	"filter_ads_hint": {
+		"message": "Blur or hide posts marked as ads using your selected filtering mode."
+	},
 	"hide_premium_promo": { "message": "Hide X Premium ads" },
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."

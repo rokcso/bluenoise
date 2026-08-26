@@ -323,6 +323,20 @@ export function SettingsApp({
 					<>
 						<PageHeading title={t("filtering")} />
 						<SettingsGroup
+							label={t("ads")}
+							icon={SlidersIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("filter_ads")}
+									hint={t("filter_ads_hint")}
+									checked={config.filterAds}
+									onChange={(v) => update({ filterAds: v })}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
 							label={t("treatment")}
 							icon={SlidersIcon}
 							labelClassName="font-normal"
