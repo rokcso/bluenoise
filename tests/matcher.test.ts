@@ -9,6 +9,10 @@ function cfg(overrides: Partial<AppConfig> = {}): AppConfig {
 }
 
 describe("buildMatchers", () => {
+	it("跳过危险的自定义正则", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["/(a+)+$/"] }));
+		expect(m.custom).toHaveLength(0);
+	});
 	it("合并普通词 + 自定义正则，白名单命中被跳过", () => {
 		const c = cfg({
 			userKeywords: ["加微信", "广告", "/\\d{6,}/"],

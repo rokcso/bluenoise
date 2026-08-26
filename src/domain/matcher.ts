@@ -6,6 +6,8 @@ import type {
 import {
 	asRegex,
 	buildWhitelistIndex,
+	isSafeCustomRegex,
+	MAX_CUSTOM_REGEX_COUNT,
 	normalizeKeyword,
 } from "@/src/domain/normalize";
 
@@ -58,6 +60,8 @@ export function buildMatchers(
 
 		const asRegexMatch = asRegex(kw);
 		if (asRegexMatch) {
+			if (custom.length >= MAX_CUSTOM_REGEX_COUNT || !isSafeCustomRegex(kw))
+				continue;
 			if (seenRegex.has(kw)) continue;
 			try {
 				// /regex/flags: keep the regex's own case/whitespace semantics,
