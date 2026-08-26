@@ -97,6 +97,12 @@ export default function App() {
 					<MasterSwitch config={config} update={update} />
 				</div>
 				<EffectSettings compact config={config} update={update} />
+				<div className="flex items-center justify-between gap-4 border-t border-x-border pt-3">
+					<span className="text-sm font-medium text-x-fg">
+						{t("page_cleanup_label")}
+					</span>
+					<PageCleanupSwitch config={config} update={update} />
+				</div>
 			</div>
 		</main>
 	);
@@ -1037,6 +1043,24 @@ function MasterSwitch({
 			checked={config.enabled}
 			label={config.enabled ? t("enabled_on") : t("enabled_off")}
 			onChange={(enabled) => update({ enabled })}
+		/>
+	);
+}
+
+function PageCleanupSwitch({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	return (
+		<BinarySwitch
+			checked={config.pageCleanupEnabled}
+			label={
+				config.pageCleanupEnabled ? t("page_cleanup_on") : t("page_cleanup_off")
+			}
+			onChange={(pageCleanupEnabled) => update({ pageCleanupEnabled })}
 		/>
 	);
 }

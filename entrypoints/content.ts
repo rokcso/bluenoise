@@ -636,7 +636,7 @@ function syncMarkedRowsInteractivity(): void {
 }
 
 function applyPageCustomizations(): void {
-	const enabled = cfg.enabled;
+	const enabled = cfg.pageCleanupEnabled;
 	for (const el of document.querySelectorAll(`[${CUSTOM_HIDDEN_ATTR}]`))
 		el.removeAttribute(CUSTOM_HIDDEN_ATTR);
 	// Title/favicon state must also be restored when the master switch is off.
@@ -729,7 +729,7 @@ function applyPageCustomizations(): void {
 }
 
 function applyTitleAndFavicon(): void {
-	const hide = cfg.enabled && cfg.hideTitleCount;
+	const hide = cfg.pageCleanupEnabled && cfg.hideTitleCount;
 	if (hide && document.title && TITLE_COUNT_RE.test(document.title)) {
 		titleBeforeCount ||= document.title;
 		document.title = document.title.replace(TITLE_COUNT_RE, "");
@@ -865,7 +865,7 @@ function applyCompactComposeClasses(button: HTMLAnchorElement): void {
  * compact navigation itself. Elements are located solely by stable structure.
  */
 function applySidebarCompactLayout(): void {
-	if (!cfg.enabled || !cfg.collapseSidebar) {
+	if (!cfg.pageCleanupEnabled || !cfg.collapseSidebar) {
 		restoreSidebarStyles();
 		restoreSidebarClasses();
 		return;
@@ -919,7 +919,7 @@ function applySidebarCompactLayout(): void {
 
 /** The expanded sidebar has no compose SVG, so reproduce X's compact DOM. */
 function applySidebarComposeIcons(): void {
-	if (!cfg.enabled || !cfg.collapseSidebar) {
+	if (!cfg.pageCleanupEnabled || !cfg.collapseSidebar) {
 		restoreSidebarComposeIcons();
 		return;
 	}
@@ -974,29 +974,35 @@ function applyStyleVars(): void {
 	// Page customizations apply on every X page, including profile pages. The
 	// filtering effect below remains limited to the home timeline and status
 	// pages via `active`.
-	if (cfg.enabled && cfg.hidePremiumPromo) root.setAttribute(PREMIUM_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hidePremiumPromo)
+		root.setAttribute(PREMIUM_ATTR, "");
 	else root.removeAttribute(PREMIUM_ATTR);
-	if (cfg.enabled && cfg.hideFooter) root.setAttribute(FOOTER_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideFooter)
+		root.setAttribute(FOOTER_ATTR, "");
 	else root.removeAttribute(FOOTER_ATTR);
-	if (cfg.enabled && cfg.hideTrends) root.setAttribute(TRENDS_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideTrends)
+		root.setAttribute(TRENDS_ATTR, "");
 	else root.removeAttribute(TRENDS_ATTR);
-	if (cfg.enabled && cfg.hideFollowSuggestions)
+	if (cfg.pageCleanupEnabled && cfg.hideFollowSuggestions)
 		root.setAttribute(FOLLOW_ATTR, "");
 	else root.removeAttribute(FOLLOW_ATTR);
-	if (cfg.enabled && cfg.hideTitleCount)
+	if (cfg.pageCleanupEnabled && cfg.hideTitleCount)
 		root.setAttribute(TITLE_COUNT_ATTR, "");
 	else root.removeAttribute(TITLE_COUNT_ATTR);
-	if (cfg.enabled && cfg.hideNotificationBadges)
+	if (cfg.pageCleanupEnabled && cfg.hideNotificationBadges)
 		root.setAttribute(BADGES_ATTR, "");
 	else root.removeAttribute(BADGES_ATTR);
-	if (cfg.enabled && cfg.hideNewPostsPrompt)
+	if (cfg.pageCleanupEnabled && cfg.hideNewPostsPrompt)
 		root.setAttribute(NEW_POSTS_ATTR, "");
 	else root.removeAttribute(NEW_POSTS_ATTR);
-	if (cfg.enabled && cfg.hideGrokButton) root.setAttribute(GROK_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideGrokButton)
+		root.setAttribute(GROK_ATTR, "");
 	else root.removeAttribute(GROK_ATTR);
-	if (cfg.enabled && cfg.hideMessageButton) root.setAttribute(MESSAGE_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideMessageButton)
+		root.setAttribute(MESSAGE_ATTR, "");
 	else root.removeAttribute(MESSAGE_ATTR);
-	if (cfg.enabled && cfg.collapseSidebar) root.setAttribute(SIDEBAR_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.collapseSidebar)
+		root.setAttribute(SIDEBAR_ATTR, "");
 	else root.removeAttribute(SIDEBAR_ATTR);
 	applySidebarCompactLayout();
 	applySidebarComposeIcons();
@@ -1025,7 +1031,7 @@ function applyStyleVars(): void {
  * navigation or while the same <svg> is re-scanned.
  */
 function applyLogo(): void {
-	const replace = cfg.enabled && cfg.useBlueBird;
+	const replace = cfg.pageCleanupEnabled && cfg.useBlueBird;
 	const bird = replace ? getBirdData() : null;
 	for (const svg of document.querySelectorAll<SVGSVGElement>(LOGO_SEL)) {
 		const path = svg.querySelector("path");
