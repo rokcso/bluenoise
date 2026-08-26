@@ -114,6 +114,13 @@ interface DisplayedReplyCountState {
 const displayedReplyCounts = new Set<DisplayedReplyCountState>();
 /** Counts learned from a detail page during this SPA session, keyed by tweet id. */
 const replyCountCache = new Map<string, number>();
+/**
+ * Every loaded reply in a detail view, keyed by root tweet then reply tweet id.
+ * X virtualizes its list, so a reply can leave the DOM while it must remain in
+ * the displayed count for the rest of this browsing session.
+ */
+const replyLedgers = new Map<string, Map<string, boolean>>();
+const MAX_CACHED_REPLY_THREADS = 50;
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
@@ -383,17 +390,44 @@ function isAfter(first: Node, second: Node): boolean {
 	);
 }
 
+function replyLedgerFor(rootId: string): Map<string, boolean> {
+	const existing = replyLedgers.get(rootId);
+	if (existing) {
+		// Move this thread to the end so the map acts as a small LRU cache.
+		replyLedgers.delete(rootId);
+		replyLedgers.set(rootId, existing);
+		return existing;
+	}
+	const ledger = new Map<string, boolean>();
+	replyLedgers.set(rootId, ledger);
+	while (replyLedgers.size > MAX_CACHED_REPLY_THREADS) {
+		const oldest = replyLedgers.keys().next().value;
+		if (!oldest) break;
+		replyLedgers.delete(oldest);
+		replyCountCache.delete(oldest);
+	}
+	return ledger;
+}
+
+function clearReplyCountCaches(): void {
+	replyCountCache.clear();
+	replyLedgers.clear();
+}
+
 /**
- * Count only loaded top-level replies in the current conversation. X also puts
- * promoted and "Discover more" content in this region, so neither can count.
+ * Record loaded top-level replies in the current conversation, then count the
+ * retained ledger entries. X also puts promoted and "Discover more" content in
+ * this region, so neither can be recorded as a reply.
  */
-function displayedReplyCount(mainTweet: Element): number | null {
+function recordDisplayedReplyCount(mainTweet: Element): number | null {
 	const conversation = mainTweet.closest('section[role="region"]');
 	if (!conversation) return null;
+	const rootId = tweetIdOf(mainTweet);
+	if (!rootId) return null;
+	const ledger = replyLedgerFor(rootId);
 	const discoverMore = [...conversation.querySelectorAll("h1, h2, h3")].find(
 		(heading) => DISCOVER_MORE_RE.test(heading.textContent?.trim() ?? ""),
 	);
-	let count = 0;
 	for (const article of conversation.querySelectorAll(ARTICLE_SEL)) {
 		if (
 			article === mainTweet ||
@@ -403,9 +437,11 @@ function displayedReplyCount(mainTweet: Element): number | null {
 			isPromotedPost(article)
 		)
 			continue;
-		if (!rowOf(article).classList.contains(HIT_CLASS)) count++;
+		const replyId = tweetIdOf(article);
+		if (replyId)
+			ledger.set(replyId, !rowOf(article).classList.contains(HIT_CLASS));
 	}
-	return count;
+	return [...ledger.values()].filter(Boolean).length;
 }
 
 function tweetIdOf(article: Element): string | null {
@@ -483,7 +519,7 @@ function updateDisplayedReplyCount(): void {
 		isMainTweet,
 	);
 	if (!mainTweet) return;
-	const count = displayedReplyCount(mainTweet);
+	const count = recordDisplayedReplyCount(mainTweet);
 	if (count === null) return;
 	const id = tweetIdOf(mainTweet);
 	if (id) replyCountCache.set(id, count);
@@ -1207,7 +1243,7 @@ function refresh(
 	options: { rebuild?: boolean; clearReplyCountCache?: boolean } = {},
 ): void {
 	if (options.rebuild) refreshMatchers();
-	if (options.rebuild || options.clearReplyCountCache) replyCountCache.clear();
+	if (options.rebuild || options.clearReplyCountCache) clearReplyCountCaches();
 	generation++;
 	// A visual clone is owned by this script rather than X's virtualized list.
 	// It must never survive a SPA route transition.
