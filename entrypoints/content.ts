@@ -1357,12 +1357,13 @@ function queueArticle(node: Node): void {
 	}
 }
 
-function fullScan(): void {
+function fullScan(options: { markTextDirty?: boolean } = {}): void {
 	if (!active || !cfg.enabled) return;
 	let articleCount = 0;
 	for (const a of document.querySelectorAll(ARTICLE_SEL)) {
 		if (a.closest(".xsf-reveal")) continue;
 		articleCount++;
+		if (options.markTextDirty) textDirty.add(a);
 		pending.add(a);
 	}
 	debugLog("Scan queued", { articleCount });
@@ -1378,7 +1379,10 @@ function onMutations(records: MutationRecord[]): void {
 	if (refreshForUrlChange()) return;
 	if (!active || !cfg.enabled) return;
 	if (records.length > MUTATION_BURST) {
-		fullScan();
+		// The per-record dirty check below is deliberately skipped for a burst.
+		// Force existing rows through text extraction so content updates cannot be
+		// mistaken for a clean cache hit when the full scan drains the queue.
+		fullScan({ markTextDirty: true });
 		return;
 	}
 	let conversationChanged = false;

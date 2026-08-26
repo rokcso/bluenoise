@@ -180,6 +180,26 @@ body,
 		),
 		var(--x-surface);
 }
+.about-brand {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+.about-brand img {
+	width: 48px;
+	height: 48px;
+	border-radius: 14px;
+}
+.about-brand span {
+	color: var(--x-muted);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11px;
+	font-weight: 400;
+	letter-spacing: 0.04em;
+	line-height: 1;
+}
 .about-hero h2,
 .about-card h2 {
 	margin: 0;
@@ -190,11 +210,13 @@ body,
 }
 .about-hero p:last-child,
 .about-card p:last-child {
-	max-width: 62ch;
 	margin: 9px 0 0;
 	color: var(--x-muted);
 	font-size: 14px;
 	line-height: 1.65;
+}
+.about-card p:last-child {
+	max-width: 62ch;
 }
 .about-grid {
 	display: grid;

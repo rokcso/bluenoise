@@ -518,6 +518,8 @@ export function SettingsApp({
 }
 
 function AboutPage() {
+	const version = chrome.runtime.getManifest().version;
+
 	return (
 		<>
 			<PageHeading
@@ -531,12 +533,10 @@ function AboutPage() {
 				}
 			/>
 			<section className="about-hero" aria-labelledby="about-idea-title">
-				<img
-					src="/icons/icon-128.png"
-					alt=""
-					aria-hidden="true"
-					className="h-12 w-12 shrink-0 rounded-[14px]"
-				/>
+				<div className="about-brand" aria-hidden="true">
+					<img src="/icons/icon-128.png" alt="" />
+					<span>{version}</span>
+				</div>
 				<div>
 					<h2 id="about-idea-title">{t("about_idea_title")}</h2>
 					<p>
