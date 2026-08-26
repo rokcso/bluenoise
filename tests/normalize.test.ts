@@ -68,6 +68,9 @@ describe("sameKeyword", () => {
 });
 
 describe("parseKeywordText", () => {
+	it("忽略注释行", () => {
+		expect(parseKeywordText("# 说明\n广告\n# another\n")).toEqual(["广告"]);
+	});
 	it("去空行、去重、去首尾空白", () => {
 		expect(parseKeywordText(" a \n a \n\n b \n")).toEqual(["a", "b"]);
 	});
