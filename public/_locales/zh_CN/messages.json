@@ -92,6 +92,14 @@
 	"filter_ads_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏标记为广告的推文。"
 	},
+	"filter_media_ads": { "message": "过滤媒体广告" },
+	"filter_media_ads_hint": {
+		"message": "模糊或隐藏包含视频或图片媒体的推广推文。"
+	},
+	"filter_card_ads": { "message": "过滤网站卡片广告" },
+	"filter_card_ads_hint": {
+		"message": "模糊或隐藏包含网站卡片的推广推文。"
+	},
 	"filter_parody_accounts": { "message": "过滤戏仿账号" },
 	"filter_parody_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为戏仿账号的推文。"

@@ -344,6 +344,24 @@ function isPromotedPost(article: Element): boolean {
 	return Boolean(cell?.querySelector('[data-testid="placementTracking"]'));
 }
 
+function isMediaAd(article: Element): boolean {
+	return (
+		isPromotedPost(article) &&
+		Boolean(
+			article.querySelector(
+				'[data-testid="videoPlayer"], [data-testid="tweetPhoto"]',
+			),
+		)
+	);
+}
+
+function isCardAd(article: Element): boolean {
+	return (
+		isPromotedPost(article) &&
+		Boolean(article.querySelector('[data-testid="card.wrapper"]'))
+	);
+}
+
 /** Read X's localized account label from its official authenticity link. */
 function getAccountLabel(article: Element): string {
 	return (
@@ -590,12 +608,19 @@ function evaluate(article: Element): {
 		(matchers.count > 0 ||
 			accountListsActive ||
 			cfg.filterAds ||
+			cfg.filterMediaAds ||
+			cfg.filterCardAds ||
 			cfg.filterParodyAccounts ||
 			cfg.filterFanAccounts ||
 			cfg.filterCommentaryAccounts ||
 			cfg.filterAutomatedAccounts)
 	) {
-		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
+		if (
+			(cfg.filterAds && isPromotedPost(article)) ||
+			(cfg.filterMediaAds && isMediaAd(article)) ||
+			(cfg.filterCardAds && isCardAd(article))
+		)
+			hit = "__ad__";
 		if (cfg.filterParodyAccounts && isParodyAccount(article))
 			hit = "__parody__";
 		if (cfg.filterFanAccounts && isFanAccount(article)) hit = "__fan__";
@@ -1043,6 +1068,8 @@ function loadStoredConfig(): Promise<void> {
 const MATCH_KEYS = [
 	"enabled",
 	"filterAds",
+	"filterMediaAds",
+	"filterCardAds",
 	"filterParodyAccounts",
 	"filterFanAccounts",
 	"filterCommentaryAccounts",

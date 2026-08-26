@@ -96,6 +96,14 @@
 	"filter_ads_hint": {
 		"message": "Blur or hide posts marked as ads using your selected filtering mode."
 	},
+	"filter_media_ads": { "message": "Filter media ads" },
+	"filter_media_ads_hint": {
+		"message": "Blur or hide promoted posts with video or image media."
+	},
+	"filter_card_ads": { "message": "Filter website card ads" },
+	"filter_card_ads_hint": {
+		"message": "Blur or hide promoted posts containing a website card."
+	},
 	"filter_parody_accounts": { "message": "Filter parody accounts" },
 	"filter_parody_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as parody by X."
