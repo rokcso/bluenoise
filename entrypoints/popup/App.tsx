@@ -641,11 +641,20 @@ function AboutPage() {
 	);
 }
 
-function XPlatformIcon() {
+function XPlatformIcon({
+	className,
+	"aria-hidden": ariaHidden,
+}: {
+	className?: string;
+	"aria-hidden"?: boolean | "true" | "false";
+}) {
 	return (
 		<XFillIcon
-			aria-label={t("x_platform")}
-			className="mx-0.5 inline-block h-[0.9em] w-[0.9em] align-[-0.12em]"
+			aria-hidden={ariaHidden}
+			aria-label={ariaHidden ? undefined : t("x_platform")}
+			className={
+				className ?? "mx-0.5 inline-block h-[0.9em] w-[0.9em] align-[-0.12em]"
+			}
 		/>
 	);
 }
