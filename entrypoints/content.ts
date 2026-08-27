@@ -375,6 +375,10 @@ function evaluate(article: Element): {
 	fresh: boolean;
 	log: FilteredLog | null;
 } {
+	// X can add promotion/account labels after the article is first rendered.
+	// Include this cheap structural state in the cache key so those changes
+	// cannot reuse an earlier non-advertisement result.
+	const preset = readPresetFilter(article);
 	const cached = state.get(article);
 	// Most mutations X emits are layout or accessibility updates. If the rule
 	// generation is unchanged and neither matching subtree is dirty, avoid the
@@ -390,7 +394,9 @@ function evaluate(article: Element): {
 	textDirty.delete(article);
 	const text = readText(article.querySelector(TEXT_SEL));
 	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
-	const sig = [generation, accountListVersion, text, name].join(SEP);
+	const sig = [generation, accountListVersion, preset ?? "", text, name].join(
+		SEP,
+	);
 
 	if (cached && cached.sig === sig) {
 		applyMark(article, cached.hit, cached.reason);
@@ -422,7 +428,6 @@ function evaluate(article: Element): {
 			cfg.filterCommentaryAccounts ||
 			cfg.filterAutomatedAccounts)
 	) {
-		const preset = readPresetFilter(article);
 		decision = classifyArticle(
 			{
 				body: text,
@@ -636,6 +641,9 @@ function onMutations(records: MutationRecord[]): void {
 	let conversationChanged = false;
 	for (const rec of records) {
 		for (const node of rec.addedNodes) queueArticle(node);
+		// An existing wrapper can become a promotion container by receiving
+		// data-testid after its article is mounted; queue descendant articles too.
+		if (rec.type === "attributes") queueArticle(rec.target);
 		const target = rec.target;
 		// Text updates inside an existing tweet are reported against the text node.
 		// Resolve both element and text-node targets back to their containing article.
@@ -687,6 +695,11 @@ function startObserving(): void {
 	observer.observe(document.body, {
 		childList: true,
 		characterData: true,
+		// Promotion wrappers are sometimes marked after the article is mounted.
+		// Observe only the identifying attribute to avoid X's high-volume class
+		// and style mutations.
+		attributes: true,
+		attributeFilter: ["data-testid"],
 		subtree: true,
 	});
 }
