@@ -10,7 +10,10 @@ describe("user rule transfers", () => {
 	it("exports only the four local user lists", () => {
 		const data = defaultRuleData();
 		data.keywords.user.block = ["local"];
-	data.keywords.external["x-comment-blocker"] = { keywords: ["remote"], syncedAt: 1 };
+		data.keywords.external["x-comment-blocker"] = {
+			keywords: ["remote"],
+			syncedAt: 1,
+		};
 		const exported = exportUserRules(data);
 		expect(exported.keywords.block).toEqual(["local"]);
 		expect(JSON.stringify(exported)).not.toContain("remote");
@@ -34,7 +37,10 @@ describe("user rule transfers", () => {
 	it("merges or replaces only user branches", () => {
 		const current = defaultRuleData();
 		current.keywords.user.block = ["old"];
-	current.keywords.external["x-comment-blocker"] = { keywords: ["remote"], syncedAt: 1 };
+		current.keywords.external["x-comment-blocker"] = {
+			keywords: ["remote"],
+			syncedAt: 1,
+		};
 		const incoming = parseUserRulesImport(
 			JSON.stringify({
 				schema: 1,
@@ -48,7 +54,9 @@ describe("user rule transfers", () => {
 		).toEqual(["old", "new"]);
 		const replaced = applyUserRulesImport(current, incoming, "replace");
 		expect(replaced.keywords.user.block).toEqual(["new"]);
-	expect(replaced.keywords.external["x-comment-blocker"]?.keywords).toEqual(["remote"]);
+		expect(replaced.keywords.external["x-comment-blocker"]?.keywords).toEqual([
+			"remote",
+		]);
 	});
 
 	it("appends valid duplicate rules when requested", () => {
