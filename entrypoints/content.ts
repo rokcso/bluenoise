@@ -6,6 +6,7 @@ import {
 	formatFilterReason,
 } from "@/src/content/filter-reason";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
+import { isPromotedPost } from "@/src/content/promoted";
 import type {
 	AppConfig,
 	Matchers,
@@ -645,12 +646,6 @@ function applyMark(
 		row.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
 		setRowInert(row, false);
 	}
-}
-
-/** X wraps promoted posts in an impression-tracking container. */
-function isPromotedPost(article: Element): boolean {
-	const cell = article.closest(CELL_SEL);
-	return Boolean(cell?.querySelector('[data-testid="placementTracking"]'));
 }
 
 function isMediaAd(article: Element): boolean {
