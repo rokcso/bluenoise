@@ -69,11 +69,19 @@ export default defineBackground(() => {
 		// Remove the previous instances before registering the fixed-id items.
 		const menuItems = [
 			{
-				id: "add-keyword",
+				id: "add-keyword-allow",
+				title: t("contextMenu_addKeywordWhitelist"),
+			},
+			{
+				id: "add-account-allow",
+				title: t("contextMenu_addAccountWhitelist"),
+			},
+			{
+				id: "add-keyword-block",
 				title: t("contextMenu_addKeyword"),
 			},
 			{
-				id: "add-account",
+				id: "add-account-block",
 				title: t("contextMenu_addAccount"),
 			},
 		] as const;
@@ -109,10 +117,17 @@ export default defineBackground(() => {
 		if (!info.selectionText) return;
 		const selection = info.selectionText.trim();
 		if (!selection) return;
-		if (info.menuItemId === "add-keyword") {
+		if (
+			info.menuItemId === "add-keyword-block" ||
+			info.menuItemId === "add-keyword-allow"
+		) {
 			void readState().then(({ rules }) => {
 				const keyword = selection;
-				if (rules.keywords.user.block.includes(keyword)) return;
+				const list =
+					info.menuItemId === "add-keyword-allow"
+						? rules.keywords.user.allow
+						: rules.keywords.user.block;
+				if (list.includes(keyword)) return;
 				return chrome.storage.local.set({
 					[RULE_DATA_KEY]: {
 						...rules,
@@ -120,16 +135,26 @@ export default defineBackground(() => {
 							...rules.keywords,
 							user: {
 								...rules.keywords.user,
-								block: [...rules.keywords.user.block, keyword],
+								[info.menuItemId === "add-keyword-allow" ? "allow" : "block"]: [
+									...list,
+									keyword,
+								],
 							},
 						},
 					},
 				});
 			});
-		} else if (info.menuItemId === "add-account") {
+		} else if (
+			info.menuItemId === "add-account-block" ||
+			info.menuItemId === "add-account-allow"
+		) {
 			void readState().then(({ rules }) => {
 				// Accept a numeric X user id or an @handle; anything else is ignored.
-				const next = addAccountRule(rules, "block", { handle: selection });
+				const next = addAccountRule(
+					rules,
+					info.menuItemId === "add-account-allow" ? "allow" : "block",
+					{ handle: selection },
+				);
 				if (!next) return;
 				return chrome.storage.local.set({
 					[RULE_DATA_KEY]: next,

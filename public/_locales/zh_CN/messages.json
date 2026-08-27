@@ -280,15 +280,15 @@
 		"message": "将过滤诊断信息写入被过滤页面的开发者工具控制台。"
 	},
 	"contextMenu_addKeyword": {
-		"message": "将选中的文本添加到 BlueNoise 关键词"
+		"message": "将选中文字加入关键词黑名单"
 	},
 	"contextMenu_addAccount": {
-		"message": "将选中的文本添加到 BlueNoise 账号黑名单"
+		"message": "将选中的账号加入账号黑名单"
 	},
-	"contextMenu_addToWhitelist": {
-		"message": "将作者加入 BlueNoise 白名单"
+	"contextMenu_addKeywordWhitelist": {
+		"message": "将选中文字加入关键词白名单"
 	},
-	"contextMenu_addToBlacklist": {
-		"message": "将作者加入 BlueNoise 黑名单"
+	"contextMenu_addAccountWhitelist": {
+		"message": "将选中的账号加入账号白名单"
 	}
 }

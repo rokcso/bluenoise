@@ -288,15 +288,15 @@
 		"message": "Write filtering diagnostics to the DevTools console of the page being filtered."
 	},
 	"contextMenu_addKeyword": {
-		"message": "Add selected text to BlueNoise keywords"
+		"message": "Add selected text to the keyword blacklist"
 	},
 	"contextMenu_addAccount": {
-		"message": "Add selected text to BlueNoise account blacklist"
+		"message": "Add selected account to the account blacklist"
 	},
-	"contextMenu_addToWhitelist": {
-		"message": "Add author to BlueNoise whitelist"
+	"contextMenu_addKeywordWhitelist": {
+		"message": "Add selected text to the keyword whitelist"
 	},
-	"contextMenu_addToBlacklist": {
-		"message": "Add author to BlueNoise blacklist"
+	"contextMenu_addAccountWhitelist": {
+		"message": "Add selected account to the account whitelist"
 	}
 }
