@@ -7,6 +7,7 @@ export const DEFAULTS: AppConfig = {
 	pageCleanupEnabled: false,
 	mode: "dim",
 	revealOnHover: true,
+	showFilterReason: true,
 	showBadgeCount: true,
 	showActualReplyCount: false,
 	collapseSidebar: false,

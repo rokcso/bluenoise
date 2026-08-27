@@ -531,6 +531,13 @@ export function SettingsApp({
 									<>
 										<SettingsDivider />
 										<XToggle
+											label={t("show_filter_reason")}
+											hint={t("show_filter_reason_hint")}
+											checked={config.showFilterReason}
+											onChange={(v) => update({ showFilterReason: v })}
+										/>
+										<SettingsDivider />
+										<XToggle
 											label={t("reveal_on_hover")}
 											hint={t("reveal_on_hover_hint")}
 											checked={config.revealOnHover}
