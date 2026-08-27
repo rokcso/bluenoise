@@ -23,6 +23,8 @@ export interface AccountListSource {
 	/** MXGA uses separate JSON artifacts; simple sources use one text file. */
 	format?: "mxga-json" | "one-per-line";
 	whitelistUrl?: string;
+	/** Whether this provider's whitelist should be downloaded and applied. */
+	includeWhitelist?: boolean;
 	metaUrl?: string;
 	artifactBaseUrl?: string;
 }
@@ -43,6 +45,7 @@ export const DEFAULT_ACCOUNT_LIST_SOURCES: AccountListSource[] = [
 		homepageUrl: MXGA_REPO_URL,
 		blacklistUrl: `${MXGA_BASE_URL}/v1/artifacts/lite.json`,
 		whitelistUrl: MXGA_WHITELIST_URL,
+		includeWhitelist: false,
 		metaUrl: MXGA_META_URL,
 		artifactBaseUrl: MXGA_BASE_URL,
 	},
@@ -239,6 +242,7 @@ const WHITELIST_MAX_PAGES = 20;
 async function fetchWhitelist(
 	source: AccountListSource,
 ): Promise<{ ids: string[]; handles: string[] }> {
+	if (source.includeWhitelist === false) return { ids: [], handles: [] };
 	if (!source.whitelistUrl)
 		throw new Error(`Missing whitelist URL for ${source.id}`);
 	const rows: unknown[] = [];
@@ -334,11 +338,11 @@ export async function syncAccountListSource(
 			sources: [source.id],
 		};
 	}
-	if (!source.whitelistUrl)
+	if (source.includeWhitelist !== false && !source.whitelistUrl)
 		throw new Error(`Missing whitelist URL for ${source.id}`);
-	// Meta-driven source: fetch the compact lite artifact for the blacklist and
-	// the tiny whitelist. When the published version is unchanged, reuse the
-	// stored blacklist and only refresh the whitelist — no re-download.
+	// Meta-driven source: fetch the compact lite artifact for the blacklist and,
+	// when configured, the whitelist. When the published version is unchanged,
+	// reuse the stored blacklist and only refresh the optional whitelist.
 	if (source.metaUrl && source.artifactBaseUrl) {
 		const meta = (await fetchJsonBounded(source.metaUrl, MAX_META_BYTES)) as {
 			version?: string;
@@ -358,7 +362,10 @@ export async function syncAccountListSource(
 			previous.blacklistIds.length > 0 &&
 			previous.blacklistHandles.length > 0;
 		if (unchanged) {
-			const white = await fetchWhitelist(source);
+			const white =
+				source.includeWhitelist === false
+					? { ids: [], handles: [] }
+					: await fetchWhitelist(source);
 			return {
 				version,
 				blacklistIds: previous.blacklistIds,
@@ -377,7 +384,9 @@ export async function syncAccountListSource(
 			fetchJsonBounded(liteUrl, MAX_LITE_BYTES).then((value) =>
 				parseLite(value, { dropInvalidEntries: true }),
 			),
-			fetchWhitelist(source),
+			source.includeWhitelist === false
+				? Promise.resolve({ ids: [], handles: [] })
+				: fetchWhitelist(source),
 		]);
 		return {
 			version,
@@ -397,7 +406,9 @@ export async function syncAccountListSource(
 		fetchJsonBounded(source.blacklistUrl, MAX_LITE_BYTES).then((value) =>
 			parseLite(value, { dropInvalidEntries: true }),
 		),
-		fetchWhitelist(source),
+		source.includeWhitelist === false
+			? Promise.resolve({ ids: [], handles: [] })
+			: fetchWhitelist(source),
 	]);
 	return {
 		version: black.version,

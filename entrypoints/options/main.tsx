@@ -35,13 +35,13 @@ const navigation: {
 		fillIcon: SettingsFillIcon,
 	},
 	{
-		id: "keywords",
+		id: "keyword-rules",
 		label: "keywords",
 		lineIcon: ListFilterIcon,
 		fillIcon: ListFilterFillIcon,
 	},
 	{
-		id: "accounts",
+		id: "account-rules",
 		label: "accounts",
 		lineIcon: UsersIcon,
 		fillIcon: UsersFillIcon,
