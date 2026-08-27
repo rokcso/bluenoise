@@ -1561,14 +1561,29 @@ const MENU_SEL = '[data-testid="Dropdown"]';
 /** X's per-post overflow button. Stable and not localized. */
 const MENU_OPENER_SEL = '[data-testid="caret"][aria-haspopup="menu"]';
 const MENU_ITEM_CLASS = "xsf-menu-item";
+const MENU_ICONS = {
+	whitelist:
+		"M14 14.252V16.3414C13.3744 16.1203 12.7013 16 12 16C8.68629 16 6 18.6863 6 22H4C4 17.5817 7.58172 14 12 14C12.6906 14 13.3608 14.0875 14 14.252ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13ZM12 11C14.21 11 16 9.21 16 7C16 4.79 14.21 3 12 3C9.79 3 8 4.79 8 7C8 9.21 9.79 11 12 11ZM17.7929 19.9142L21.3284 16.3787L22.7426 17.7929L17.7929 22.7426L14.2574 19.2071L15.6716 17.7929L17.7929 19.9142Z",
+	blacklist:
+		"M8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7ZM12 1C8.68629 1 6 3.68629 6 7C6 10.3137 8.68629 13 12 13C15.3137 13 18 10.3137 18 7C18 3.68629 15.3137 1 12 1ZM15 18C15 16.3431 16.3431 15 18 15C18.4631 15 18.9018 15.105 19.2934 15.2924L15.2924 19.2934C15.105 18.9018 15 18.4631 15 18ZM16.7066 20.7076L20.7076 16.7066C20.895 17.0982 21 17.5369 21 18C21 19.6569 19.6569 21 18 21C17.5369 21 17.0982 20.895 16.7066 20.7076ZM18 13C15.2386 13 13 15.2386 13 18C13 20.7614 15.2386 23 18 23C20.7614 23 23 20.7614 23 18C23 15.2386 20.7614 13 18 13ZM12 14C12.0843 14 12.1683 14.0013 12.252 14.0039C11.8236 14.6189 11.4914 15.3059 11.2772 16.0431C8.30431 16.4 6 18.9309 6 22H4C4 17.5817 7.58172 14 12 14Z",
+} as const;
 
 let menuSourceArticle: Element | null = null;
 let menuObserver: MutationObserver | null = null;
 let menuTokenTimer = 0;
 
+function nativeMenuHoverColor(template: HTMLElement | null): string {
+	if (!template) return "rgba(0, 0, 0, 0.03)";
+	const channels = getComputedStyle(template).color.match(/\d+(?:\.\d+)?/g);
+	const [red = 0, green = 0, blue = 0] = channels?.map(Number) ?? [];
+	const lightText = red + green + blue > 384;
+	return lightText ? "rgba(239, 243, 244, 0.1)" : "rgba(0, 0, 0, 0.03)";
+}
+
 function buildMenuAction(
 	article: Element,
 	list: "whitelist" | "blacklist",
+	template: HTMLElement | null,
 ): HTMLElement {
 	const label =
 		list === "whitelist"
@@ -1576,11 +1591,42 @@ function buildMenuAction(
 			: t("contextMenu_addToBlacklist");
 	const el = document.createElement("button");
 	el.type = "button";
-	el.className = MENU_ITEM_CLASS;
+	el.className = template
+		? `${template.className} ${MENU_ITEM_CLASS} xsf-native-menu-item`
+		: MENU_ITEM_CLASS;
 	el.setAttribute("role", "menuitem");
-	const span = document.createElement("span");
-	span.textContent = label;
-	el.append(span);
+	el.tabIndex = 0;
+	el.style.setProperty("--xsf-menu-hover", nativeMenuHoverColor(template));
+
+	if (template) {
+		for (const child of template.children) el.append(child.cloneNode(true));
+		const icon = el.querySelector("svg");
+		const labelNode = el.querySelector("span");
+		if (icon && labelNode) {
+			icon.replaceChildren();
+			const path = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"path",
+			);
+			path.setAttribute("d", MENU_ICONS[list]);
+			icon.append(path);
+			labelNode.textContent = label;
+		} else {
+			el.replaceChildren();
+		}
+	}
+
+	if (!el.children.length) {
+		const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+		icon.setAttribute("viewBox", "0 0 24 24");
+		icon.setAttribute("aria-hidden", "true");
+		const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+		path.setAttribute("d", MENU_ICONS[list]);
+		icon.append(path);
+		const span = document.createElement("span");
+		span.textContent = label;
+		el.append(icon, span);
+	}
 	// Do not stopPropagation: React only schedules handlers with fibers, and X's
 	// "click outside to close" listener (if any) still needs the event to bubble.
 	// Capture the article here (closure), not from the global token at click time:
@@ -1608,9 +1654,12 @@ function injectMenuItems(menu: HTMLElement): void {
 	for (const oldItem of menu.querySelectorAll(`.${MENU_ITEM_CLASS}`)) {
 		oldItem.remove();
 	}
+	const template = menu.querySelector<HTMLElement>(
+		`:scope > [role="menuitem"]:not(.${MENU_ITEM_CLASS})`,
+	);
 	// Append after X's native items; never add data-testid (see sanitizeRevealClone).
-	const whitelist = buildMenuAction(article, "whitelist");
-	const blacklist = buildMenuAction(article, "blacklist");
+	const whitelist = buildMenuAction(article, "whitelist", template);
+	const blacklist = buildMenuAction(article, "blacklist", template);
 	menu.append(whitelist, blacklist);
 	hideTweetMenuToken();
 }
