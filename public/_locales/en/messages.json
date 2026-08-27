@@ -292,5 +292,11 @@
 	},
 	"contextMenu_addAccount": {
 		"message": "Add selected text to BlueNoise account blacklist"
+	},
+	"contextMenu_addToWhitelist": {
+		"message": "Add author to BlueNoise whitelist"
+	},
+	"contextMenu_addToBlacklist": {
+		"message": "Add author to BlueNoise blacklist"
 	}
 }

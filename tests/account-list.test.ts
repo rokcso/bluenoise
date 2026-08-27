@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	type AccountListSnapshot,
 	type AccountListSource,
+	accountIdentityToStored,
+	addAccountToList,
 	buildAccountListIndex,
 	matchAccountIndex,
 	mergeAccountListSnapshots,
@@ -314,5 +316,44 @@ describe("account list providers", () => {
 		expect(result.whitelistIds[total - 1]).toBe(String(200000 + total - 1));
 		expect(result.whitelistCount).toBe(total);
 		vi.unstubAllGlobals();
+	});
+});
+
+describe("accountIdentityToStored", () => {
+	it("数字 ID 存裸数字", () => {
+		expect(accountIdentityToStored({ id: "123" })).toBe("123");
+	});
+
+	it("handle 存 @ 前缀", () => {
+		expect(accountIdentityToStored({ handle: "foo" })).toBe("@foo");
+	});
+
+	it("id 优先于 handle", () => {
+		expect(accountIdentityToStored({ id: "123", handle: "foo" })).toBe("123");
+	});
+
+	it("没有合法 id/handle 时返回 null", () => {
+		expect(accountIdentityToStored({})).toBeNull();
+		expect(accountIdentityToStored({ handle: "@" })).toBeNull();
+	});
+});
+
+describe("addAccountToList", () => {
+	it("追加合法的 @handle 和数字 ID", () => {
+		expect(addAccountToList([], "@foo")).toEqual(["@foo"]);
+		expect(addAccountToList(["@foo"], "123")).toEqual(["@foo", "123"]);
+	});
+
+	it("已存在（大小写 / @ 前缀差异）时返回 null", () => {
+		expect(addAccountToList(["@Foo"], "@foo")).toBeNull();
+		expect(addAccountToList(["123"], "123")).toBeNull();
+		expect(addAccountToList(["@foo"], "@FOO")).toBeNull();
+	});
+
+	it("非法 entry 返回 null", () => {
+		expect(addAccountToList([], "@")).toBeNull();
+		expect(
+			addAccountToList([], "not a valid @ handle with spaces!"),
+		).toBeNull();
 	});
 });

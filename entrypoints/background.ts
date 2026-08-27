@@ -2,7 +2,6 @@ import { setLanguage, t } from "@/lib/i18n";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
 	DEFAULT_ACCOUNT_LIST_SOURCES,
-	normalizeAccountEntry,
 	syncAccountListSource,
 } from "@/src/domain/account-list";
 import {
@@ -11,7 +10,11 @@ import {
 	loadConfig,
 } from "@/src/domain/defaults";
 import { fetchKeywordSource } from "@/src/domain/keywords";
-import { KEYWORD_SOURCES, loadRuleData } from "@/src/domain/rules";
+import {
+	addAccountRule,
+	KEYWORD_SOURCES,
+	loadRuleData,
+} from "@/src/domain/rules";
 
 export default defineBackground(() => {
 	let syncInFlight = false;
@@ -126,24 +129,10 @@ export default defineBackground(() => {
 		} else if (info.menuItemId === "add-account") {
 			void readState().then(({ rules }) => {
 				// Accept a numeric X user id or an @handle; anything else is ignored.
-				const entry = normalizeAccountEntry(selection);
-				if (!entry) return;
-				const already = rules.accounts.user.block.some(
-					(item) => normalizeAccountEntry(item) === entry,
-				);
-				if (already) return;
-				const stored = /^\d+$/.test(entry) ? entry : `@${entry}`;
+				const next = addAccountRule(rules, "block", { handle: selection });
+				if (!next) return;
 				return chrome.storage.local.set({
-					[RULE_DATA_KEY]: {
-						...rules,
-						accounts: {
-							...rules.accounts,
-							user: {
-								...rules.accounts.user,
-								block: [...rules.accounts.user.block, stored],
-							},
-						},
-					},
+					[RULE_DATA_KEY]: next,
 				});
 			});
 		}
