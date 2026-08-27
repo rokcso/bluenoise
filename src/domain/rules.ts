@@ -28,7 +28,7 @@ export const KEYWORD_SOURCES: Omit<
 		url: "https://raw.githubusercontent.com/ZPVIP/x-spam-filter/main/keywords.txt",
 	},
 	{
-		id: "community",
+		id: "x-comment-blocker",
 		name: "X Comment Blocker",
 		homepageUrl: "https://github.com/amahteru/x-comment-blocker",
 		url: "https://raw.githubusercontent.com/amahteru/x-comment-blocker/refs/heads/main/keywords.txt",
