@@ -13,18 +13,11 @@ interface RevealOptions {
 }
 
 interface RevealState {
-	el: HTMLElement;
 	row: Element;
 	reason: HTMLElement | null;
 }
 
-function sanitizeClone(el: HTMLElement): void {
-	for (const node of el.querySelectorAll<HTMLElement>("[data-testid]"))
-		node.removeAttribute("data-testid");
-	el.removeAttribute("data-testid");
-}
-
-/** Owns the pointer spotlight clone, reason mask, and all related listeners. */
+/** Owns the pointer spotlight overlay, reason mask, and related listeners. */
 export function createRevealController(
 	options: RevealOptions,
 ): RevealController {
@@ -38,7 +31,13 @@ export function createRevealController(
 			reveal.reason.style.removeProperty("--xsf-reason-reveal-y");
 			reveal.reason.style.removeProperty("--xsf-reason-reveal-radius");
 		}
-		reveal?.el.remove();
+		if (reveal) {
+			const row = reveal.row as HTMLElement;
+			row.classList.remove("xsf-revealing");
+			row.style.removeProperty("--xsf-reveal-x");
+			row.style.removeProperty("--xsf-reveal-y");
+			row.style.removeProperty("--xsf-reveal-radius");
+		}
 		reveal = null;
 	}
 
@@ -54,37 +53,20 @@ export function createRevealController(
 				return;
 			}
 			hide();
-			const el = row.cloneNode(true) as HTMLElement;
-			el.querySelector(`:scope > .${options.reasonClass}`)?.remove();
-			el.classList.remove(options.filteredClass);
-			el.classList.add("xsf-reveal");
-			el.removeAttribute(options.hitAttribute);
-			sanitizeClone(el);
-			el.inert = true;
-			document.body.append(el);
-			el.style.left = `${rect.left}px`;
-			el.style.top = `${rect.top}px`;
-			el.style.width = `${rect.width}px`;
-			el.style.height = `${rect.height}px`;
-			el.style.margin = "0";
-			el.style.setProperty("opacity", "1", "important");
-			el.style.setProperty("filter", "none", "important");
-			const initialRect = el.getBoundingClientRect();
-			el.style.left = `${rect.left + (rect.left - initialRect.left)}px`;
-			el.style.top = `${rect.top + (rect.top - initialRect.top)}px`;
 			reveal = {
-				el,
 				row,
 				reason: row.querySelector<HTMLElement>(
 					`:scope > .${options.reasonClass}`,
 				),
 			};
+			(row as HTMLElement).classList.add("xsf-revealing");
 		}
 
-		const cloneRect = reveal.el.getBoundingClientRect();
-		reveal.el.style.setProperty("--xsf-reveal-x", `${x - cloneRect.left}px`);
-		reveal.el.style.setProperty("--xsf-reveal-y", `${y - cloneRect.top}px`);
-		reveal.el.style.setProperty("--xsf-reveal-radius", `${options.radius}px`);
+		const rowRect = reveal.row.getBoundingClientRect();
+		const rowElement = reveal.row as HTMLElement;
+		rowElement.style.setProperty("--xsf-reveal-x", `${x - rowRect.left}px`);
+		rowElement.style.setProperty("--xsf-reveal-y", `${y - rowRect.top}px`);
+		rowElement.style.setProperty("--xsf-reveal-radius", `${options.radius}px`);
 		if (reveal.reason) {
 			const reasonRect = reveal.reason.getBoundingClientRect();
 			reveal.reason.classList.add("xsf-filter-reason-revealing");

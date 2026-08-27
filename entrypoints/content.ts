@@ -598,22 +598,18 @@ function schedule(): void {
 
 function queueArticle(node: Node): void {
 	if (node.nodeType !== 1) return;
-	if ((node as Element).closest?.(".xsf-reveal")) return;
 	if (node instanceof Element && node.matches?.(ARTICLE_SEL)) {
 		pending.add(node);
 		return;
 	}
 	if (!(node instanceof Element)) return;
-	for (const a of node.querySelectorAll(ARTICLE_SEL)) {
-		if (!a.closest(".xsf-reveal")) pending.add(a);
-	}
+	for (const a of node.querySelectorAll(ARTICLE_SEL)) pending.add(a);
 }
 
 function fullScan(options: { markTextDirty?: boolean } = {}): void {
 	if (!active || !cfg.enabled) return;
 	let articleCount = 0;
 	for (const a of document.querySelectorAll(ARTICLE_SEL)) {
-		if (a.closest(".xsf-reveal")) continue;
 		articleCount++;
 		if (options.markTextDirty) textDirty.add(a);
 		pending.add(a);
