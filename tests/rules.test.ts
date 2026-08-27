@@ -11,7 +11,7 @@ describe("rule data", () => {
 		const settings = defaultConfig();
 		const rules = defaultRuleData();
 		rules.keywords.user.block = ["local block"];
-	rules.keywords.external["x-comment-blocker"] = {
+		rules.keywords.external["x-comment-blocker"] = {
 			keywords: ["remote block"],
 			syncedAt: 1,
 		};
@@ -21,7 +21,8 @@ describe("rule data", () => {
 		expect("userKeywords" in settings).toBe(false);
 		expect(view.userKeywords).toEqual(["local block"]);
 		expect(
-		view.subscriptions.find((source) => source.id === "x-comment-blocker")?.keywords,
+			view.subscriptions.find((source) => source.id === "x-comment-blocker")
+				?.keywords,
 		).toEqual(["remote block"]);
 		expect(view.accountWhitelist).toEqual(["@trusted"]);
 	});
