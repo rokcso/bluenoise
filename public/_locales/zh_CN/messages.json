@@ -137,30 +137,30 @@
 	"account_blacklist_title": { "message": "我的账号黑名单" },
 	"account_whitelist_title": { "message": "我的账号白名单" },
 	"about": { "message": "关于" },
-	"about_intro_before_platform": { "message": "一个在浏览器本地运行的" },
+	"about_intro_before_platform": { "message": "一个让你更平静地阅读" },
 	"about_intro_after_platform": {
-		"message": "阅读工具。规则由你定义，边界也由你定义。"
+		"message": "的浏览器工具。定好规则，然后回到你真正想看的内容。"
 	},
-	"about_idea_title": { "message": "把信息流还给正在阅读的人" },
+	"about_idea_title": { "message": "给思考留一点位置" },
 	"about_idea_body_after_platform": {
-		"message": "上从来不缺信息，缺的是自己做判断的空间。BlueNoise 把筛选权交还给你。所有数据和逻辑都留在浏览器里，不直接触碰账号，不与"
+		"message": "上从不缺信息，只是太多内容都在争夺你的注意力。BlueNoise 让你决定哪些内容留下。你的规则和数据都留在浏览器里；它不会碰你的账号，也不会调用"
 	},
 	"about_idea_body_after_api": {
-		"message": " API 交互，也不收集你的数据。我们把控制做得足够细，是因为你应该能决定时间线里出现什么，也能决定哪些东西不再出现。"
+		"message": " API，更不会收集个人数据。"
 	},
 	"x_platform": { "message": "X" },
 	"twitter_platform": { "message": "Twitter" },
 	"about_name_title": { "message": "为什么叫 BlueNoise" },
 	"about_name_body": {
-		"message": "蓝噪声常用于图像和信号处理中。它把干扰分散开，不让它们聚成刺眼的斑块。这个名字并不意味着要消灭一切噪声。好的信息流仍然可以有意外和分歧，只是没必要把注意力浪费在重复、诱导和无意义的打扰上。"
+		"message": "蓝噪声常用于图像和信号处理。它会把干扰分散开，避免它们聚成碍眼的斑块。这个名字并不是说要消灭所有噪声。好的信息流仍该有意外和分歧，只是不必把注意力耗在重复、诱导和杂乱的内容上。"
 	},
-	"about_open_title": { "message": "你应该看得懂它在做什么" },
+	"about_open_title": { "message": "看得见，也查得到" },
 	"about_open_body": {
-		"message": "BlueNoise 是开源项目。你可以检查代码、提出问题，也可以参与改进。我们不认为用户需要先信任一个扩展，才有资格使用它。扩展会做什么，应当由功能和代码清楚地说明，而不是藏在权限说明或模糊的承诺里。"
+		"message": "BlueNoise 是开源项目。你可以读代码、提出问题，也可以参与改进。一个扩展该靠清楚可查的行为赢得信任，而不是让你先相信它的承诺。"
 	},
 	"about_studio_title": { "message": "Coryso Studio 出品" },
 	"about_studio_body": {
-		"message": "BlueNoise 由独立产品工作室 Coryso Studio 打造。我们专注于创造周到的数字工具，让工作更清晰、更从容。访问官网，发现更多以同样理念打造的产品。"
+		"message": "Coryso Studio 是一家独立产品工作室。我们做贴合真实工作方式的数字工具，安静地帮人把事情做好。BlueNoise 是其中之一；访问官网，看看我们还在做什么。"
 	},
 	"about_links_label": { "message": "BlueNoise 链接" },
 	"about_github": { "message": "在 GitHub 查看项目" },

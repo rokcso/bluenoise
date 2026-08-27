@@ -143,7 +143,6 @@ body,
 	letter-spacing: -0.045em;
 }
 .options-page-heading p {
-	max-width: 560px;
 	margin: 8px 0 0;
 	color: var(--x-muted);
 	font-size: 14px;
@@ -215,9 +214,6 @@ body,
 	font-size: 14px;
 	line-height: 1.65;
 }
-.about-card p:last-child {
-	max-width: 62ch;
-}
 .about-grid {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -278,7 +274,6 @@ body,
 	transform: translate(2px, -2px);
 }
 .about-studio p {
-	max-width: 62ch;
 	margin: 9px 0 0;
 	color: var(--x-muted);
 	font-size: 14px;
