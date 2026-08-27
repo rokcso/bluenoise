@@ -158,6 +158,10 @@
 	"about_open_body": {
 		"message": "BlueNoise 是开源项目。你可以检查代码、提出问题，也可以参与改进。我们不认为用户需要先信任一个扩展，才有资格使用它。扩展会做什么，应当由功能和代码清楚地说明，而不是藏在权限说明或模糊的承诺里。"
 	},
+	"about_studio_title": { "message": "Coryso Studio 出品" },
+	"about_studio_body": {
+		"message": "BlueNoise 由独立产品工作室 Coryso Studio 打造。我们专注于创造周到的数字工具，让工作更清晰、更从容。访问官网，发现更多以同样理念打造的产品。"
+	},
 	"about_links_label": { "message": "BlueNoise 链接" },
 	"about_github": { "message": "在 GitHub 查看项目" },
 	"makeover_options": { "message": "页面改造" },
