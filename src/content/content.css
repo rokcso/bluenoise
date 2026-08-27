@@ -215,8 +215,10 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 
 [data-xsf-collapse-sidebar]
 	header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])
-	:is(nav[role="navigation"], [data-testid="SideNav_AccountSwitcher_Button"])
-	[dir] {
+	nav[role="navigation"]
+	> :is(a, button)
+	> div
+	> div[dir] {
 	/* biome-ignore lint/complexity/noImportantStyles: X uses inline and generated layout styles for sidebar labels. */
 	display: none !important;
 }

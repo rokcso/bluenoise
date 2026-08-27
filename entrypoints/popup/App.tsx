@@ -625,7 +625,7 @@ function AboutPage() {
 				</section>
 			</div>
 			<a
-				href="https://coryso.com/"
+				href="https://coryso.com/?utm_source=bluenoise&utm_medium=extension&utm_campaign=about"
 				target="_blank"
 				rel="noreferrer"
 				className="about-studio"
