@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - 让 X 重新值得阅读" },
 	"extDescription": {
-		"message": "使用本地、可逆的关键词规则模糊或隐藏嘈杂的 X 回复与时间线推文；不调用 API、不读取 Cookie，也不修改账号。"
+		"message": "让 X 更清爽：在本地模糊或隐藏嘈杂回复、时间线推文和广告，并可通过界面改造清理页面；不读取 Cookie，也不修改账号。"
 	},
 	"loading": { "message": "加载中…" },
 	"tagline": { "message": "更少噪音，更多信号。" },
@@ -18,14 +18,13 @@
 	},
 	"enabled_on": { "message": "过滤已开启" },
 	"enabled_off": { "message": "过滤已关闭" },
+	"x_makeover": { "message": "X 界面改造" },
+	"x_makeover_on": { "message": "X 界面改造已开启" },
+	"x_makeover_off": { "message": "X 界面改造已关闭" },
+	"makeover": { "message": "界面改造" },
 	"mode_dim": { "message": "模糊" },
 	"mode_hide": { "message": "隐藏" },
 	"external_keywords": { "message": "外部关键词" },
-	"account_lists_enabled": { "message": "启用账号过滤" },
-	"account_lists_enabled_hint": {
-		"message": "同时应用本地账号规则和已启用的外部账号名单。"
-	},
-	"external_account_lists": { "message": "使用外部账号名单" },
 	"account_source_link": { "message": "查看公开数据与审计历史" },
 	"account_blacklist_hint": {
 		"message": "本地账号黑名单。每行填写一个 X 数字 ID 或 @用户名。"
@@ -52,11 +51,54 @@
 		"placeholders": { "count": { "content": "$1" } }
 	},
 	"not_synced": { "message": "未同步" },
+	"account_blacklist_count": {
+		"message": "黑名单 $1 条",
+		"placeholders": { "count": { "content": "$1" } }
+	},
 	"last_synced": {
 		"message": "更新于 $1",
 		"placeholders": { "date": { "content": "$1" } }
 	},
 	"sync": { "message": "同步" },
+	"rule_backup": { "message": "规则备份" },
+	"rule_backup_title": { "message": "规则备份" },
+	"rule_export_title": { "message": "导出用户规则" },
+	"rule_export_description": {
+		"message": "将自定义的关键词和账号规则下载为备份文件。"
+	},
+	"rule_export_action": { "message": "导出" },
+	"rule_import_title": { "message": "导入用户规则" },
+	"rule_import_description": {
+		"message": "从 BlueNoise 备份文件恢复自定义的关键词和账号规则。"
+	},
+	"rule_import_action": { "message": "导入" },
+	"rule_import_success_merge": {
+		"message": "规则已合并导入，忽略 $1 条无效规则。"
+	},
+	"rule_import_success_append": {
+		"message": "规则已追加导入，忽略 $1 条无效规则。"
+	},
+	"rule_import_success_replace": {
+		"message": "规则已覆盖导入，忽略 $1 条无效规则。"
+	},
+	"rule_import_dialog_title": { "message": "选择导入模式" },
+	"rule_import_dialog_summary": {
+		"message": "已解析 $1 条规则，忽略 $2 条无效规则。"
+	},
+	"rule_import_mode_merge": { "message": "合并导入" },
+	"rule_import_mode_merge_description": {
+		"message": "保留现有规则，仅新增不重复规则。"
+	},
+	"rule_import_mode_append": { "message": "追加原样导入" },
+	"rule_import_mode_append_description": {
+		"message": "保留现有规则，并追加所有有效规则，允许重复。"
+	},
+	"rule_import_mode_replace": { "message": "覆盖导入" },
+	"rule_import_mode_replace_description": {
+		"message": "替换当前全部用户规则。"
+	},
+	"rule_import_confirm": { "message": "确认导入" },
+	"cancel": { "message": "取消" },
 	"my_keywords": { "message": "我的关键词" },
 	"my_keywords_hint": {
 		"message": "添加要触发过滤的关键词或正则表达式，每行一条。"
@@ -78,12 +120,43 @@
 	"keywords": { "message": "关键词" },
 	"accounts": { "message": "账号" },
 	"filtering": { "message": "过滤" },
+	"advanced": { "message": "高级设置" },
+	"content_filters": { "message": "内容过滤" },
 	"account_filtering": { "message": "账号过滤" },
 	"external_account_sources": { "message": "外部账号来源" },
 	"account_blacklist_title": { "message": "我的账号黑名单" },
 	"account_whitelist_title": { "message": "我的账号白名单" },
-	"customization": { "message": "X 变身" },
-	"customization_options": { "message": "页面改造" },
+	"about": { "message": "关于" },
+	"about_intro_before_platform": { "message": "一个在浏览器本地运行的" },
+	"about_intro_after_platform": {
+		"message": "阅读工具。规则由你定义，边界也由你定义。"
+	},
+	"about_idea_title": { "message": "把信息流还给正在阅读的人" },
+	"about_idea_body_after_platform": {
+		"message": "上从来不缺信息，缺的是自己做判断的空间。BlueNoise 把筛选权交还给你。所有数据和逻辑都留在浏览器里，不直接触碰账号，不与"
+	},
+	"about_idea_body_after_api": {
+		"message": " API 交互，也不收集你的数据。我们把控制做得足够细，是因为你应该能决定时间线里出现什么，也能决定哪些东西不再出现。"
+	},
+	"x_platform": { "message": "X" },
+	"twitter_platform": { "message": "Twitter" },
+	"about_name_title": { "message": "为什么叫 BlueNoise" },
+	"about_name_body": {
+		"message": "蓝噪声常用于图像和信号处理中。它把干扰分散开，不让它们聚成刺眼的斑块。这个名字并不意味着要消灭一切噪声。好的信息流仍然可以有意外和分歧，只是没必要把注意力浪费在重复、诱导和无意义的打扰上。"
+	},
+	"about_open_title": { "message": "你应该看得懂它在做什么" },
+	"about_open_body": {
+		"message": "BlueNoise 是开源项目。你可以检查代码、提出问题，也可以参与改进。我们不认为用户需要先信任一个扩展，才有资格使用它。扩展会做什么，应当由功能和代码清楚地说明，而不是藏在权限说明或模糊的承诺里。"
+	},
+	"about_links_label": { "message": "BlueNoise 链接" },
+	"about_github": { "message": "在 GitHub 查看项目" },
+	"makeover_options": { "message": "页面改造" },
+	"makeover_layout": { "message": "布局" },
+	"makeover_distractions_tab_nav": { "message": "标签页与导航" },
+	"makeover_distractions_timeline": { "message": "时间线" },
+	"makeover_distractions_sidebar": { "message": "侧边栏" },
+	"makeover_distractions_floating": { "message": "悬浮按钮" },
+	"makeover_branding": { "message": "品牌元素" },
 	"treatment": { "message": "过滤模式" },
 	"matching": { "message": "匹配选项" },
 	"diagnostics": { "message": "诊断" },
@@ -91,6 +164,14 @@
 	"filter_ads": { "message": "过滤广告推文" },
 	"filter_ads_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏标记为广告的推文。"
+	},
+	"filter_media_ads": { "message": "过滤媒体广告" },
+	"filter_media_ads_hint": {
+		"message": "模糊或隐藏包含视频或图片媒体的推广推文。"
+	},
+	"filter_card_ads": { "message": "过滤网站卡片广告" },
+	"filter_card_ads_hint": {
+		"message": "模糊或隐藏包含网站卡片的推广推文。"
 	},
 	"filter_parody_accounts": { "message": "过滤戏仿账号" },
 	"filter_parody_accounts_hint": {
@@ -100,11 +181,17 @@
 	"filter_fan_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为粉丝账号的推文。"
 	},
+	"filter_commentary_accounts": { "message": "过滤评论账号" },
+	"filter_commentary_accounts_hint": {
+		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为评论账号的推文。"
+	},
 	"filter_automated_accounts": { "message": "过滤自动发推账号" },
 	"filter_automated_accounts_hint": {
 		"message": "按照当前选择的过滤模式模糊或隐藏被 X 标记为自动发推的账号。"
 	},
-	"hide_premium_promo": { "message": "隐藏 X Premium 订阅广告" },
+	"hide_premium_promo": { "message": "隐藏 Premium 订阅广告" },
+	"hide_premium_promo_before_platform": { "message": "隐藏" },
+	"hide_premium_promo_after_platform": { "message": "Premium 订阅广告" },
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"
 	},
@@ -113,18 +200,30 @@
 	"hide_follow_suggestions_hint": {
 		"message": "移除侧边栏中的「推荐关注」面板。"
 	},
+	"hide_timeline_follow_suggestions": { "message": "隐藏时间线推荐关注" },
+	"hide_timeline_follow_suggestions_hint": {
+		"message": "移除时间线中的「推荐关注」推荐模块。"
+	},
+	"hide_discover_more": { "message": "隐藏发现更多" },
+	"hide_discover_more_hint": {
+		"message": "移除帖子详情页评论区底部的「发现更多」推荐模块。"
+	},
+	"hide_live_streams": { "message": "隐藏 X 上的直播" },
+	"hide_live_streams_hint": {
+		"message": "从时间线中移除「X 上的直播」直播卡片。"
+	},
 	"hide_trends": { "message": "隐藏当前趋势" },
 	"hide_trends_hint": {
 		"message": "移除侧边栏中的「当前趋势」面板。"
 	},
-	"hide_footer": { "message": "隐藏 X 页脚" },
+	"hide_footer": { "message": "隐藏页脚" },
 	"hide_footer_hint": {
 		"message": "移除侧边栏中的「条款 / 隐私 / Cookie」页脚。"
 	},
 	"use_blue_bird": { "message": "使用经典蓝鸟 logo" },
-	"use_blue_bird_hint": {
-		"message": "将 X 的 logo 替换为经典的 Twitter 蓝鸟。"
-	},
+	"use_blue_bird_hint_before": { "message": "将" },
+	"use_blue_bird_hint_between": { "message": "的 logo 替换为经典的" },
+	"use_blue_bird_hint_after": { "message": "蓝鸟。" },
 	"hide_title_count": { "message": "隐藏 Tab 未读数字" },
 	"hide_title_count_hint": {
 		"message": "移除浏览器标签页标题和图标上的未读数字。"
@@ -151,6 +250,14 @@
 	"show_badge_count": { "message": "显示工具栏计数" },
 	"show_badge_count_hint": {
 		"message": "在 BlueNoise 工具栏图标上显示当前已过滤的回复与推文数量。"
+	},
+	"show_actual_reply_count": { "message": "显示实际评论数量" },
+	"show_actual_reply_count_hint": {
+		"message": "在帖子详情页中，用当前已加载且过滤后保留的评论数替换 X 的总回复数。"
+	},
+	"collapse_sidebar": { "message": "折叠导航侧边栏" },
+	"collapse_sidebar_hint": {
+		"message": "始终使用 X 的紧凑图标侧边栏，包括没有折叠按钮的页面。"
 	},
 	"reveal_on_hover": { "message": "在光标附近显示内容" },
 	"reveal_on_hover_hint": {

@@ -1,33 +1,55 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
-import type { AppConfig, KeywordSubscription } from "@/src/contracts/config";
+import type {
+	KeywordSubscription,
+	RuleView,
+	AppConfig as SettingsConfig,
+} from "@/src/contracts/config";
+import { RULE_DATA_KEY } from "@/src/contracts/config";
 import {
-	ACCOUNT_LIST_KEY,
 	type AccountListSnapshot,
 	DEFAULT_ACCOUNT_LIST_SOURCES,
 	MXGA_DATA_URL,
 	MXGA_REPO_URL,
 } from "@/src/domain/account-list";
+import { defaultRuleData } from "@/src/domain/defaults";
 import { fetchKeywordSource } from "@/src/domain/keywords";
+import { loadRuleData } from "@/src/domain/rules";
 import {
-	AccountFilterIcon,
+	applyUserRulesImport,
+	exportUserRules,
+	type ImportPreview,
+	parseUserRulesImport,
+} from "@/src/domain/user-rules-transfer";
+
+type AppConfig = SettingsConfig & RuleView;
+
+import {
 	AppearanceIcon,
 	DatabaseIcon,
 	DiagnosticsIcon,
+	DownloadIcon,
 	ExternalLinkIcon,
 	LayoutIcon,
+	LayoutRightIcon,
 	ListFilterIcon,
 	LoaderIcon,
+	MessageIcon,
 	MonitorIcon,
 	MoonIcon,
 	RefreshIcon,
+	RssIcon,
 	SearchIcon,
 	SettingsIcon,
 	ShieldCheckIcon,
 	SlidersIcon,
 	SunIcon,
 	ToolbarIcon,
+	TwitterIcon,
+	UploadIcon,
 	UserSlashIcon,
+	WindowIcon,
+	XFillIcon,
 } from "@/src/ui/icons";
 import { useConfig } from "./useConfig";
 import { useTheme } from "./useTheme";
@@ -78,6 +100,13 @@ export default function App() {
 					<MasterSwitch config={config} update={update} />
 				</div>
 				<EffectSettings compact config={config} update={update} />
+				<div className="flex items-center justify-between gap-4">
+					<span className="flex items-center gap-1.5 text-sm font-medium text-x-fg">
+						<XFillIcon aria-label={t("x_platform")} className="h-4 w-4" />
+						{t("makeover")}
+					</span>
+					<PageCleanupSwitch config={config} update={update} />
+				</div>
 			</div>
 		</main>
 	);
@@ -87,8 +116,11 @@ export type SettingsSection =
 	| "general"
 	| "keywords"
 	| "accounts"
+	| "backup"
 	| "filtering"
-	| "customization";
+	| "advanced"
+	| "makeover"
+	| "about";
 
 /** Full configuration screen rendered from the extension's Options page. */
 export function SettingsApp({
@@ -105,6 +137,34 @@ export function SettingsApp({
 			void chrome.runtime.sendMessage({ type: "XSF_ENSURE_SUBSCRIPTIONS" });
 		}
 	}, [config?.subscriptions]);
+
+	type MakeoverKey =
+		| "collapseSidebar"
+		| "hideTitleCount"
+		| "hideNotificationBadges"
+		| "hideNewPostsPrompt"
+		| "hideGrokButton"
+		| "hideMessageButton"
+		| "hideTrends"
+		| "hideFollowSuggestions"
+		| "hideTimelineFollowSuggestions"
+		| "hideDiscoverMore"
+		| "hideLiveStreams"
+		| "hideFooter"
+		| "hidePremiumPromo"
+		| "useBlueBird";
+
+	/**
+	 * Turning on any makeover sub-feature also enables the makeover master switch
+	 * (pageCleanupEnabled): sub-features are inert while the master is off, and
+	 * the master switch only lives in the popup, so users toggling a sub-feature
+	 * here would otherwise see no effect at all.
+	 */
+	const toggleMakeover = (key: MakeoverKey) => (enabled: boolean) => {
+		const patch: Partial<AppConfig> = { [key]: enabled };
+		if (enabled && !config?.pageCleanupEnabled) patch.pageCleanupEnabled = true;
+		update(patch);
+	};
 
 	if (!config) {
 		return <div className="p-4 text-sm text-x-muted">{t("loading")}</div>;
@@ -186,19 +246,6 @@ export function SettingsApp({
 					<>
 						<PageHeading title={t("accounts")} />
 						<SettingsGroup
-							label={t("account_filtering")}
-							icon={AccountFilterIcon}
-							labelClassName="font-normal"
-						>
-							<SettingsPanel>
-								<AccountListSettings
-									section="controls"
-									config={config}
-									update={update}
-								/>
-							</SettingsPanel>
-						</SettingsGroup>
-						<SettingsGroup
 							label={t("account_blacklist_title")}
 							icon={UserSlashIcon}
 							labelClassName="font-normal"
@@ -236,12 +283,45 @@ export function SettingsApp({
 					</>
 				)}
 
-				{activeSection === "customization" && (
+				{activeSection === "backup" && (
 					<>
-						<PageHeading title={t("customization")} />
+						<PageHeading title={t("rule_backup_title")} />
 						<SettingsGroup
-							label={t("customization_options")}
+							label={t("rule_backup")}
+							icon={DatabaseIcon}
+							labelClassName="font-normal"
+						>
+							<UserRulesTransfer config={config} update={update} />
+						</SettingsGroup>
+					</>
+				)}
+
+				{activeSection === "makeover" && (
+					<>
+						<PageHeading
+							title={
+								<>
+									<XPlatformIcon /> {t("makeover")}
+								</>
+							}
+						/>
+						<SettingsGroup
+							label={t("makeover_layout")}
 							icon={LayoutIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("collapse_sidebar")}
+									hint={t("collapse_sidebar_hint")}
+									checked={config.collapseSidebar}
+									onChange={toggleMakeover("collapseSidebar")}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_tab_nav")}
+							icon={WindowIcon}
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
@@ -249,70 +329,134 @@ export function SettingsApp({
 									label={t("hide_title_count")}
 									hint={t("hide_title_count_hint")}
 									checked={config.hideTitleCount}
-									onChange={(v) => update({ hideTitleCount: v })}
+									onChange={toggleMakeover("hideTitleCount")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_notification_badges")}
 									hint={t("hide_notification_badges_hint")}
 									checked={config.hideNotificationBadges}
-									onChange={(v) => update({ hideNotificationBadges: v })}
+									onChange={toggleMakeover("hideNotificationBadges")}
 								/>
-								<SettingsDivider />
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_timeline")}
+							icon={RssIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
 								<XToggle
 									label={t("hide_new_posts_prompt")}
 									hint={t("hide_new_posts_prompt_hint")}
 									checked={config.hideNewPostsPrompt}
-									onChange={(v) => update({ hideNewPostsPrompt: v })}
+									onChange={toggleMakeover("hideNewPostsPrompt")}
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={t("hide_grok_button")}
-									hint={t("hide_grok_button_hint")}
-									checked={config.hideGrokButton}
-									onChange={(v) => update({ hideGrokButton: v })}
+									label={t("hide_timeline_follow_suggestions")}
+									hint={t("hide_timeline_follow_suggestions_hint")}
+									checked={config.hideTimelineFollowSuggestions}
+									onChange={toggleMakeover("hideTimelineFollowSuggestions")}
 								/>
 								<SettingsDivider />
 								<XToggle
-									label={t("hide_message_button")}
-									hint={t("hide_message_button_hint")}
-									checked={config.hideMessageButton}
-									onChange={(v) => update({ hideMessageButton: v })}
+									label={t("hide_discover_more")}
+									hint={t("hide_discover_more_hint")}
+									checked={config.hideDiscoverMore}
+									onChange={toggleMakeover("hideDiscoverMore")}
 								/>
-								<SettingsDivider />
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_sidebar")}
+							icon={LayoutRightIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
 								<XToggle
-									label={t("hide_premium_promo")}
-									hint={t("hide_premium_promo_hint")}
-									checked={config.hidePremiumPromo}
-									onChange={(v) => update({ hidePremiumPromo: v })}
+									label={t("hide_live_streams")}
+									hint={t("hide_live_streams_hint")}
+									checked={config.hideLiveStreams}
+									onChange={toggleMakeover("hideLiveStreams")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_trends")}
 									hint={t("hide_trends_hint")}
 									checked={config.hideTrends}
-									onChange={(v) => update({ hideTrends: v })}
+									onChange={toggleMakeover("hideTrends")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_follow_suggestions")}
 									hint={t("hide_follow_suggestions_hint")}
 									checked={config.hideFollowSuggestions}
-									onChange={(v) => update({ hideFollowSuggestions: v })}
+									onChange={toggleMakeover("hideFollowSuggestions")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("hide_footer")}
 									hint={t("hide_footer_hint")}
 									checked={config.hideFooter}
-									onChange={(v) => update({ hideFooter: v })}
+									onChange={toggleMakeover("hideFooter")}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_distractions_floating")}
+							icon={MessageIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={t("hide_grok_button")}
+									hint={t("hide_grok_button_hint")}
+									checked={config.hideGrokButton}
+									onChange={toggleMakeover("hideGrokButton")}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_message_button")}
+									hint={t("hide_message_button_hint")}
+									checked={config.hideMessageButton}
+									onChange={toggleMakeover("hideMessageButton")}
+								/>
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("makeover_branding")}
+							icon={XPlatformIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<XToggle
+									label={
+										<>
+											{t("hide_premium_promo_before_platform")}
+											<XPlatformIcon />
+											{t("hide_premium_promo_after_platform")}
+										</>
+									}
+									switchLabel={`${t("hide_premium_promo")} ${t("x_platform")}`}
+									hint={t("hide_premium_promo_hint")}
+									checked={config.hidePremiumPromo}
+									onChange={toggleMakeover("hidePremiumPromo")}
 								/>
 								<SettingsDivider />
 								<XToggle
 									label={t("use_blue_bird")}
-									hint={t("use_blue_bird_hint")}
+									hint={
+										<>
+											{t("use_blue_bird_hint_before")}
+											<XPlatformIcon />
+											{t("use_blue_bird_hint_between")}
+											<TwitterPlatformIcon />
+											{t("use_blue_bird_hint_after")}
+										</>
+									}
 									checked={config.useBlueBird}
-									onChange={(v) => update({ useBlueBird: v })}
+									onChange={toggleMakeover("useBlueBird")}
 								/>
 							</SettingsPanel>
 						</SettingsGroup>
@@ -323,16 +467,23 @@ export function SettingsApp({
 					<>
 						<PageHeading title={t("filtering")} />
 						<SettingsGroup
-							label={t("ads")}
+							label={t("content_filters")}
 							icon={SlidersIcon}
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
 								<XToggle
-									label={t("filter_ads")}
-									hint={t("filter_ads_hint")}
-									checked={config.filterAds}
-									onChange={(v) => update({ filterAds: v })}
+									label={t("filter_media_ads")}
+									hint={t("filter_media_ads_hint")}
+									checked={config.filterMediaAds}
+									onChange={(v) => update({ filterMediaAds: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("filter_card_ads")}
+									hint={t("filter_card_ads_hint")}
+									checked={config.filterCardAds}
+									onChange={(v) => update({ filterCardAds: v })}
 								/>
 								<SettingsDivider />
 								<XToggle
@@ -350,6 +501,13 @@ export function SettingsApp({
 								/>
 								<SettingsDivider />
 								<XToggle
+									label={t("filter_commentary_accounts")}
+									hint={t("filter_commentary_accounts_hint")}
+									checked={config.filterCommentaryAccounts}
+									onChange={(v) => update({ filterCommentaryAccounts: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
 									label={t("filter_automated_accounts")}
 									hint={t("filter_automated_accounts_hint")}
 									checked={config.filterAutomatedAccounts}
@@ -363,11 +521,11 @@ export function SettingsApp({
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
-								<EffectSettings
-									compact
-									description={t("filter_effect_hint")}
-									config={config}
-									update={update}
+								<XToggle
+									label={t("show_actual_reply_count")}
+									hint={t("show_actual_reply_count_hint")}
+									checked={config.showActualReplyCount}
+									onChange={(v) => update({ showActualReplyCount: v })}
 								/>
 								{config.mode === "dim" && (
 									<>
@@ -382,6 +540,12 @@ export function SettingsApp({
 								)}
 							</SettingsPanel>
 						</SettingsGroup>
+					</>
+				)}
+
+				{activeSection === "advanced" && (
+					<>
+						<PageHeading title={t("advanced")} />
 						<SettingsGroup
 							label={t("matching")}
 							icon={SearchIcon}
@@ -406,8 +570,101 @@ export function SettingsApp({
 						</SettingsGroup>
 					</>
 				)}
+
+				{activeSection === "about" && <AboutPage />}
 			</div>
 		</main>
+	);
+}
+
+function AboutPage() {
+	const version = chrome.runtime.getManifest().version;
+
+	return (
+		<>
+			<PageHeading
+				title={t("about")}
+				description={
+					<>
+						{t("about_intro_before_platform")}
+						<XPlatformIcon />
+						{t("about_intro_after_platform")}
+					</>
+				}
+			/>
+			<section className="about-hero" aria-labelledby="about-idea-title">
+				<div className="about-brand" aria-hidden="true">
+					<img src="/icons/icon-128.png" alt="" />
+					<span>{version}</span>
+				</div>
+				<div>
+					<h2 id="about-idea-title">{t("about_idea_title")}</h2>
+					<p>
+						<XPlatformIcon />
+						{t("about_idea_body_after_platform")}
+						<XPlatformIcon />
+						{t("about_idea_body_after_api")}
+					</p>
+				</div>
+			</section>
+			<div className="about-grid">
+				<section className="about-card" aria-labelledby="about-name-title">
+					<h2 id="about-name-title">{t("about_name_title")}</h2>
+					<p>{t("about_name_body")}</p>
+				</section>
+				<section className="about-card" aria-labelledby="about-open-title">
+					<h2 id="about-open-title">{t("about_open_title")}</h2>
+					<p>{t("about_open_body")}</p>
+				</section>
+			</div>
+			<nav className="about-actions" aria-label={t("about_links_label")}>
+				<a
+					href="https://github.com/rokcso/bluenoise"
+					target="_blank"
+					rel="noreferrer"
+					className="about-action about-action-primary"
+				>
+					{t("about_github")}
+					<ExternalLinkIcon aria-hidden="true" />
+				</a>
+				<a
+					href="https://x.com/intent/follow?screen_name=rokcso"
+					target="_blank"
+					rel="noreferrer"
+					className="about-action"
+				>
+					{t("follow_maker")}
+					<ExternalLinkIcon aria-hidden="true" />
+				</a>
+			</nav>
+		</>
+	);
+}
+
+function XPlatformIcon({
+	className,
+	"aria-hidden": ariaHidden,
+}: {
+	className?: string;
+	"aria-hidden"?: boolean | "true" | "false";
+}) {
+	return (
+		<XFillIcon
+			aria-hidden={ariaHidden}
+			aria-label={ariaHidden ? undefined : t("x_platform")}
+			className={
+				className ?? "mx-0.5 inline-block h-[0.9em] w-[0.9em] align-[-0.12em]"
+			}
+		/>
+	);
+}
+
+function TwitterPlatformIcon() {
+	return (
+		<TwitterIcon
+			aria-label={t("twitter_platform")}
+			className="mx-0.5 inline-block h-[0.9em] w-[0.9em] align-[-0.12em] text-[#1D9BF0]"
+		/>
 	);
 }
 
@@ -416,28 +673,28 @@ function AccountListSettings({
 	config,
 	update,
 }: {
-	section: "controls" | "localBlacklist" | "localWhitelist" | "source";
+	section: "localBlacklist" | "localWhitelist" | "source";
 	config: AppConfig;
 	update: (p: Partial<AppConfig>) => void;
 }) {
-	const [snapshot, setSnapshot] = useState<AccountListSnapshot | undefined>();
-	const [syncing, setSyncing] = useState(false);
+	const [snapshots, setSnapshots] = useState<
+		Record<string, AccountListSnapshot>
+	>({});
+	const [syncingSource, setSyncingSource] = useState<string | null>(null);
 
 	useEffect(() => {
 		let active = true;
-		chrome.storage.local.get(ACCOUNT_LIST_KEY).then((result) => {
+		chrome.storage.local.get(RULE_DATA_KEY).then((result) => {
 			if (active)
-				setSnapshot(
-					result[ACCOUNT_LIST_KEY] as AccountListSnapshot | undefined,
-				);
+				setSnapshots(loadRuleData(result[RULE_DATA_KEY]).accounts.external);
 		});
 		const onChanged = (
 			changes: { [key: string]: chrome.storage.StorageChange },
 			area: string,
 		) => {
-			if (area === "local" && changes[ACCOUNT_LIST_KEY]) {
-				setSnapshot(
-					changes[ACCOUNT_LIST_KEY].newValue as AccountListSnapshot | undefined,
+			if (area === "local" && changes[RULE_DATA_KEY]) {
+				setSnapshots(
+					loadRuleData(changes[RULE_DATA_KEY].newValue).accounts.external,
 				);
 			}
 		};
@@ -448,26 +705,17 @@ function AccountListSettings({
 		};
 	}, []);
 
-	async function sync() {
-		setSyncing(true);
+	async function sync(sourceId: string) {
+		setSyncingSource(sourceId);
 		try {
-			await chrome.runtime.sendMessage({ type: "XSF_SYNC_ACCOUNT_LIST" });
+			await chrome.runtime.sendMessage({
+				type: "XSF_SYNC_ACCOUNT_LIST",
+				sourceId,
+			});
 		} finally {
-			setSyncing(false);
+			setSyncingSource(null);
 		}
 	}
-
-	const status = snapshot
-		? t(
-				"account_status",
-				String(snapshot.blacklistCount),
-				String(snapshot.whitelistCount),
-				new Intl.DateTimeFormat(undefined, {
-					dateStyle: "medium",
-					timeStyle: "short",
-				}).format(snapshot.syncedAt),
-			)
-		: t("not_synced");
 	if (section === "localBlacklist" || section === "localWhitelist") {
 		const isBlacklist = section === "localBlacklist";
 		return (
@@ -493,70 +741,331 @@ function AccountListSettings({
 			</div>
 		);
 	}
-	if (section === "controls") {
-		return (
-			<XToggle
-				label={t("account_lists_enabled")}
-				hint={t("account_lists_enabled_hint")}
-				checked={config.accountListEnabled}
-				onChange={(v) => update({ accountListEnabled: v })}
-			/>
-		);
-	}
-
-	const source = DEFAULT_ACCOUNT_LIST_SOURCES[0];
+	const sources = DEFAULT_ACCOUNT_LIST_SOURCES;
 
 	return (
-		<div className={config.externalAccountListsEnabled ? "" : "opacity-70"}>
-			<div className="flex items-center justify-between gap-4 py-3">
-				<div className="min-w-0 flex-1">
-					<a
-						href={MXGA_REPO_URL}
-						target="_blank"
-						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-sm font-medium transition-colors hover:text-x-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-					>
-						{source.name}
-						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-					</a>
-					<span className="mt-1 block truncate text-xs text-x-muted">
-						{status}
-					</span>
-					<a
-						href={MXGA_DATA_URL}
-						target="_blank"
-						rel="noreferrer"
-						className="mt-1 block truncate text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-						title={t("account_source_link")}
-					>
-						{t("account_source_link")}
-					</a>
-				</div>
-				<div className="flex shrink-0 items-center gap-1">
+		<div>
+			{sources
+				.map((source) => {
+					const snapshot = snapshots[source.id];
+					const status = snapshot
+						? source.format === "one-per-line"
+							? `${t("account_blacklist_count", String(snapshot.blacklistCount))} · ${t("last_synced", new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(snapshot.syncedAt))}`
+							: t(
+									"account_status",
+									String(snapshot.blacklistCount),
+									String(snapshot.whitelistCount),
+									new Intl.DateTimeFormat(undefined, {
+										dateStyle: "medium",
+										timeStyle: "short",
+									}).format(snapshot.syncedAt),
+								)
+						: t("not_synced");
+					const enabled = config.accountSourceEnabled[source.id] ?? false;
+					const metadata = snapshot?.syncError || status;
+					return (
+						<div
+							key={source.id}
+							className="flex items-center justify-between gap-4 py-3"
+						>
+							<div className="min-w-0 flex-1">
+								<a
+									href={source.homepageUrl ?? MXGA_REPO_URL}
+									target="_blank"
+									rel="noreferrer"
+									className="inline-flex w-fit items-center gap-1 text-sm font-medium transition-colors hover:text-x-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+								>
+									{source.name}
+									<ExternalLinkIcon
+										className="h-3.5 w-3.5"
+										aria-hidden="true"
+									/>
+								</a>
+								<span className="mt-1 block truncate text-xs text-x-muted">
+									{metadata}
+								</span>
+								{source.format === "one-per-line" && (
+									<a
+										href={source.blacklistUrl}
+										target="_blank"
+										rel="noreferrer"
+										className="mt-1 block truncate text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+										title={source.blacklistUrl}
+									>
+										{source.blacklistUrl}
+									</a>
+								)}
+								{source.id === "mxga" && (
+									<a
+										href={MXGA_DATA_URL}
+										target="_blank"
+										rel="noreferrer"
+										className="mt-1 block truncate text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+										title={t("account_source_link")}
+									>
+										{t("account_source_link")}
+									</a>
+								)}
+							</div>
+							<div className="flex shrink-0 items-center gap-1">
+								<button
+									type="button"
+									onClick={() => void sync(source.id)}
+									disabled={syncingSource !== null}
+									className="flex cursor-pointer items-center gap-1 rounded-full border border-x-border px-2.5 py-1 text-xs text-x-fg hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									{syncingSource === source.id ? (
+										<LoaderIcon
+											aria-hidden="true"
+											className="h-3 w-3 animate-spin"
+										/>
+									) : (
+										<RefreshIcon aria-hidden="true" className="h-3 w-3" />
+									)}
+									{t("sync")}
+								</button>
+								<BinarySwitch
+									checked={enabled}
+									label={source.name}
+									onChange={(v) => {
+										update({
+											accountSourceEnabled: {
+												...config.accountSourceEnabled,
+												[source.id]: v,
+											},
+										});
+										if (v)
+											void chrome.runtime.sendMessage({
+												type: "XSF_SYNC_ACCOUNT_LIST",
+												sourceId: source.id,
+											});
+									}}
+								/>
+							</div>
+						</div>
+					);
+				})
+				.map((node, i) => (
+					<div key={sources[i].id}>
+						{i > 0 && <SettingsDivider />}
+						{node}
+					</div>
+				))}
+		</div>
+	);
+}
+
+function UserRulesTransfer({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	const input = useRef<HTMLInputElement>(null);
+	const [message, setMessage] = useState("");
+	const [pendingImport, setPendingImport] = useState<ImportPreview | null>(
+		null,
+	);
+	const exportRules = () => {
+		const rules = defaultRuleData();
+		rules.keywords.user = {
+			block: config.userKeywords,
+			allow: config.whitelist,
+		};
+		rules.accounts.user = {
+			block: config.accountBlacklist,
+			allow: config.accountWhitelist,
+		};
+		const blob = new Blob([JSON.stringify(exportUserRules(rules), null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `bluenoise-user-rules-${new Date().toISOString().slice(0, 10)}.json`;
+		link.click();
+		URL.revokeObjectURL(url);
+	};
+	const importRules = async (file: File) => {
+		try {
+			const preview = parseUserRulesImport(await file.text(), {
+				preserveDuplicates: true,
+			});
+			setPendingImport(preview);
+		} catch (error) {
+			setMessage(error instanceof Error ? error.message : String(error));
+		}
+	};
+	const applyImport = (mode: "replace" | "merge" | "append") => {
+		if (!pendingImport) return;
+		const current = defaultRuleData();
+		current.keywords.user = {
+			block: config.userKeywords,
+			allow: config.whitelist,
+		};
+		current.accounts.user = {
+			block: config.accountBlacklist,
+			allow: config.accountWhitelist,
+		};
+		const next = applyUserRulesImport(current, pendingImport.rules, mode);
+		update({
+			userKeywords: next.keywords.user.block,
+			whitelist: next.keywords.user.allow,
+			accountBlacklist: next.accounts.user.block,
+			accountWhitelist: next.accounts.user.allow,
+		});
+		setMessage(
+			t(
+				mode === "replace"
+					? "rule_import_success_replace"
+					: mode === "append"
+						? "rule_import_success_append"
+						: "rule_import_success_merge",
+				String(pendingImport.ignored),
+			),
+		);
+		setPendingImport(null);
+	};
+	return (
+		<div>
+			<SettingsPanel>
+				<SettingsRow
+					label={t("rule_export_title")}
+					description={t("rule_export_description")}
+					control={
+						<button
+							type="button"
+							onClick={exportRules}
+							className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-x-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							<DownloadIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							{t("rule_export_action")}
+						</button>
+					}
+				/>
+				<SettingsDivider />
+				<SettingsRow
+					label={t("rule_import_title")}
+					description={t("rule_import_description")}
+					control={
+						<button
+							type="button"
+							onClick={() => input.current?.click()}
+							className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-x-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							<UploadIcon className="h-3.5 w-3.5" aria-hidden="true" />
+							{t("rule_import_action")}
+						</button>
+					}
+				/>
+			</SettingsPanel>
+			<input
+				ref={input}
+				type="file"
+				accept="application/json,.json"
+				className="hidden"
+				onChange={(event) => {
+					const file = event.target.files?.[0];
+					if (file) void importRules(file);
+					event.currentTarget.value = "";
+				}}
+			/>
+			{message && <p className="mt-3 text-xs text-x-muted">{message}</p>}
+			{pendingImport && (
+				<ImportModeDialog
+					preview={pendingImport}
+					onCancel={() => setPendingImport(null)}
+					onSelect={applyImport}
+				/>
+			)}
+		</div>
+	);
+}
+
+function ImportModeDialog({
+	preview,
+	onCancel,
+	onSelect,
+}: {
+	preview: ImportPreview;
+	onCancel: () => void;
+	onSelect: (mode: "replace" | "merge" | "append") => void;
+}) {
+	const [mode, setMode] = useState<"replace" | "merge" | "append">("merge");
+	const total =
+		preview.rules.keywords.block.length +
+		preview.rules.keywords.allow.length +
+		preview.rules.accounts.block.length +
+		preview.rules.accounts.allow.length;
+	return (
+		<div
+			className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
+			role="dialog"
+			aria-modal="true"
+			aria-label={t("rule_import_dialog_title")}
+		>
+			<div className="w-full max-w-md rounded-xl border border-x-border bg-x-bg p-5 shadow-xl">
+				<h2 className="text-base font-semibold">
+					{t("rule_import_dialog_title")}
+				</h2>
+				<p className="mt-2 text-sm text-x-muted">
+					{t(
+						"rule_import_dialog_summary",
+						String(total),
+						String(preview.ignored),
+					)}
+				</p>
+				<div className="mt-4 grid gap-2">
 					<button
 						type="button"
-						onClick={sync}
-						disabled={syncing}
-						className="flex cursor-pointer items-center gap-1 rounded-full border border-x-border px-2.5 py-1 text-xs text-x-fg hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+						onClick={() => setMode("merge")}
+						aria-pressed={mode === "merge"}
+						className={`rounded-lg border p-3 text-left text-sm ${mode === "merge" ? "border-x-accent bg-x-hover" : "border-x-border"}`}
 					>
-						{syncing ? (
-							<LoaderIcon aria-hidden="true" className="h-3 w-3 animate-spin" />
-						) : (
-							<RefreshIcon aria-hidden="true" className="h-3 w-3" />
-						)}
-						{t("sync")}
+						<strong>{t("rule_import_mode_merge")}</strong>
+						<span className="mt-1 block text-xs text-x-muted">
+							{t("rule_import_mode_merge_description")}
+						</span>
 					</button>
-					<BinarySwitch
-						checked={config.externalAccountListsEnabled}
-						label={source.name}
-						onChange={(v) => {
-							update({ externalAccountListsEnabled: v });
-							if (v)
-								void chrome.runtime.sendMessage({
-									type: "XSF_SYNC_ACCOUNT_LIST",
-								});
-						}}
-					/>
+					<button
+						type="button"
+						onClick={() => setMode("append")}
+						aria-pressed={mode === "append"}
+						className={`rounded-lg border p-3 text-left text-sm ${mode === "append" ? "border-x-accent bg-x-hover" : "border-x-border"}`}
+					>
+						<strong>{t("rule_import_mode_append")}</strong>
+						<span className="mt-1 block text-xs text-x-muted">
+							{t("rule_import_mode_append_description")}
+						</span>
+					</button>
+					<button
+						type="button"
+						onClick={() => setMode("replace")}
+						aria-pressed={mode === "replace"}
+						className={`rounded-lg border p-3 text-left text-sm text-x-red ${mode === "replace" ? "border-x-red bg-x-hover" : "border-x-red/20"}`}
+					>
+						<strong>{t("rule_import_mode_replace")}</strong>
+						<span className="mt-1 block text-xs text-x-muted">
+							{t("rule_import_mode_replace_description")}
+						</span>
+					</button>
+				</div>
+				<div className="mt-4 flex justify-end gap-2">
+					<button
+						type="button"
+						onClick={onCancel}
+						className="rounded-full px-3 py-1.5 text-sm text-x-muted hover:bg-x-hover"
+					>
+						{t("cancel")}
+					</button>
+					<button
+						type="button"
+						onClick={() => onSelect(mode)}
+						className="rounded-full bg-x-accent px-4 py-1.5 text-sm font-medium text-x-accent-fg"
+					>
+						{t("rule_import_confirm")}
+					</button>
 				</div>
 			</div>
 		</div>
@@ -593,6 +1102,24 @@ function MasterSwitch({
 			checked={config.enabled}
 			label={config.enabled ? t("enabled_on") : t("enabled_off")}
 			onChange={(enabled) => update({ enabled })}
+		/>
+	);
+}
+
+function PageCleanupSwitch({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	return (
+		<BinarySwitch
+			checked={config.pageCleanupEnabled}
+			label={
+				config.pageCleanupEnabled ? t("x_makeover_on") : t("x_makeover_off")
+			}
+			onChange={(pageCleanupEnabled) => update({ pageCleanupEnabled })}
 		/>
 	);
 }
@@ -716,8 +1243,8 @@ function PageHeading({
 	title,
 	description,
 }: {
-	title: string;
-	description?: string;
+	title: React.ReactNode;
+	description?: React.ReactNode;
 }) {
 	return (
 		<header className="options-page-heading">
@@ -768,7 +1295,7 @@ function SettingsRow({
 	control,
 }: {
 	label: React.ReactNode;
-	description?: string;
+	description?: React.ReactNode;
 	control: React.ReactNode;
 }) {
 	return (
@@ -1110,18 +1637,26 @@ function XToggle({
 	checked,
 	onChange,
 	hint,
+	switchLabel,
 }: {
-	label: string;
+	label: React.ReactNode;
 	checked: boolean;
 	onChange: (v: boolean) => void;
-	hint?: string;
+	hint?: React.ReactNode;
+	switchLabel?: string;
 }) {
 	return (
 		<SettingsRow
 			label={label}
 			description={hint}
 			control={
-				<BinarySwitch checked={checked} label={label} onChange={onChange} />
+				<BinarySwitch
+					checked={checked}
+					label={
+						switchLabel ?? (typeof label === "string" ? label : t("x_platform"))
+					}
+					onChange={onChange}
+				/>
 			}
 		/>
 	);

@@ -1,0 +1,2 @@
+# BlueNoise maintained keyword blacklist.
+# Add one plain keyword or /regular-expression/flags per line.

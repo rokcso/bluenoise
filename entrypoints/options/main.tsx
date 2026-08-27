@@ -6,16 +6,19 @@ import "../popup/style.css";
 import "./style.css";
 import { setLanguage, t } from "@/lib/i18n";
 import {
+	DatabaseIcon,
 	FilterFillIcon,
 	FilterIcon,
-	LayoutFillIcon,
-	LayoutIcon,
+	InformationFillIcon,
+	InformationIcon,
 	ListFilterFillIcon,
 	ListFilterIcon,
 	SettingsFillIcon,
 	SettingsIcon,
+	SlidersIcon,
 	UsersFillIcon,
 	UsersIcon,
+	XFillIcon,
 	XIcon,
 } from "@/src/ui/icons";
 
@@ -44,16 +47,34 @@ const navigation: {
 		fillIcon: UsersFillIcon,
 	},
 	{
+		id: "backup",
+		label: "rule_backup",
+		lineIcon: DatabaseIcon,
+		fillIcon: DatabaseIcon,
+	},
+	{
 		id: "filtering",
 		label: "filtering",
 		lineIcon: FilterIcon,
 		fillIcon: FilterFillIcon,
 	},
 	{
-		id: "customization",
-		label: "customization",
-		lineIcon: LayoutIcon,
-		fillIcon: LayoutFillIcon,
+		id: "advanced",
+		label: "advanced",
+		lineIcon: SlidersIcon,
+		fillIcon: SlidersIcon,
+	},
+	{
+		id: "makeover",
+		label: "makeover",
+		lineIcon: XFillIcon,
+		fillIcon: XFillIcon,
+	},
+	{
+		id: "about",
+		label: "about",
+		lineIcon: InformationIcon,
+		fillIcon: InformationFillIcon,
 	},
 ];
 

@@ -123,17 +123,47 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	display: none !important;
 }
 
-/* Injected items inside X's tweet ⋯ menu. Color is inherited from the menu
- * container so light/dark themes stay readable; only hover feedback is ours. */
+/* Injected items inside X's tweet menu. */
 .xsf-menu-item {
+	width: 100%;
 	display: flex;
 	align-items: center;
-	gap: 8px;
 	padding: 12px 16px;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
 	cursor: pointer;
 	user-select: none;
-	transition: background-color 0.2s ease;
 }
-.xsf-menu-item:hover {
-	background-color: rgba(255, 255, 255, 0.1);
+
+.xsf-menu-item:is(:hover, :focus-visible) {
+	background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* The expanded tree keeps text nodes, so hide them while compact geometry is active. */
+
+.xsf-compose-icon {
+	width: 24px;
+	height: 24px;
+	fill: currentColor;
+}
+
+[data-xsf-compact-compose] [data-xsf-compose-spacer] {
+	display: none;
+}
+
+/* Native compact account menus retain only the avatar container. */
+[data-xsf-compact-account] > div:not(:first-child) {
+	/* biome-ignore lint/complexity/noImportantStyles: override X's expanded account details. */
+	display: none !important;
+}
+
+[data-xsf-collapse-sidebar]
+	header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])
+	:is(nav[role="navigation"], [data-testid="SideNav_AccountSwitcher_Button"])
+	[dir] {
+	/* biome-ignore lint/complexity/noImportantStyles: X uses inline and generated layout styles for sidebar labels. */
+	display: none !important;
 }

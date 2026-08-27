@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - Make X readable again" },
 	"extDescription": {
-		"message": "Blur or hide noisy X replies and timeline posts with local, reversible keyword rules - no APIs, cookies, or account changes."
+		"message": "Make X readable: locally blur or hide noisy replies, timeline posts, and ads; optional page cleanups; no cookies or account changes."
 	},
 	"loading": { "message": "Loading…" },
 	"tagline": { "message": "Less noise. More signal." },
@@ -18,14 +18,13 @@
 	},
 	"enabled_on": { "message": "Filtering on" },
 	"enabled_off": { "message": "Filtering off" },
+	"x_makeover": { "message": "X Makeover" },
+	"x_makeover_on": { "message": "X Makeover on" },
+	"x_makeover_off": { "message": "X Makeover off" },
+	"makeover": { "message": "Makeover" },
 	"mode_dim": { "message": "Blur" },
 	"mode_hide": { "message": "Hide" },
 	"external_keywords": { "message": "External keywords" },
-	"account_lists_enabled": { "message": "Enable account filtering" },
-	"account_lists_enabled_hint": {
-		"message": "Apply both local account rules and enabled external account sources."
-	},
-	"external_account_lists": { "message": "Use external account sources" },
 	"account_source_link": { "message": "View public data and audit history" },
 	"account_blacklist_hint": {
 		"message": "Local account blacklist. Enter one numeric X ID or @handle per line."
@@ -52,11 +51,54 @@
 		"placeholders": { "count": { "content": "$1" } }
 	},
 	"not_synced": { "message": "Not synced" },
+	"account_blacklist_count": {
+		"message": "$1 blacklist entries",
+		"placeholders": { "count": { "content": "$1" } }
+	},
 	"last_synced": {
 		"message": "Updated $1",
 		"placeholders": { "date": { "content": "$1" } }
 	},
 	"sync": { "message": "Sync" },
+	"rule_backup": { "message": "Rule backup" },
+	"rule_backup_title": { "message": "Rule backup" },
+	"rule_export_title": { "message": "Export user rules" },
+	"rule_export_description": {
+		"message": "Download your custom keyword and account rules as a backup file."
+	},
+	"rule_export_action": { "message": "Export" },
+	"rule_import_title": { "message": "Import user rules" },
+	"rule_import_description": {
+		"message": "Restore custom keyword and account rules from a BlueNoise backup file."
+	},
+	"rule_import_action": { "message": "Import" },
+	"rule_import_success_merge": {
+		"message": "Rules merged successfully. Ignored $1 invalid rules."
+	},
+	"rule_import_success_append": {
+		"message": "Rules appended successfully. Ignored $1 invalid rules."
+	},
+	"rule_import_success_replace": {
+		"message": "Rules replaced successfully. Ignored $1 invalid rules."
+	},
+	"rule_import_dialog_title": { "message": "Choose import mode" },
+	"rule_import_dialog_summary": {
+		"message": "Parsed $1 rules. Ignored $2 invalid rules."
+	},
+	"rule_import_mode_merge": { "message": "Merge" },
+	"rule_import_mode_merge_description": {
+		"message": "Keep existing rules and add only non-duplicate rules."
+	},
+	"rule_import_mode_append": { "message": "Append as-is" },
+	"rule_import_mode_append_description": {
+		"message": "Keep existing rules and append every valid rule, including duplicates."
+	},
+	"rule_import_mode_replace": { "message": "Replace" },
+	"rule_import_mode_replace_description": {
+		"message": "Replace all current user rules."
+	},
+	"rule_import_confirm": { "message": "Confirm import" },
+	"cancel": { "message": "Cancel" },
 	"my_keywords": { "message": "My keywords" },
 	"my_keywords_hint": {
 		"message": "Add words or regular expressions that should trigger filtering. Use one rule per line."
@@ -82,12 +124,43 @@
 	"keywords": { "message": "Keywords" },
 	"accounts": { "message": "Accounts" },
 	"filtering": { "message": "Filtering" },
+	"advanced": { "message": "Advanced" },
+	"content_filters": { "message": "Content filters" },
 	"account_filtering": { "message": "Account filtering" },
 	"external_account_sources": { "message": "External account sources" },
 	"account_blacklist_title": { "message": "My account blacklist" },
 	"account_whitelist_title": { "message": "My account whitelist" },
-	"customization": { "message": "X makeover" },
-	"customization_options": { "message": "Page tweaks" },
+	"about": { "message": "About" },
+	"about_intro_before_platform": { "message": "An " },
+	"about_intro_after_platform": {
+		"message": " reading tool that runs in your browser. You define the rules and the boundaries."
+	},
+	"about_idea_title": { "message": "Put the feed back in the reader's hands" },
+	"about_idea_body_after_platform": {
+		"message": " has never lacked information. What it often lacks is room for your own judgment. BlueNoise gives the filtering decisions back to you. All data and logic stay in your browser. It never touches your account, calls the "
+	},
+	"about_idea_body_after_api": {
+		"message": " API, or collects your data. The controls are deliberately detailed because you should decide what appears in your timeline and what stops appearing there."
+	},
+	"x_platform": { "message": "X" },
+	"twitter_platform": { "message": "Twitter" },
+	"about_name_title": { "message": "Why BlueNoise" },
+	"about_name_body": {
+		"message": "Blue noise appears in image and signal processing. It spreads interference out instead of letting it gather into distracting clumps. The name does not mean eliminating every bit of noise. A good feed can still have surprise and disagreement. It just should not waste your attention on repetition, manipulation, or empty interruption."
+	},
+	"about_open_title": { "message": "You should be able to see what it does" },
+	"about_open_body": {
+		"message": "BlueNoise is open source. You can inspect the code, ask questions, and help improve it. We do not think you should have to trust an extension before you are allowed to use it. Its behavior should be clear in its features and code, not buried in permission text or vague promises."
+	},
+	"about_links_label": { "message": "BlueNoise links" },
+	"about_github": { "message": "View on GitHub" },
+	"makeover_options": { "message": "Page tweaks" },
+	"makeover_layout": { "message": "Layout" },
+	"makeover_distractions_tab_nav": { "message": "Tab & navigation" },
+	"makeover_distractions_timeline": { "message": "Timeline" },
+	"makeover_distractions_sidebar": { "message": "Sidebar" },
+	"makeover_distractions_floating": { "message": "Floating buttons" },
+	"makeover_branding": { "message": "Branding" },
 	"treatment": { "message": "Filtering mode" },
 	"matching": { "message": "Match options" },
 	"diagnostics": { "message": "Diagnostics" },
@@ -95,6 +168,14 @@
 	"filter_ads": { "message": "Filter promoted posts" },
 	"filter_ads_hint": {
 		"message": "Blur or hide posts marked as ads using your selected filtering mode."
+	},
+	"filter_media_ads": { "message": "Filter media ads" },
+	"filter_media_ads_hint": {
+		"message": "Blur or hide promoted posts with video or image media."
+	},
+	"filter_card_ads": { "message": "Filter website card ads" },
+	"filter_card_ads_hint": {
+		"message": "Blur or hide promoted posts containing a website card."
 	},
 	"filter_parody_accounts": { "message": "Filter parody accounts" },
 	"filter_parody_accounts_hint": {
@@ -104,11 +185,17 @@
 	"filter_fan_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as fan accounts by X."
 	},
+	"filter_commentary_accounts": { "message": "Filter commentary accounts" },
+	"filter_commentary_accounts_hint": {
+		"message": "Blur or hide posts from accounts marked as commentary by X."
+	},
 	"filter_automated_accounts": { "message": "Filter automated accounts" },
 	"filter_automated_accounts_hint": {
 		"message": "Blur or hide posts from accounts marked as automated by X."
 	},
-	"hide_premium_promo": { "message": "Hide X Premium ads" },
+	"hide_premium_promo": { "message": "Hide Premium ads" },
+	"hide_premium_promo_before_platform": { "message": "Hide " },
+	"hide_premium_promo_after_platform": { "message": " Premium ads" },
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
 	},
@@ -117,18 +204,32 @@
 	"hide_follow_suggestions_hint": {
 		"message": "Remove the \"Who to follow\" recommendations panel from the sidebar."
 	},
+	"hide_timeline_follow_suggestions": {
+		"message": "Hide timeline follow suggestions"
+	},
+	"hide_timeline_follow_suggestions_hint": {
+		"message": "Remove the \"Who to follow\" recommendation block from the timeline."
+	},
+	"hide_discover_more": { "message": "Hide Discover more" },
+	"hide_discover_more_hint": {
+		"message": "Remove the Discover more recommendations at the bottom of a post page."
+	},
+	"hide_live_streams": { "message": "Hide Live on X" },
+	"hide_live_streams_hint": {
+		"message": "Remove the \"Live on X\" live-stream cards from the timeline."
+	},
 	"hide_trends": { "message": "Hide current trends" },
 	"hide_trends_hint": {
 		"message": "Remove the \"What's happening\" trends panel from the sidebar."
 	},
-	"hide_footer": { "message": "Hide X footer" },
+	"hide_footer": { "message": "Hide footer" },
 	"hide_footer_hint": {
 		"message": "Remove the Terms / Privacy / Cookie footer from the sidebar."
 	},
 	"use_blue_bird": { "message": "Use the classic blue bird" },
-	"use_blue_bird_hint": {
-		"message": "Replace the X logo with the classic Twitter blue bird."
-	},
+	"use_blue_bird_hint_before": { "message": "Replace the " },
+	"use_blue_bird_hint_between": { "message": " logo with the classic " },
+	"use_blue_bird_hint_after": { "message": " blue bird." },
 	"hide_title_count": { "message": "Hide tab unread count" },
 	"hide_title_count_hint": {
 		"message": "Remove the unread number from the browser tab title and favicon."
@@ -157,6 +258,14 @@
 	"show_badge_count": { "message": "Show toolbar count" },
 	"show_badge_count_hint": {
 		"message": "Show the number of filtered replies and posts on the BlueNoise toolbar icon."
+	},
+	"show_actual_reply_count": { "message": "Show actual reply count" },
+	"show_actual_reply_count_hint": {
+		"message": "On post pages, replace X's total with the loaded replies that remain after filtering."
+	},
+	"collapse_sidebar": { "message": "Collapse navigation sidebar" },
+	"collapse_sidebar_hint": {
+		"message": "Always use X's compact icon-only sidebar, including pages without a collapse button."
 	},
 	"reveal_on_hover": { "message": "Reveal around cursor" },
 	"reveal_on_hover_hint": {

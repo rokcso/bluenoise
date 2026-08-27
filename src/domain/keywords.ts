@@ -4,6 +4,7 @@ import { parseKeywordText } from "@/src/domain/normalize";
 export async function fetchKeywordSource(source: {
 	name: string;
 	url: string;
+	allowEmpty?: boolean;
 }): Promise<string[]> {
 	const response = await fetch(source.url, { cache: "no-store" });
 	if (!response.ok) {
@@ -19,7 +20,7 @@ export async function fetchKeywordSource(source: {
 	}
 
 	const keywords = parseKeywordText(text);
-	if (keywords.length === 0) {
+	if (keywords.length === 0 && !source.allowEmpty) {
 		throw new Error(`${source.name} is empty`);
 	}
 

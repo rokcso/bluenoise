@@ -4,6 +4,7 @@ import {
 	asRegex,
 	buildWhitelistIndex,
 	escapeRegExp,
+	isSafeCustomRegex,
 	looseRegex,
 	normalizeKeyword,
 	parseKeywordText,
@@ -44,6 +45,20 @@ describe("asRegex", () => {
 	});
 });
 
+describe("isSafeCustomRegex", () => {
+	it("接受常见的简单正则", () => {
+		expect(isSafeCustomRegex("/\\d{4,}/i")).toBe(true);
+	});
+	it("拒绝嵌套量词和超长规则", () => {
+		expect(isSafeCustomRegex("/(a+)+$/")).toBe(false);
+		expect(isSafeCustomRegex(`/${"a".repeat(513)}/`)).toBe(false);
+	});
+	it("允许兼容性 flags，但拒绝不必要的高级 flags", () => {
+		expect(isSafeCustomRegex("/foo/g")).toBe(true);
+		expect(isSafeCustomRegex("/foo/v")).toBe(false);
+	});
+});
+
 describe("buildWhitelistIndex", () => {
 	it("普通词按归一化比对", () => {
 		const index = buildWhitelistIndex(["求主\u200b人"], cfg);
@@ -68,6 +83,9 @@ describe("sameKeyword", () => {
 });
 
 describe("parseKeywordText", () => {
+	it("忽略注释行", () => {
+		expect(parseKeywordText("# 说明\n广告\n# another\n")).toEqual(["广告"]);
+	});
 	it("去空行、去重、去首尾空白", () => {
 		expect(parseKeywordText(" a \n a \n\n b \n")).toEqual(["a", "b"]);
 	});
