@@ -624,6 +624,20 @@ function AboutPage() {
 					<p>{t("about_open_body")}</p>
 				</section>
 			</div>
+			<a
+				href="https://coryso.com/"
+				target="_blank"
+				rel="noreferrer"
+				className="about-studio"
+			>
+				<div>
+					<h2>
+						{t("about_studio_title")}
+						<ExternalLinkIcon aria-hidden="true" />
+					</h2>
+					<p>{t("about_studio_body")}</p>
+				</div>
+			</a>
 			<nav className="about-actions" aria-label={t("about_links_label")}>
 				<a
 					href="https://github.com/rokcso/bluenoise"
