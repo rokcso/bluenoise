@@ -284,5 +284,11 @@
 	},
 	"contextMenu_addAccount": {
 		"message": "将选中的文本添加到 BlueNoise 账号黑名单"
+	},
+	"contextMenu_addToWhitelist": {
+		"message": "将作者加入 BlueNoise 白名单"
+	},
+	"contextMenu_addToBlacklist": {
+		"message": "将作者加入 BlueNoise 黑名单"
 	}
 }

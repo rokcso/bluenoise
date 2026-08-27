@@ -4,6 +4,11 @@ import type {
 	RuleData,
 	RuleView,
 } from "@/src/contracts/config";
+import {
+	type AccountIdentity,
+	accountIdentityToStored,
+	addAccountToList,
+} from "@/src/domain/account-list";
 
 export const KEYWORD_SOURCES: Omit<
 	KeywordSubscription,
@@ -46,6 +51,24 @@ export function loadRuleData(value: unknown): RuleData {
 				block: data?.accounts?.user?.block ?? [],
 			},
 			external: data?.accounts?.external ?? {},
+		},
+	};
+}
+
+export function addAccountRule(
+	rules: RuleData,
+	list: "allow" | "block",
+	identity: AccountIdentity,
+): RuleData | null {
+	const stored = accountIdentityToStored(identity);
+	if (!stored) return null;
+	const next = addAccountToList(rules.accounts.user[list], stored);
+	if (!next) return null;
+	return {
+		...rules,
+		accounts: {
+			...rules.accounts,
+			user: { ...rules.accounts.user, [list]: next },
 		},
 	};
 }

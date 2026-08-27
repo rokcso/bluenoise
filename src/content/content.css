@@ -123,6 +123,41 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	display: none !important;
 }
 
+/* Injected items inside X's tweet menu. */
+.xsf-menu-item {
+	border: 0;
+	background: transparent;
+	color: inherit;
+	text-align: start;
+	cursor: pointer;
+	user-select: none;
+}
+
+.xsf-menu-item:not(.xsf-native-menu-item) {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 12px 16px;
+	font: inherit;
+}
+
+.xsf-menu-item:not(.xsf-native-menu-item) svg {
+	width: 24px;
+	height: 24px;
+	flex: none;
+	fill: currentColor;
+}
+
+.xsf-menu-item:is(:hover, :focus-visible) {
+	background: var(--xsf-menu-hover, rgba(0, 0, 0, 0.03));
+}
+
+.xsf-native-menu-item {
+	appearance: none;
+	font: inherit;
+}
+
 /* The expanded tree keeps text nodes, so hide them while compact geometry is active. */
 
 .xsf-compose-icon {
