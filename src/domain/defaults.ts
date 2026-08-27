@@ -12,6 +12,7 @@ export const DEFAULTS: AppConfig = {
 	showActualReplyCount: false,
 	collapseSidebar: false,
 	hidePremiumPromo: false,
+	hidePremiumFeaturePrompt: false,
 	hideFooter: false,
 	useBlueBird: false,
 	hideTrends: false,

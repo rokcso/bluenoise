@@ -1,6 +1,7 @@
 import type { AppConfig } from "@/src/contracts/config";
 
 const PREMIUM_ATTR = "data-xsf-hide-premium";
+const PREMIUM_FEATURE_PROMPT_ATTR = "data-xsf-hide-premium-feature-prompt";
 const FOOTER_ATTR = "data-xsf-hide-footer";
 const TRENDS_ATTR = "data-xsf-hide-trends";
 const FOLLOW_ATTR = "data-xsf-hide-follow";
@@ -506,6 +507,10 @@ export function createPageMakeoverController(options: {
 		cfg = config;
 		const enabled = config.pageCleanupEnabled;
 		setRootAttribute(PREMIUM_ATTR, enabled && config.hidePremiumPromo);
+		setRootAttribute(
+			PREMIUM_FEATURE_PROMPT_ATTR,
+			enabled && config.hidePremiumFeaturePrompt,
+		);
 		setRootAttribute(FOOTER_ATTR, enabled && config.hideFooter);
 		setRootAttribute(TRENDS_ATTR, enabled && config.hideTrends);
 		setRootAttribute(FOLLOW_ATTR, enabled && config.hideFollowSuggestions);

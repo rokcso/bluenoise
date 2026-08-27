@@ -24,6 +24,8 @@ export interface AppConfig {
 	collapseSidebar: boolean;
 	/** Hide X's in-timeline "Subscribe to Premium" upsell ad card. */
 	hidePremiumPromo: boolean;
+	/** Hide X's in-timeline prompt advertising unlocked Premium features. */
+	hidePremiumFeaturePrompt: boolean;
 	/** Hide X's site footer (Terms / Privacy / Cookie links, copyright). */
 	hideFooter: boolean;
 	/** Replace X's header logo with the classic Twitter blue bird. */

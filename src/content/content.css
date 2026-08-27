@@ -140,6 +140,16 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	display: none !important;
 }
 
+/* Hide the timeline prompt describing unlocked Premium features. Match X's
+ * stable prompt and destination markers instead of localized copy or classes. */
+[data-xsf-hide-premium-feature-prompt]
+[data-testid="cellInnerDiv"]:has(
+	[data-testid="inlinePrompt"] a[href^="/i/premium"]
+) {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
 /* Keep the source DOM intact: an overlay blurs everything except the cursor hole. */
 .xsf-filtered.xsf-revealing > :not(.xsf-filter-reason) {
 	opacity: 1;
