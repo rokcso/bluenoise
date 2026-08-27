@@ -1,18 +1,34 @@
 import { setLanguage, t } from "@/lib/i18n";
-import type { AppConfig } from "@/src/contracts/config";
-import { CONFIG_KEY } from "@/src/contracts/config";
+import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
-	ACCOUNT_LIST_KEY,
-	accountIdentityToStored,
-	addAccountToList,
-	type AccountListSnapshot,
-	syncAccountLists,
+	DEFAULT_ACCOUNT_LIST_SOURCES,
+	syncAccountListSource,
 } from "@/src/domain/account-list";
-import { defaultConfig } from "@/src/domain/defaults";
+import {
+	defaultConfig,
+	defaultRuleData,
+	loadConfig,
+} from "@/src/domain/defaults";
 import { fetchKeywordSource } from "@/src/domain/keywords";
+import {
+	addAccountRule,
+	KEYWORD_SOURCES,
+	loadRuleData,
+} from "@/src/domain/rules";
 
 export default defineBackground(() => {
 	let syncInFlight = false;
+
+	async function readState() {
+		const [synced, local] = await Promise.all([
+			chrome.storage.sync.get(SETTINGS_KEY),
+			chrome.storage.local.get(RULE_DATA_KEY),
+		]);
+		return {
+			settings: loadConfig(synced[SETTINGS_KEY] ?? defaultConfig()),
+			rules: loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData()),
+		};
+	}
 
 	// Public keyword sources change slowly; refresh them twice per day.
 	chrome.runtime.onInstalled.addListener(async (details) => {
@@ -24,13 +40,14 @@ export default defineBackground(() => {
 			delayInMinutes: 2,
 			periodInMinutes: 360,
 		});
-		void syncAccounts();
 		if (details.reason !== "install") return;
 
-		const { config } = await chrome.storage.local.get(CONFIG_KEY);
-		if (!config) {
-			await chrome.storage.local.set({ config: defaultConfig() });
-		}
+		const state = await readState();
+		await Promise.all([
+			chrome.storage.sync.set({ [SETTINGS_KEY]: state.settings }),
+			chrome.storage.local.set({ [RULE_DATA_KEY]: state.rules }),
+		]);
+		void syncAccounts();
 
 		// The community list isn't bundled; fetch it on install. If it fails, the
 		// popup will retry when opened.
@@ -73,8 +90,7 @@ export default defineBackground(() => {
 		removePrev(0);
 		// Localize the items with the user's chosen language (not just the
 		// browser locale) by seeding the message catalog from stored config.
-		chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
-			const cfg = (config ?? defaultConfig()) as AppConfig;
+		readState().then(({ settings: cfg }) => {
 			setLanguage(cfg.language);
 			for (const item of menuItems) {
 				chrome.contextMenus?.create(
@@ -94,27 +110,29 @@ export default defineBackground(() => {
 		const selection = info.selectionText.trim();
 		if (!selection) return;
 		if (info.menuItemId === "add-keyword") {
-			void chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
-				const latest = (config ?? defaultConfig()) as AppConfig;
+			void readState().then(({ rules }) => {
 				const keyword = selection;
-				if (latest.userKeywords.includes(keyword)) return;
+				if (rules.keywords.user.block.includes(keyword)) return;
 				return chrome.storage.local.set({
-					config: {
-						...latest,
-						userKeywords: [...latest.userKeywords, keyword],
+					[RULE_DATA_KEY]: {
+						...rules,
+						keywords: {
+							...rules.keywords,
+							user: {
+								...rules.keywords.user,
+								block: [...rules.keywords.user.block, keyword],
+							},
+						},
 					},
 				});
 			});
 		} else if (info.menuItemId === "add-account") {
-			void chrome.storage.local.get(CONFIG_KEY).then(({ config }) => {
-				const latest = (config ?? defaultConfig()) as AppConfig;
+			void readState().then(({ rules }) => {
 				// Accept a numeric X user id or an @handle; anything else is ignored.
-				const stored = accountIdentityToStored({ handle: selection });
-				if (!stored) return;
-				const next = addAccountToList(latest.accountBlacklist, stored);
-				if (next === null) return; // already present
+				const next = addAccountRule(rules, "block", { handle: selection });
+				if (!next) return;
 				return chrome.storage.local.set({
-					config: { ...latest, accountBlacklist: next },
+					[RULE_DATA_KEY]: next,
 				});
 			});
 		}
@@ -139,7 +157,9 @@ export default defineBackground(() => {
 			// replacing a successfully stored snapshot.
 			void syncMissingSubscriptions();
 		} else if (message?.type === "XSF_SYNC_ACCOUNT_LIST") {
-			syncAccounts(true)
+			const sourceId =
+				typeof message.sourceId === "string" ? message.sourceId : undefined;
+			syncAccounts(sourceId ? [sourceId] : undefined)
 				.then(() => sendResponse({ ok: true }))
 				.catch((error) =>
 					sendResponse({
@@ -152,32 +172,44 @@ export default defineBackground(() => {
 		return false;
 	});
 
-	async function syncAccounts(force = false): Promise<void> {
-		if (!force) {
-			const { config } = await chrome.storage.local.get(CONFIG_KEY);
-			const current = (config ?? defaultConfig()) as AppConfig;
-			if (!current.externalAccountListsEnabled) return;
-		}
-		try {
-			const previous = (await chrome.storage.local.get(ACCOUNT_LIST_KEY))[
-				ACCOUNT_LIST_KEY
-			] as AccountListSnapshot | undefined;
-			const snapshot = await syncAccountLists(undefined, previous);
-			await chrome.storage.local.set({ [ACCOUNT_LIST_KEY]: snapshot });
-		} catch (error) {
-			const result = await chrome.storage.local.get(ACCOUNT_LIST_KEY);
-			const previous = result[ACCOUNT_LIST_KEY] as
-				| AccountListSnapshot
-				| undefined;
-			if (previous) {
-				await chrome.storage.local.set({
-					[ACCOUNT_LIST_KEY]: {
-						...previous,
+	async function syncAccounts(sourceIds?: string[]): Promise<void> {
+		const { settings, rules } = await readState();
+		const sources = DEFAULT_ACCOUNT_LIST_SOURCES.filter(
+			(source) =>
+				(!sourceIds || sourceIds.includes(source.id)) &&
+				settings.accountSourceEnabled[source.id],
+		);
+		const external = { ...rules.accounts.external };
+		await Promise.all(
+			sources.map(async (source) => {
+				try {
+					external[source.id] = await syncAccountListSource(
+						source,
+						external[source.id],
+					);
+				} catch (error) {
+					const previous = external[source.id];
+					external[source.id] = {
+						version: previous?.version ?? 0,
+						blacklistIds: previous?.blacklistIds ?? [],
+						blacklistHandles: previous?.blacklistHandles ?? [],
+						whitelistIds: previous?.whitelistIds ?? [],
+						whitelistHandles: previous?.whitelistHandles ?? [],
+						blacklistCount: previous?.blacklistCount ?? 0,
+						whitelistCount: previous?.whitelistCount ?? 0,
+						syncedAt: previous?.syncedAt ?? Date.now(),
+						sources: previous?.sources ?? [source.id],
 						syncError: String(error instanceof Error ? error.message : error),
-					},
-				});
-			}
-		}
+					};
+				}
+			}),
+		);
+		await chrome.storage.local.set({
+			[RULE_DATA_KEY]: {
+				...rules,
+				accounts: { ...rules.accounts, external },
+			},
+		});
 	}
 
 	/** Fetch and store snapshots for subscriptions that have never synced. */
@@ -185,15 +217,12 @@ export default defineBackground(() => {
 		if (syncInFlight) return;
 		syncInFlight = true;
 		try {
-			const { config } = await chrome.storage.local.get(CONFIG_KEY);
-			const cfg = (config ?? defaultConfig()) as AppConfig;
-			const subscriptions = [...(cfg.subscriptions ?? [])];
-			for (let i = 0; i < subscriptions.length; i++) {
-				const source = subscriptions[i];
-				if (source.keywords) continue;
+			const { rules } = await readState();
+			const external = { ...rules.keywords.external };
+			for (const source of KEYWORD_SOURCES) {
+				if (external[source.id]?.keywords) continue;
 				try {
-					subscriptions[i] = {
-						...source,
+					external[source.id] = {
 						keywords: await fetchKeywordSource(source),
 						syncedAt: Date.now(),
 					};
@@ -201,10 +230,12 @@ export default defineBackground(() => {
 					/* Keep the missing snapshot; the next popup open retries. */
 				}
 			}
-			const { config: latestConfig } =
-				await chrome.storage.local.get(CONFIG_KEY);
-			const latest = (latestConfig ?? defaultConfig()) as AppConfig;
-			await chrome.storage.local.set({ config: { ...latest, subscriptions } });
+			await chrome.storage.local.set({
+				[RULE_DATA_KEY]: {
+					...rules,
+					keywords: { ...rules.keywords, external },
+				},
+			});
 		} catch {
 			// Storage failures are harmless; the next popup open retries.
 		} finally {
@@ -215,27 +246,32 @@ export default defineBackground(() => {
 		if (syncInFlight) return;
 		syncInFlight = true;
 		try {
-			const { config } = await chrome.storage.local.get(CONFIG_KEY);
-			const latest = (config ?? defaultConfig()) as AppConfig;
-			const subscriptions = await Promise.all(
-				latest.subscriptions.map(async (source) => {
-					if (!source.enabled) return source;
+			const { settings, rules } = await readState();
+			const external = { ...rules.keywords.external };
+			await Promise.all(
+				KEYWORD_SOURCES.map(async (source) => {
+					if (!settings.keywordSourceEnabled[source.id]) return;
 					try {
-						return {
-							...source,
+						external[source.id] = {
 							keywords: await fetchKeywordSource(source),
 							syncedAt: Date.now(),
 							syncError: "",
 						};
 					} catch (error) {
-						return {
-							...source,
+						external[source.id] = {
+							keywords: external[source.id]?.keywords ?? null,
+							syncedAt: external[source.id]?.syncedAt ?? 0,
 							syncError: String(error instanceof Error ? error.message : error),
 						};
 					}
 				}),
 			);
-			await chrome.storage.local.set({ config: { ...latest, subscriptions } });
+			await chrome.storage.local.set({
+				[RULE_DATA_KEY]: {
+					...rules,
+					keywords: { ...rules.keywords, external },
+				},
+			});
 		} finally {
 			syncInFlight = false;
 		}

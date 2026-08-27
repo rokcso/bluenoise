@@ -8,8 +8,6 @@
  * storage.onChanged. Matching keeps the compact strings only (no per-entry
  * object expansion), so a tab's resident set is small.
  */
-export const ACCOUNT_LIST_KEY = "account-list";
-
 export const MXGA_META_URL = "https://x.zuoluo.tv/v1/list/meta";
 export const MXGA_BASE_URL = "https://x.zuoluo.tv";
 export const MXGA_WHITELIST_URL = `${MXGA_BASE_URL}/v1/whitelist`;
@@ -20,16 +18,29 @@ export const MXGA_REPO_URL = "https://github.com/foru17/make-x-great-again";
 export interface AccountListSource {
 	id: string;
 	name: string;
+	homepageUrl?: string;
 	blacklistUrl: string;
-	whitelistUrl: string;
+	/** MXGA uses separate JSON artifacts; simple sources use one text file. */
+	format?: "mxga-json" | "one-per-line";
+	whitelistUrl?: string;
 	metaUrl?: string;
 	artifactBaseUrl?: string;
 }
 
 export const DEFAULT_ACCOUNT_LIST_SOURCES: AccountListSource[] = [
 	{
+		id: "bluenoise",
+		name: "BlueNoise",
+		homepageUrl:
+			"https://github.com/rokcso/bluenoise/blob/main/data/accounts.txt",
+		blacklistUrl:
+			"https://raw.githubusercontent.com/rokcso/bluenoise/refs/heads/main/data/accounts.txt",
+		format: "one-per-line",
+	},
+	{
 		id: "mxga",
 		name: "Make X Great Again",
+		homepageUrl: MXGA_REPO_URL,
 		blacklistUrl: `${MXGA_BASE_URL}/v1/artifacts/lite.json`,
 		whitelistUrl: MXGA_WHITELIST_URL,
 		metaUrl: MXGA_META_URL,
@@ -118,6 +129,24 @@ export function addAccountToList(
 	return [...list, stored];
 }
 
+/** Parse a human-maintained TXT list: one numeric id or @handle per line. */
+export function parseAccountText(text: string): {
+	ids: string[];
+	handles: string[];
+} {
+	const ids = new Set<string>();
+	const handles = new Set<string>();
+	for (const rawLine of String(text || "").split(/\r?\n/)) {
+		const line = rawLine.trim();
+		if (!line || line.startsWith("#")) continue;
+		const entry = normalizeAccountEntry(line);
+		if (!entry) continue;
+		if (/^\d+$/.test(entry)) ids.add(entry);
+		else handles.add(entry);
+	}
+	return { ids: [...ids], handles: [...handles] };
+}
+
 function matchesEntries(entries: string[], identity: AccountIdentity): boolean {
 	const id = identity.id;
 	const handle = normalizeAccountHandle(identity.handle);
@@ -200,6 +229,8 @@ const WHITELIST_MAX_PAGES = 20;
 async function fetchWhitelist(
 	source: AccountListSource,
 ): Promise<{ ids: string[]; handles: string[] }> {
+	if (!source.whitelistUrl)
+		throw new Error(`Missing whitelist URL for ${source.id}`);
 	const rows: unknown[] = [];
 	let since = 0;
 	for (let page = 0; page < WHITELIST_MAX_PAGES; page++) {
@@ -258,10 +289,43 @@ async function fetchJsonBounded(
 	}
 }
 
+async function fetchTextBounded(
+	url: string,
+	maxBytes: number,
+): Promise<string> {
+	const response = await fetch(url, { cache: "no-store" });
+	if (!response.ok)
+		throw new Error(`Account list request failed: HTTP ${response.status}`);
+	const text = await response.text();
+	if (new TextEncoder().encode(text).byteLength > maxBytes)
+		throw new Error("Account list response too large");
+	if (/^\s*<(?:!doctype|html)\b/i.test(text))
+		throw new Error("Account list source returned HTML");
+	return text;
+}
+
 export async function syncAccountListSource(
 	source: AccountListSource,
 	previous?: AccountListSnapshot,
 ): Promise<AccountListSnapshot> {
+	if (source.format === "one-per-line") {
+		const black = parseAccountText(
+			await fetchTextBounded(source.blacklistUrl, MAX_WHITELIST_BYTES),
+		);
+		return {
+			version: Date.now(),
+			blacklistIds: black.ids,
+			blacklistHandles: black.handles,
+			whitelistIds: [],
+			whitelistHandles: [],
+			blacklistCount: black.ids.length + black.handles.length,
+			whitelistCount: 0,
+			syncedAt: Date.now(),
+			sources: [source.id],
+		};
+	}
+	if (!source.whitelistUrl)
+		throw new Error(`Missing whitelist URL for ${source.id}`);
 	// Meta-driven source: fetch the compact lite artifact for the blacklist and
 	// the tiny whitelist. When the published version is unchanged, reuse the
 	// stored blacklist and only refresh the whitelist — no re-download.
@@ -412,6 +476,34 @@ export function buildAccountListIndex(
 		whitelistHandles: new Set(snapshot.whitelistHandles),
 		blacklistIds: new Set(snapshot.blacklistIds),
 		blacklistHandles: new Set(snapshot.blacklistHandles),
+	};
+}
+
+/** Merge selected provider snapshots into the indexable account-list shape. */
+export function mergeAccountListSnapshots(
+	snapshots: AccountListSnapshot[],
+): AccountListSnapshot | undefined {
+	if (snapshots.length === 0) return undefined;
+	return {
+		version: Math.max(...snapshots.map((item) => item.version)),
+		blacklistIds: [...new Set(snapshots.flatMap((item) => item.blacklistIds))],
+		blacklistHandles: [
+			...new Set(snapshots.flatMap((item) => item.blacklistHandles)),
+		],
+		whitelistIds: [...new Set(snapshots.flatMap((item) => item.whitelistIds))],
+		whitelistHandles: [
+			...new Set(snapshots.flatMap((item) => item.whitelistHandles)),
+		],
+		blacklistCount: snapshots.reduce(
+			(sum, item) => sum + item.blacklistCount,
+			0,
+		),
+		whitelistCount: snapshots.reduce(
+			(sum, item) => sum + item.whitelistCount,
+			0,
+		),
+		syncedAt: Math.max(...snapshots.map((item) => item.syncedAt)),
+		sources: snapshots.flatMap((item) => item.sources ?? []),
 	};
 }
 

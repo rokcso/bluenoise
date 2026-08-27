@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { AppConfig } from "@/src/contracts/config";
 import { DEFAULTS } from "@/src/domain/defaults";
 import { buildMatchers, matchAny } from "@/src/domain/matcher";
+import { KEYWORD_SOURCES } from "@/src/domain/rules";
 
 function cfg(overrides: Partial<AppConfig> = {}): AppConfig {
 	return { ...DEFAULTS, ...overrides };
 }
 
 describe("buildMatchers", () => {
+	it("跳过危险的自定义正则", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["/(a+)+$/"] }));
+		expect(m.custom).toHaveLength(0);
+	});
 	it("合并普通词 + 自定义正则，白名单命中被跳过", () => {
 		const c = cfg({
 			userKeywords: ["加微信", "广告", "/\\d{6,}/"],
@@ -44,8 +49,18 @@ describe("buildMatchers", () => {
 		const m = buildMatchers(
 			cfg({
 				subscriptions: [
-					{ ...DEFAULTS.subscriptions[0], keywords: ["贷款"], enabled: true },
-					{ ...DEFAULTS.subscriptions[1], keywords: ["广告"], enabled: false },
+					{
+						...KEYWORD_SOURCES[0],
+						keywords: ["贷款"],
+						enabled: true,
+						syncedAt: 0,
+					},
+					{
+						...KEYWORD_SOURCES[1],
+						keywords: ["广告"],
+						enabled: false,
+						syncedAt: 0,
+					},
 				],
 			}),
 		);

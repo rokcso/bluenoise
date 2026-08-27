@@ -1,5 +1,5 @@
 /**
- * Global app config. Stored in storage.local under the single key "config".
+ * Behavioral settings stored in chrome.storage.sync under "settings".
  */
 export interface AppConfig {
 	/** "auto" follows the OS color scheme; "light"/"dark" force one. Popup-only. */
@@ -8,12 +8,18 @@ export interface AppConfig {
 	language: "auto" | "en" | "zh_CN";
 	/** Master switch: turning it off instantly restores all replies. */
 	enabled: boolean;
+	/** Master switch for X's own interface cleanup, independent of content filtering. */
+	pageCleanupEnabled: boolean;
 	/** "dim" = fade the whole reply; "hide" = make it disappear. Mutually exclusive. */
 	mode: "dim" | "hide";
 	/** In Blur mode, reveal a circular area around the cursor while hovering a filtered reply. */
 	revealOnHover: boolean;
 	/** Show the number of filtered replies on the browser toolbar icon. */
 	showBadgeCount: boolean;
+	/** Replace X's total with the loaded, unfiltered reply count on post pages. */
+	showActualReplyCount: boolean;
+	/** Always show X's left navigation sidebar in its compact icon-only layout. */
+	collapseSidebar: boolean;
 	/** Hide X's in-timeline "Subscribe to Premium" upsell ad card. */
 	hidePremiumPromo: boolean;
 	/** Hide X's site footer (Terms / Privacy / Cookie links, copyright). */
@@ -24,21 +30,19 @@ export interface AppConfig {
 	hideTrends: boolean;
 	/** Hide X's "Who to follow" recommendations panel. */
 	hideFollowSuggestions: boolean;
+	/** Hide follow recommendations embedded in the home timeline. */
+	hideTimelineFollowSuggestions: boolean;
+	/** Hide the Discover more recommendations at the bottom of a post page. */
+	hideDiscoverMore: boolean;
+	/** Hide the "Live on X" live-stream cards on the home timeline. */
+	hideLiveStreams: boolean;
 	hideTitleCount: boolean;
 	hideNotificationBadges: boolean;
 	hideNewPostsPrompt: boolean;
 	hideGrokButton: boolean;
 	hideMessageButton: boolean;
-	/** User-controlled external keyword subscriptions. */
-	subscriptions: KeywordSubscription[];
-	/** User-defined keywords (one per line; wrap in /.../ to denote a regex). */
-	userKeywords: string[];
-	/**
-	 * Whitelist: rules listed here never match. Both keyword lists are read-only
-	 * (sync overwrites them), so "false positives" are handled here, not by
-	 * editing the lists.
-	 */
-	whitelist: string[];
+	/** Which built-in external keyword sources participate in matching. */
+	keywordSourceEnabled: Record<string, boolean>;
 	/** Besides body text, also match the display name and @handle. */
 	matchNames: boolean;
 	/** Strip whitespace and zero-width chars before matching to catch evasive forms. */
@@ -49,20 +53,20 @@ export interface AppConfig {
 	debugLogging: boolean;
 	/** Filter promoted/ad posts using the selected filtering mode. */
 	filterAds: boolean;
+	/** Filter promoted posts whose creative contains video or media. */
+	filterMediaAds: boolean;
+	/** Filter promoted posts containing an external website card. */
+	filterCardAds: boolean;
 	/** Filter posts from accounts marked as parody by X. */
 	filterParodyAccounts: boolean;
 	/** Filter posts from accounts marked as fan accounts by X. */
 	filterFanAccounts: boolean;
+	/** Filter posts from accounts marked as commentary by X. */
+	filterCommentaryAccounts: boolean;
 	/** Filter posts from accounts marked as automated by X. */
 	filterAutomatedAccounts: boolean;
-	/** Use subscribed public account-level blacklists and whitelists. */
-	accountListEnabled: boolean;
-	/** Enable downloaded account list providers independently of local lists. */
-	externalAccountListsEnabled: boolean;
-	/** Local account IDs or @handles that should always be allowed. */
-	accountWhitelist: string[];
-	/** Local account IDs or @handles that should always be filtered. */
-	accountBlacklist: string[];
+	/** Which external account providers participate in matching. */
+	accountSourceEnabled: Record<string, boolean>;
 }
 
 export interface KeywordSubscription {
@@ -74,9 +78,43 @@ export interface KeywordSubscription {
 	enabled: boolean;
 	keywords: string[] | null;
 	syncedAt: number;
+	/** Allow a bundled source to start empty while its maintained list grows. */
+	allowEmpty?: boolean;
 	etag?: string;
 	syncError?: string;
 }
+
+/** Download state for one external keyword source. Source metadata lives in code. */
+export interface KeywordSourceSnapshot {
+	keywords: string[] | null;
+	syncedAt: number;
+	etag?: string;
+	syncError?: string;
+}
+
+/** Persisted rules, deliberately separate from behavioral settings. */
+export interface RuleData {
+	keywords: {
+		user: { block: string[]; allow: string[] };
+		external: Record<string, KeywordSourceSnapshot>;
+	};
+	accounts: {
+		user: { allow: string[]; block: string[] };
+		external: Record<
+			string,
+			import("@/src/domain/account-list").AccountListSnapshot
+		>;
+	};
+}
+
+/** UI/runtime projection; never persist this merged shape. */
+export type RuleView = Pick<AppConfig, "keywordSourceEnabled"> & {
+	userKeywords: string[];
+	whitelist: string[];
+	accountWhitelist: string[];
+	accountBlacklist: string[];
+	subscriptions: KeywordSubscription[];
+};
 
 /** A rule to compile. Plain keywords are merged into big regexes; /regex/ compile separately. */
 export interface Rule {
@@ -114,5 +152,6 @@ export const IGNORABLE_SRC =
 
 export const REGEX_ESCAPE_RE = /[.*+?^${}()|[\]\\]/g;
 
-/** storage.local key used to persist the config. */
-export const CONFIG_KEY = "config";
+/** Keys for synced behavioral settings and local rule snapshots. */
+export const SETTINGS_KEY = "settings";
+export const RULE_DATA_KEY = "rule-data";

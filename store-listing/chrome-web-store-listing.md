@@ -6,7 +6,7 @@ BlueNoise - Make X readable again
 
 ## Short description
 
-Blur or hide noisy X replies and timeline posts with local, reversible keyword rules - no APIs, cookies, or account changes.
+Make X readable: locally blur or hide noisy replies, timeline posts, and ads; optional page cleanups; no cookies or account changes.
 
 ## Detailed description
 
@@ -20,6 +20,8 @@ BlueNoise makes X reply threads and your home timeline easier to read without ta
 - Handles common spacing and zero-width-character evasion.
 - Lets you blur or hide matched content, with a whitelist for correcting false positives.
 - Updates newly loaded replies and posts without reloading the page.
+- Includes X Makeover controls to hide selected recommendations, promotions, footer elements, counters, and navigation clutter.
+- Filters promoted posts, media and website-card ads, and X-labeled parody, fan, commentary, or automated accounts.
 
 ### What it does not do
 

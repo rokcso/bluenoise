@@ -4,13 +4,13 @@
 
 > 让 X 重新变得可读。
 
-BlueNoise 是一款开源的浏览器扩展，可以模糊或隐藏 X（原 Twitter）帖子详情页中嘈杂的回复，以及首页时间线上的帖子。它通过本地、可逆的关键词规则实现，不调用 X API、不读取 cookie、也不会改变你的账号状态，让阅读体验更清爽。
+BlueNoise 是一款开源、隐私优先的 X（原 Twitter）过滤与界面整理扩展：在本地用可逆的关键词和账号规则模糊或隐藏嘈杂回复、时间线帖子和广告，还能隐藏界面杂乱元素、恢复更清爽的经典风格。不调用 X API、不读取 cookie，也不会改变你的账号状态。
 
 作者：rokcso · 源码与反馈：<https://github.com/rokcso/bluenoise>
 
 ## 安装
 
-<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khjGJcVzh1J3I8B5oE1/aU1sJbxmQ1yCXS5MYRDu.svg" alt="在 Chrome 应用商店中获取" width="220"></a>
+<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="在 Chrome 应用商店中获取" width="220"></a>
 
 从 [Chrome 应用商店](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid)安装 BlueNoise。
 
@@ -22,11 +22,14 @@ BlueNoise 是一款开源的浏览器扩展，可以模糊或隐藏 X（原 Twit
 ## 功能特性
 
 - 模糊或隐藏帖子详情页中嘈杂的回复，以及首页时间线上的帖子（绝不会过滤你自己打开的那条帖子）。关闭扩展即可一键恢复。
-- 支持按关键词和账号过滤：纯关键词、`/regex/` 正则表达式，以及账号 ID 或 @用户名。
+- 支持按关键词和账号过滤：纯关键词、安全的 `/regex/` 正则表达式，以及账号 ID 或 @用户名。
 - 内置社区关键词列表（X Spam Filter、X Comment Blocker）和社区账号名单（Make X Great Again），自动保持更新；同时支持你自己的个人关键词列表，以及本地账号黑名单/白名单。
+- 可将个人关键词和账号规则导出为可迁移的 JSON 备份，也支持合并、追加或覆盖导入。
 - 选中任意文字后右键，即可将其添加为关键词或账号屏蔽。
 - 工具栏角标会显示已过滤的帖子数量；悬停被模糊的回复时，可在光标周围临时显示。
-- 能识别常见的绕行手段（空格和零宽字符），并内置白名单用于纠正误杀。
+- 可选过滤推广帖子、含媒体或外链卡片的广告，以及被 X 标记为仿冒、粉丝、评论或自动化的账号。
+- 提供可独立开关的 X 界面改造：隐藏指定的推荐、推广内容、页脚、计数器和导航控件；折叠侧边栏；或换回经典的 Twitter 蓝鸟图标。
+- 能识别常见的绕行手段（空格和零宽字符），支持浅色/深色主题及中英文界面，并内置白名单用于纠正误杀。
 - 新加载的回复和帖子会自动过滤，无需刷新页面。
 
 ## 隐私与权限
@@ -35,7 +38,7 @@ BlueNoise 不收集任何遥测或分析数据。它不读取 cookie、不访问
 
 扩展申请了以下权限：
 
-- `storage` 和 `unlimitedStorage`：在本地保存你的设置、规则和白名单，并缓存关键词列表。
+- `storage` 和 `unlimitedStorage`：通过 Chrome 同步保存行为设置；在本地保存个人规则和社区列表缓存。BlueNoise 不会将这些存储用于遥测。
 - `alarms`：在后台定期刷新已订阅的关键词和账号列表。
 - `contextMenus`：为选中的文字在右键菜单中提供「添加关键词」/「添加账号」选项。
 - `https://raw.githubusercontent.com/*`：下载公开的关键词列表。

@@ -10,6 +10,38 @@ export function asRegex(keyword: string): RegExpMatchArray | null {
 	return String(keyword || "").match(/^\/(.+)\/([a-zA-Z]*)$/);
 }
 
+/** Guardrails for user/remote regexes executed on the page's main thread. */
+export const MAX_CUSTOM_REGEX_LENGTH = 512;
+export const MAX_CUSTOM_REGEX_COUNT = 200;
+
+/**
+ * Native JavaScript regexes can backtrack catastrophically. This intentionally
+ * conservative check rejects the common nested/unbounded quantifier shapes;
+ * ordinary regexes remain on the fast native path.
+ */
+export function isSafeCustomRegex(keyword: string): boolean {
+	const parsed = asRegex(keyword.trim());
+	if (!parsed) return false;
+	const [, source, flags] = parsed;
+	if (source.length > MAX_CUSTOM_REGEX_LENGTH) return false;
+	// g/y are accepted for compatibility but removed before matching below;
+	// d/v are intentionally excluded because they add no filtering value and
+	// vary across older extension runtimes.
+	if (/[^gimsuy]/i.test(flags) || new Set(flags).size !== flags.length)
+		return false;
+	// A quantifier applied to a group that itself contains a quantifier is the
+	// most common source of exponential backtracking in user-supplied rules.
+	if (/\([^()]*[+*{][^()]*\)[+*{]/.test(source)) return false;
+	if (/(?:\.\*|\.\+|\[\^?[^\]]+\][+*])[^\n]{0,80}(?:\.\*|\.\+)/.test(source))
+		return false;
+	try {
+		new RegExp(source, flags.replace(/[gy]/gi, ""));
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 /**
  * Normalize a plain keyword or body text.
  * The content script uses it to decide matches; the settings panel uses it to
@@ -87,7 +119,7 @@ export function parseKeywordText(text: string): string[] {
 
 	for (const line of String(text || "").split(/\r?\n/)) {
 		const keyword = line.trim();
-		if (!keyword || seen.has(keyword)) continue;
+		if (!keyword || keyword.startsWith("#") || seen.has(keyword)) continue;
 		seen.add(keyword);
 		keywords.push(keyword);
 	}

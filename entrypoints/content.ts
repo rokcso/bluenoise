@@ -2,19 +2,32 @@ import "../src/content/content.css";
 import { setLanguage, t } from "@/lib/i18n";
 import { readFiberUserId } from "@/src/content/fiber";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
-import type { AppConfig, Matchers } from "@/src/contracts/config";
-import { CONFIG_KEY } from "@/src/contracts/config";
+import type {
+	AppConfig,
+	Matchers,
+	RuleData,
+	RuleView,
+} from "@/src/contracts/config";
+import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
-	ACCOUNT_LIST_KEY,
-	accountIdentityToStored,
-	addAccountToList,
 	type AccountListIndex,
 	type AccountListSnapshot,
 	buildAccountListIndex,
+	DEFAULT_ACCOUNT_LIST_SOURCES,
 	matchAccountIndex,
+	mergeAccountListSnapshots,
 } from "@/src/domain/account-list";
-import { loadConfig } from "@/src/domain/defaults";
+import {
+	defaultConfig,
+	defaultRuleData,
+	loadConfig,
+} from "@/src/domain/defaults";
 import { buildMatchers, matchAny, matchDetail } from "@/src/domain/matcher";
+import {
+	addAccountRule,
+	createRuleView,
+	loadRuleData,
+} from "@/src/domain/rules";
 
 const ARTICLE_SEL = 'article[data-testid="tweet"], article[role="article"]';
 const CELL_SEL = 'div[data-testid="cellInnerDiv"]';
@@ -41,6 +54,12 @@ const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
 const GROK_ATTR = "data-xsf-hide-grok";
 const MESSAGE_ATTR = "data-xsf-hide-message";
 const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
+const SIDEBAR_ATTR = "data-xsf-collapse-sidebar";
+const COMPOSE_ICON_MARK = "data-xsf-compose-icon";
+const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
+/** X's "Live on X" module heading, localized by X's UI language. */
+const LIVE_STREAMS_HEADING_RE = /^(?:X \u4e0a\u7684\u76f4\u64ad|live on x)$/i;
+const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
 
 /** X's header logo link — its aria-label is the stable "X" brand name. */
 const LOGO_SEL = 'a[aria-label="X"] svg';
@@ -74,6 +93,9 @@ const REVEAL_RADIUS = 40;
 const RESCAN_DELAYS = [0, 250, 800, 1800, 3500];
 /** Beyond this many mutation records per callback, fall back to a full scan. */
 const MUTATION_BURST = 800;
+/** Keep filtering work below a frame budget so X remains responsive. */
+const FLUSH_BUDGET_MS = 8;
+const FLUSH_MAX_ARTICLES = 50;
 
 export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
@@ -89,6 +111,8 @@ export default defineContentScript({
 // ==================== State ====================
 
 let cfg: AppConfig = loadConfig(undefined);
+let rules: RuleData = defaultRuleData();
+let ruleView: RuleView = createRuleView(cfg, rules);
 let matchers: Matchers = {
 	plain: [],
 	normalization: { caseSensitive: false, ignoreSpaces: true },
@@ -97,6 +121,39 @@ let matchers: Matchers = {
 };
 let accountIndex: AccountListIndex | undefined;
 let accountListVersion = 0;
+
+interface DisplayedReplyCountState {
+	button: HTMLButtonElement;
+	text: HTMLElement;
+	originalText: string;
+	injectedText: string;
+	originalAria: string | null;
+	injectedAria: string | null;
+	group: HTMLElement | null;
+	originalGroupAria: string | null;
+	injectedGroupAria: string | null;
+}
+
+interface ComposeIconState {
+	originalChildren: DocumentFragment;
+}
+
+/** Reply-count DOM touched by this script, so it can always be restored. */
+const displayedReplyCounts = new Set<DisplayedReplyCountState>();
+/** Counts learned from a detail page during this SPA session, keyed by tweet id. */
+const replyCountCache = new Map<string, number>();
+/**
+ * Every loaded reply in a detail view, keyed by root tweet then reply tweet id.
+ * X virtualizes its list, so a reply can leave the DOM while it must remain in
+ * the displayed count for the rest of this browsing session.
+ */
+const replyLedgers = new Map<string, Map<string, boolean>>();
+const MAX_CACHED_REPLY_THREADS = 50;
+const composeOriginalChildren = new Map<HTMLElement, ComposeIconState>();
+/** Inline styles owned by the compact-sidebar feature, restored on disable. */
+const sidebarOriginalStyles = new Map<HTMLElement, string>();
+/** Original classes for the structural nodes switched to X's native compact form. */
+const sidebarOriginalClasses = new Map<HTMLElement, string>();
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
@@ -108,6 +165,8 @@ const state = new WeakMap<
 	{ sig: string; hit: string | null; log: FilteredLog | null }
 >();
 const pending = new Set<Element>();
+/** Articles whose text/name subtree changed since the last evaluation. */
+const textDirty = new WeakSet<Element>();
 
 /** A single filtered reply, recorded only when debug logging is enabled. */
 interface FilteredLog {
@@ -129,6 +188,7 @@ let flushScheduled = false;
 let rafId = 0;
 let flushTimer = 0;
 let observer: MutationObserver | null = null;
+let cleanupObserver: MutationObserver | null = null;
 let lastUrl = typeof location !== "undefined" ? location.href : "";
 const rescanTimers: number[] = [];
 let badgeTimer = 0;
@@ -143,7 +203,8 @@ function debugLog(message: string, details: Record<string, unknown>): void {
 }
 
 function refreshMatchers(): void {
-	matchers = buildMatchers(cfg);
+	ruleView = createRuleView(cfg, rules);
+	matchers = buildMatchers({ ...cfg, ...ruleView });
 }
 
 function clearAllMarks(): void {
@@ -327,6 +388,191 @@ function rowOf(article: Element): Element {
 	return article.closest(CELL_SEL) ?? article;
 }
 
+/** Replace only X's leading metric in an accessible action label. */
+function replaceLabelCount(label: string | null, count: string): string | null {
+	return label?.replace(COUNT_PREFIX_RE, `$1${count} `) ?? null;
+}
+
+function clearDisplayedReplyCounts(): void {
+	for (const state of displayedReplyCounts) {
+		if (state.text.isConnected && state.text.textContent === state.injectedText)
+			state.text.textContent = state.originalText;
+		if (
+			state.button.isConnected &&
+			state.button.getAttribute("aria-label") === state.injectedAria
+		) {
+			if (state.originalAria === null)
+				state.button.removeAttribute("aria-label");
+			else state.button.setAttribute("aria-label", state.originalAria);
+		}
+		if (
+			state.group?.isConnected &&
+			state.group.getAttribute("aria-label") === state.injectedGroupAria
+		) {
+			if (state.originalGroupAria === null)
+				state.group.removeAttribute("aria-label");
+			else state.group.setAttribute("aria-label", state.originalGroupAria);
+		}
+	}
+	displayedReplyCounts.clear();
+}
+
+function isNestedArticle(article: Element): boolean {
+	return Boolean(article.parentElement?.closest(ARTICLE_SEL));
+}
+
+function isAfter(first: Node, second: Node): boolean {
+	return Boolean(
+		first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
+	);
+}
+
+function replyLedgerFor(rootId: string): Map<string, boolean> {
+	const existing = replyLedgers.get(rootId);
+	if (existing) {
+		// Move this thread to the end so the map acts as a small LRU cache.
+		replyLedgers.delete(rootId);
+		replyLedgers.set(rootId, existing);
+		return existing;
+	}
+	const ledger = new Map<string, boolean>();
+	replyLedgers.set(rootId, ledger);
+	while (replyLedgers.size > MAX_CACHED_REPLY_THREADS) {
+		const oldest = replyLedgers.keys().next().value;
+		if (!oldest) break;
+		replyLedgers.delete(oldest);
+		replyCountCache.delete(oldest);
+	}
+	return ledger;
+}
+
+function clearReplyCountCaches(): void {
+	replyCountCache.clear();
+	replyLedgers.clear();
+}
+
+/**
+ * Record loaded top-level replies in the current conversation, then count the
+ * retained ledger entries. X also puts promoted and "Discover more" content in
+ * this region, so neither can be recorded as a reply.
+ */
+function recordDisplayedReplyCount(mainTweet: Element): number | null {
+	const conversation = mainTweet.closest('section[role="region"]');
+	if (!conversation) return null;
+	const rootId = tweetIdOf(mainTweet);
+	if (!rootId) return null;
+	const ledger = replyLedgerFor(rootId);
+	const discoverMore = [...conversation.querySelectorAll("h1, h2, h3")].find(
+		(heading) => DISCOVER_MORE_RE.test(heading.textContent?.trim() ?? ""),
+	);
+	for (const article of conversation.querySelectorAll(ARTICLE_SEL)) {
+		if (
+			article === mainTweet ||
+			isNestedArticle(article) ||
+			!isAfter(mainTweet, article) ||
+			(discoverMore && isAfter(discoverMore, article)) ||
+			isPromotedPost(article)
+		)
+			continue;
+		const replyId = tweetIdOf(article);
+		if (replyId)
+			ledger.set(replyId, !rowOf(article).classList.contains(HIT_CLASS));
+	}
+	return [...ledger.values()].filter(Boolean).length;
+}
+
+function tweetIdOf(article: Element): string | null {
+	for (const link of article.querySelectorAll<HTMLAnchorElement>(
+		'a[href*="/status/"]',
+	)) {
+		// The timestamp link belongs to this tweet, unlike a link in quoted media.
+		if (!link.querySelector("time")) continue;
+		const id = link.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1];
+		if (id) return id;
+	}
+	return null;
+}
+
+function renderDisplayedReplyCount(article: Element, count: number): void {
+	const button = article.querySelector<HTMLButtonElement>(
+		'button[data-testid="reply"]',
+	);
+	const container = button?.querySelector<HTMLElement>(
+		'[data-testid="app-text-transition-container"]',
+	);
+	const text = container?.firstElementChild;
+	if (!button || !(text instanceof HTMLElement)) return;
+
+	const formatted = count.toLocaleString();
+	let state = [...displayedReplyCounts].find((item) => item.button === button);
+	if (!state) {
+		const group = button.closest<HTMLElement>('[role="group"]');
+		state = {
+			button,
+			text,
+			originalText: text.textContent ?? "",
+			injectedText: "",
+			originalAria: button.getAttribute("aria-label"),
+			injectedAria: null,
+			group,
+			originalGroupAria: group?.getAttribute("aria-label") ?? null,
+			injectedGroupAria: null,
+		};
+		displayedReplyCounts.add(state);
+	} else {
+		// A React update can replace X's server count in place; retain that latest
+		// value so disabling the extension restores the correct native metric.
+		if (text.textContent !== state.injectedText)
+			state.originalText = text.textContent ?? "";
+		const aria = button.getAttribute("aria-label");
+		if (aria !== state.injectedAria) state.originalAria = aria;
+		const groupAria = state.group?.getAttribute("aria-label") ?? null;
+		if (groupAria !== state.injectedGroupAria)
+			state.originalGroupAria = groupAria;
+	}
+
+	const aria = replaceLabelCount(state.originalAria, formatted);
+	const groupAria = replaceLabelCount(state.originalGroupAria, formatted);
+	if (text.textContent !== formatted) text.textContent = formatted;
+	if (aria !== null && button.getAttribute("aria-label") !== aria)
+		button.setAttribute("aria-label", aria);
+	if (
+		state.group &&
+		groupAria !== null &&
+		state.group.getAttribute("aria-label") !== groupAria
+	)
+		state.group.setAttribute("aria-label", groupAria);
+	state.injectedText = formatted;
+	state.injectedAria = aria;
+	state.injectedGroupAria = groupAria;
+}
+
+function updateDisplayedReplyCount(): void {
+	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isStatusPage()) {
+		clearDisplayedReplyCounts();
+		return;
+	}
+	const mainTweet = [...document.querySelectorAll(ARTICLE_SEL)].find(
+		isMainTweet,
+	);
+	if (!mainTweet) return;
+	const count = recordDisplayedReplyCount(mainTweet);
+	if (count === null) return;
+	const id = tweetIdOf(mainTweet);
+	if (id) replyCountCache.set(id, count);
+	renderDisplayedReplyCount(mainTweet, count);
+}
+
+function updateTimelineReplyCounts(): void {
+	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isHomeTimeline())
+		return;
+	for (const article of document.querySelectorAll(ARTICLE_SEL)) {
+		const id = tweetIdOf(article);
+		const count = id ? replyCountCache.get(id) : undefined;
+		if (count !== undefined) renderDisplayedReplyCount(article, count);
+	}
+}
+
 function applyMark(article: Element, hit: string | null): void {
 	const row = rowOf(article);
 	if (hit) {
@@ -344,6 +590,24 @@ function applyMark(article: Element, hit: string | null): void {
 function isPromotedPost(article: Element): boolean {
 	const cell = article.closest(CELL_SEL);
 	return Boolean(cell?.querySelector('[data-testid="placementTracking"]'));
+}
+
+function isMediaAd(article: Element): boolean {
+	return (
+		isPromotedPost(article) &&
+		Boolean(
+			article.querySelector(
+				'[data-testid="videoPlayer"], [data-testid="tweetPhoto"]',
+			),
+		)
+	);
+}
+
+function isCardAd(article: Element): boolean {
+	return (
+		isPromotedPost(article) &&
+		Boolean(article.querySelector('[data-testid="card.wrapper"]'))
+	);
 }
 
 /** Read X's localized account label from its official authenticity link. */
@@ -365,6 +629,12 @@ function isFanAccount(article: Element): boolean {
 	return /^(粉丝账号|fan account)$/i.test(getAccountLabel(article));
 }
 
+function isCommentaryAccount(article: Element): boolean {
+	return /^(评论账号|评论性账号|commentary account)$/i.test(
+		getAccountLabel(article),
+	);
+}
+
 /** X displays this account status beside the author handle. */
 function isAutomatedAccount(article: Element): boolean {
 	const name = article.querySelector(NAME_SEL);
@@ -378,7 +648,7 @@ function syncMarkedRowsInteractivity(): void {
 }
 
 function applyPageCustomizations(): void {
-	const enabled = cfg.enabled;
+	const enabled = cfg.pageCleanupEnabled;
 	for (const el of document.querySelectorAll(`[${CUSTOM_HIDDEN_ATTR}]`))
 		el.removeAttribute(CUSTOM_HIDDEN_ATTR);
 	// Title/favicon state must also be restored when the master switch is off.
@@ -398,6 +668,72 @@ function applyPageCustomizations(): void {
 			'aside[role="complementary"]:has(> div > h2[role="heading"]):has(> ul[role="list"] > li[data-testid="UserCell"])',
 		))
 			hideAncestors(aside, 2);
+	}
+	if (cfg.hideTimelineFollowSuggestions) {
+		const primary = document.querySelector('[data-testid="primaryColumn"]');
+		const hasTimelineHeading = [
+			...(primary?.querySelectorAll("h2") ?? []),
+		].some((h) => /推荐关注|who to follow/i.test(h.textContent ?? ""));
+		if (hasTimelineHeading) {
+			for (const cell of primary?.querySelectorAll<HTMLElement>(
+				`[data-testid="${"cellInnerDiv"}"]:has([data-testid="UserCell"]), [data-testid="cellInnerDiv"]:has(a[href^="/i/connect_people"])`,
+			) ?? [])
+				cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+		}
+	}
+	if (cfg.hideDiscoverMore && isStatusPage()) {
+		for (const heading of document.querySelectorAll<HTMLElement>(
+			'h2[role="heading"][aria-level="2"]',
+		)) {
+			if (!/发现更多|discover more/i.test(heading.textContent ?? "")) continue;
+			const cell = heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
+			if (!cell) continue;
+			cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			// Discover more is the final recommendation block on a status page;
+			// its virtualized content is rendered as following sibling cells.
+			for (
+				let next = cell.nextElementSibling;
+				next?.matches('[data-testid="cellInnerDiv"]');
+				next = next.nextElementSibling
+			)
+				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+		}
+	}
+	if (cfg.hideLiveStreams) {
+		for (const heading of document.querySelectorAll<HTMLElement>(
+			'h2[role="heading"][aria-level="2"]',
+		)) {
+			if (!LIVE_STREAMS_HEADING_RE.test(heading.textContent?.trim() ?? ""))
+				continue;
+			// The module root is the closest ancestor that also contains the live
+			// cards, identified by X's impression-tracking marker. Cap the climb so
+			// a heading rendered in its own cell can never hide the whole page.
+			let root: HTMLElement | null = heading.parentElement;
+			for (let depth = 0; root && depth < 6; depth++) {
+				if (root.querySelector('[data-testid="placementTracking"]')) break;
+				root = root.parentElement;
+			}
+			if (root?.querySelector('[data-testid="placementTracking"]'))
+				root.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			const cell = heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
+			if (!cell) {
+				// No cell wrapper: hide the heading and its direct wrappers.
+				hideAncestors(heading, 2);
+				continue;
+			}
+			cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			// Live-stream rows render as following sibling cells carrying the same
+			// marker; stop at the first cell without it so ordinary tweets after
+			// the module are never hidden.
+			for (
+				let next = cell.nextElementSibling;
+				next?.matches('[data-testid="cellInnerDiv"]');
+				next = next.nextElementSibling
+			) {
+				if (!next.querySelector('[data-testid="placementTracking"]')) break;
+				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			}
+		}
 	}
 	if (cfg.hideTrends) {
 		for (const section of document.querySelectorAll<HTMLElement>(
@@ -422,7 +758,9 @@ function applyPageCustomizations(): void {
 			'[data-testid="primaryColumn"] [data-testid="pillLabel"]',
 		)) {
 			const pill = label.parentElement;
-			if (pill?.querySelector(':scope > [data-testid="userAvatars"]'))
+			// X wraps the avatar stack in an extra layout container. Match it
+			// anywhere inside the pill rather than requiring a direct child.
+			if (pill?.querySelector('[data-testid="userAvatars"]'))
 				hideAncestors(pill, 0);
 		}
 	}
@@ -441,7 +779,7 @@ function applyPageCustomizations(): void {
 }
 
 function applyTitleAndFavicon(): void {
-	const hide = cfg.enabled && cfg.hideTitleCount;
+	const hide = cfg.pageCleanupEnabled && cfg.hideTitleCount;
 	if (hide && document.title && TITLE_COUNT_RE.test(document.title)) {
 		titleBeforeCount ||= document.title;
 		document.title = document.title.replace(TITLE_COUNT_RE, "");
@@ -462,34 +800,262 @@ function applyTitleAndFavicon(): void {
 	}
 }
 
+function createComposeIcon(): SVGSVGElement {
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("viewBox", "0 0 24 24");
+	svg.setAttribute("aria-hidden", "true");
+	svg.setAttribute("class", "xsf-compose-icon");
+	svg.setAttribute(COMPOSE_ICON_MARK, "");
+	const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+	for (const [pathData, fillRule] of [
+		[
+			"M10.938 4.5H9.9c-1.136 0-1.929 0-2.546.05-.605.05-.953.143-1.216.277-.564.288-1.023.747-1.31 1.31-.135.264-.228.612-.277 1.218C4.5 7.97 4.5 8.765 4.5 9.9v4.2c0 1.136 0 1.929.05 2.546.05.605.143.953.277 1.216.288.565.747 1.023 1.31 1.31.264.135.612.228 1.217.277.617.05 1.41.051 2.546.051h4.2c1.136 0 1.929 0 2.545-.05.606-.05.954-.143 1.217-.277.565-.288 1.023-.746 1.31-1.31.135-.264.228-.612.277-1.217.05-.617.051-1.41.051-2.546v-1.037h2V14.1c0 1.103.001 1.992-.058 2.709-.06.728-.185 1.368-.487 1.96-.48.941-1.245 1.707-2.185 2.186-.593.302-1.233.428-1.961.488-.718.058-1.606.057-2.71.057H9.9c-1.103 0-1.991.001-2.709-.058-.728-.06-1.368-.185-1.96-.487-.941-.48-1.707-1.245-2.186-2.185-.302-.593-.428-1.233-.487-1.961-.059-.718-.058-1.606-.058-2.71V9.9c0-1.103-.001-1.991.058-2.709.06-.728.185-1.368.487-1.96.48-.941 1.245-1.707 2.185-2.186.593-.302 1.233-.428 1.961-.487.718-.059 1.606-.058 2.71-.058h1.037v2z",
+			undefined,
+		],
+		[
+			"M16.293 3.293c1.219-1.219 3.195-1.219 4.414 0 1.219 1.219 1.219 3.195 0 4.414l-5.491 5.491c-.533.533-.89.896-1.31 1.179-.356.24-.742.433-1.148.574-.478.167-.983.234-1.729.341l-2.708.387.387-2.708c.107-.746.174-1.25.34-1.729.142-.405.335-.792.575-1.148.283-.42.646-.777 1.179-1.31l5.491-5.491zm3 1.414c-.438-.438-1.148-.438-1.586 0l-5.491 5.491c-.587.587-.784.79-.934 1.013-.144.214-.26.445-.345.688-.088.254-.131.533-.248 1.354l-.01.067.068-.008c.82-.118 1.1-.161 1.354-.25.243-.084.474-.2.688-.344.223-.15.426-.347 1.013-.934l5.491-5.491c.438-.438.438-1.148 0-1.586z",
+			"evenodd",
+		],
+	] as const) {
+		const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+		path.setAttribute("d", pathData);
+		if (fillRule) {
+			path.setAttribute("clip-rule", fillRule);
+			path.setAttribute("fill-rule", fillRule);
+		}
+		group.append(path);
+	}
+	svg.append(group);
+	return svg;
+}
+
+function restoreSidebarComposeIcons(): void {
+	for (const [content, state] of composeOriginalChildren) {
+		if (
+			content.isConnected &&
+			content.querySelector(`[${COMPOSE_ICON_MARK}]`)
+		) {
+			content.replaceChildren();
+			content.append(state.originalChildren);
+		}
+	}
+	composeOriginalChildren.clear();
+	for (const button of document.querySelectorAll<HTMLElement>(
+		"[data-xsf-compact-compose]",
+	))
+		button.removeAttribute("data-xsf-compact-compose");
+}
+
+function setSidebarStyle(element: HTMLElement, cssText: string): void {
+	if (sidebarOriginalStyles.has(element)) return;
+	sidebarOriginalStyles.set(element, element.style.cssText);
+	element.style.cssText += `;${cssText}`;
+}
+
+function restoreSidebarStyles(): void {
+	for (const [element, cssText] of sidebarOriginalStyles)
+		if (element.isConnected) element.style.cssText = cssText;
+	sidebarOriginalStyles.clear();
+}
+
+function setSidebarClasses(
+	element: HTMLElement,
+	remove: string[],
+	add: string[],
+): void {
+	if (!sidebarOriginalClasses.has(element))
+		sidebarOriginalClasses.set(element, element.className);
+	element.classList.remove(...remove);
+	element.classList.add(...add);
+}
+
+function restoreSidebarClasses(): void {
+	for (const [element, className] of sidebarOriginalClasses)
+		if (element.isConnected) element.className = className;
+	sidebarOriginalClasses.clear();
+	for (const button of document.querySelectorAll<HTMLElement>(
+		"[data-xsf-compact-account]",
+	))
+		button.removeAttribute("data-xsf-compact-account");
+}
+
+/** Remove width declarations written by earlier versions of this feature. */
+function clearLegacySidebarGeometry(element: HTMLElement): void {
+	for (const property of [
+		"width",
+		"min-width",
+		"max-width",
+		"margin-left",
+		"margin-right",
+		"box-sizing",
+		"flex",
+		"transition",
+	]) {
+		if (element.style.getPropertyPriority(property) === "important")
+			element.style.removeProperty(property);
+	}
+}
+
+function applyCompactComposeClasses(button: HTMLAnchorElement): void {
+	button.setAttribute("data-xsf-compact-compose", "");
+	setSidebarStyle(
+		button,
+		"width:52px !important; min-width:52px !important; height:52px !important; min-height:52px !important; border-radius:9999px !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 !important",
+	);
+	const container = button.parentElement;
+	if (container instanceof HTMLElement)
+		setSidebarStyle(
+			container,
+			"width:52px !important; min-width:52px !important; max-width:52px !important; margin-left:0 !important; margin-right:0 !important; align-self:flex-start !important",
+		);
+}
+
+/**
+ * Switch the expanded sidebar shell to the same classes X uses when it renders
+ * compact navigation itself. Elements are located solely by stable structure.
+ */
+function applySidebarCompactLayout(): void {
+	if (!cfg.pageCleanupEnabled || !cfg.collapseSidebar) {
+		restoreSidebarStyles();
+		restoreSidebarClasses();
+		return;
+	}
+	for (const header of document.querySelectorAll<HTMLElement>(
+		'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
+	)) {
+		const widthContainer = header.querySelector<HTMLElement>(":scope > div");
+		const layoutContainer = header.querySelector<HTMLElement>(
+			":scope > div > div > div",
+		);
+		const sidebarColumn =
+			layoutContainer?.querySelector<HTMLElement>(":scope > div");
+		if (widthContainer) clearLegacySidebarGeometry(widthContainer);
+		if (layoutContainer) clearLegacySidebarGeometry(layoutContainer);
+		if (sidebarColumn) clearLegacySidebarGeometry(sidebarColumn);
+		if (widthContainer)
+			setSidebarClasses(widthContainer, ["r-o96wvk"], ["r-1gymjhz"]);
+		if (layoutContainer)
+			setSidebarClasses(layoutContainer, ["r-o96wvk"], ["r-1gymjhz"]);
+		if (sidebarColumn)
+			setSidebarClasses(sidebarColumn, ["r-1habvwh"], ["r-1awozwy"]);
+		const nav = header.querySelector<HTMLElement>('nav[role="navigation"]');
+		if (nav) {
+			const navContainer = nav.parentElement;
+			if (navContainer instanceof HTMLElement) {
+				clearLegacySidebarGeometry(navContainer);
+				setSidebarClasses(navContainer, ["r-1habvwh"], ["r-1awozwy"]);
+			}
+			clearLegacySidebarGeometry(nav);
+			setSidebarClasses(nav, ["r-1habvwh"], ["r-1awozwy"]);
+			for (const control of nav.querySelectorAll<HTMLElement>(
+				":scope > a, :scope > button",
+			)) {
+				clearLegacySidebarGeometry(control);
+				setSidebarClasses(control, ["r-1habvwh"], ["r-cnw61z", "r-1awozwy"]);
+			}
+		}
+		const accountButton = header.querySelector<HTMLElement>(
+			'[data-testid="SideNav_AccountSwitcher_Button"]',
+		);
+		if (accountButton) {
+			accountButton.setAttribute("data-xsf-compact-account", "");
+			const accountContainer = accountButton.parentElement;
+			if (accountContainer instanceof HTMLElement)
+				setSidebarClasses(accountContainer, ["r-1habvwh"], ["r-1awozwy"]);
+			setSidebarClasses(accountButton, ["r-1habvwh"], ["r-1awozwy"]);
+		}
+	}
+}
+
+/** The expanded sidebar has no compose SVG, so reproduce X's compact DOM. */
+function applySidebarComposeIcons(): void {
+	if (!cfg.pageCleanupEnabled || !cfg.collapseSidebar) {
+		restoreSidebarComposeIcons();
+		return;
+	}
+	for (const button of document.querySelectorAll<HTMLAnchorElement>(
+		'a[data-testid="SideNav_NewTweet_Button"]',
+	)) {
+		if (
+			!button.closest(
+				'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
+			)
+		)
+			continue;
+		const content = button.querySelector<HTMLElement>(":scope > div[dir]");
+		if (!content) continue;
+		const injectedIcon = content.querySelector<SVGSVGElement>(
+			`:scope > svg[${COMPOSE_ICON_MARK}]`,
+		);
+		const nativeIcon = [...content.querySelectorAll(":scope > svg")].find(
+			(svg) => svg !== injectedIcon,
+		);
+		// X can append its compact SVG after a partial expanded render. When that
+		// happens, discard our temporary icon and preserve X's native one.
+		if (nativeIcon) {
+			const spacer = injectedIcon?.nextElementSibling;
+			injectedIcon?.remove();
+			if (spacer?.hasAttribute("data-xsf-compose-spacer")) spacer.remove();
+			composeOriginalChildren.delete(content);
+			continue;
+		}
+		if (injectedIcon) {
+			applyCompactComposeClasses(button);
+			continue;
+		}
+		const originalChildren = document.createDocumentFragment();
+		while (content.firstChild) originalChildren.append(content.firstChild);
+		composeOriginalChildren.set(content, {
+			originalChildren,
+		});
+		applyCompactComposeClasses(button);
+		content.append(createComposeIcon());
+		const spacer = document.createElement("div");
+		spacer.setAttribute("data-xsf-compose-spacer", "");
+		const emptyLabel = document.createElement("span");
+		spacer.append(emptyLabel);
+		content.append(spacer);
+	}
+}
+
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
 function applyStyleVars(): void {
 	const root = document.documentElement;
 	// Page customizations apply on every X page, including profile pages. The
 	// filtering effect below remains limited to the home timeline and status
 	// pages via `active`.
-	if (cfg.enabled && cfg.hidePremiumPromo) root.setAttribute(PREMIUM_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hidePremiumPromo)
+		root.setAttribute(PREMIUM_ATTR, "");
 	else root.removeAttribute(PREMIUM_ATTR);
-	if (cfg.enabled && cfg.hideFooter) root.setAttribute(FOOTER_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideFooter)
+		root.setAttribute(FOOTER_ATTR, "");
 	else root.removeAttribute(FOOTER_ATTR);
-	if (cfg.enabled && cfg.hideTrends) root.setAttribute(TRENDS_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideTrends)
+		root.setAttribute(TRENDS_ATTR, "");
 	else root.removeAttribute(TRENDS_ATTR);
-	if (cfg.enabled && cfg.hideFollowSuggestions)
+	if (cfg.pageCleanupEnabled && cfg.hideFollowSuggestions)
 		root.setAttribute(FOLLOW_ATTR, "");
 	else root.removeAttribute(FOLLOW_ATTR);
-	if (cfg.enabled && cfg.hideTitleCount)
+	if (cfg.pageCleanupEnabled && cfg.hideTitleCount)
 		root.setAttribute(TITLE_COUNT_ATTR, "");
 	else root.removeAttribute(TITLE_COUNT_ATTR);
-	if (cfg.enabled && cfg.hideNotificationBadges)
+	if (cfg.pageCleanupEnabled && cfg.hideNotificationBadges)
 		root.setAttribute(BADGES_ATTR, "");
 	else root.removeAttribute(BADGES_ATTR);
-	if (cfg.enabled && cfg.hideNewPostsPrompt)
+	if (cfg.pageCleanupEnabled && cfg.hideNewPostsPrompt)
 		root.setAttribute(NEW_POSTS_ATTR, "");
 	else root.removeAttribute(NEW_POSTS_ATTR);
-	if (cfg.enabled && cfg.hideGrokButton) root.setAttribute(GROK_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideGrokButton)
+		root.setAttribute(GROK_ATTR, "");
 	else root.removeAttribute(GROK_ATTR);
-	if (cfg.enabled && cfg.hideMessageButton) root.setAttribute(MESSAGE_ATTR, "");
+	if (cfg.pageCleanupEnabled && cfg.hideMessageButton)
+		root.setAttribute(MESSAGE_ATTR, "");
 	else root.removeAttribute(MESSAGE_ATTR);
+	if (cfg.pageCleanupEnabled && cfg.collapseSidebar)
+		root.setAttribute(SIDEBAR_ATTR, "");
+	else root.removeAttribute(SIDEBAR_ATTR);
+	applySidebarCompactLayout();
+	applySidebarComposeIcons();
 
 	applyPageCustomizations();
 	if (!cfg.enabled || !active) {
@@ -515,7 +1081,7 @@ function applyStyleVars(): void {
  * navigation or while the same <svg> is re-scanned.
  */
 function applyLogo(): void {
-	const replace = cfg.enabled && cfg.useBlueBird;
+	const replace = cfg.pageCleanupEnabled && cfg.useBlueBird;
 	const bird = replace ? getBirdData() : null;
 	for (const svg of document.querySelectorAll<SVGSVGElement>(LOGO_SEL)) {
 		const path = svg.querySelector("path");
@@ -560,11 +1126,21 @@ function evaluate(article: Element): {
 	fresh: boolean;
 	log: FilteredLog | null;
 } {
+	const cached = state.get(article);
+	// Most mutations X emits are layout or accessibility updates. If the rule
+	// generation is unchanged and neither matching subtree is dirty, avoid the
+	// expensive TreeWalker pass entirely.
+	if (
+		cached &&
+		!textDirty.has(article) &&
+		cached.sig.startsWith(`${generation}${SEP}${accountListVersion}${SEP}`)
+	)
+		return { fresh: false, log: null };
+	textDirty.delete(article);
 	const text = readText(article.querySelector(TEXT_SEL));
 	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
 	const sig = [generation, accountListVersion, text, name].join(SEP);
 
-	const cached = state.get(article);
 	if (cached && cached.sig === sig) {
 		return { fresh: false, log: null };
 	}
@@ -575,25 +1151,37 @@ function evaluate(article: Element): {
 
 	// Account matching needs the numeric user id (React internals); keyword
 	// matching only needs the @handle from the DOM.
+	const externalAccountSourcesActive = Object.values(
+		cfg.accountSourceEnabled,
+	).some(Boolean);
 	const accountListsActive =
-		cfg.accountListEnabled &&
-		(cfg.externalAccountListsEnabled ||
-			cfg.accountWhitelist.length > 0 ||
-			cfg.accountBlacklist.length > 0);
+		externalAccountSourcesActive ||
+		ruleView.accountWhitelist.length > 0 ||
+		ruleView.accountBlacklist.length > 0;
 
 	if (
 		!mainTweet &&
 		(matchers.count > 0 ||
 			accountListsActive ||
 			cfg.filterAds ||
+			cfg.filterMediaAds ||
+			cfg.filterCardAds ||
 			cfg.filterParodyAccounts ||
 			cfg.filterFanAccounts ||
+			cfg.filterCommentaryAccounts ||
 			cfg.filterAutomatedAccounts)
 	) {
-		if (cfg.filterAds && isPromotedPost(article)) hit = "__ad__";
+		if (
+			(cfg.filterAds && isPromotedPost(article)) ||
+			(cfg.filterMediaAds && isMediaAd(article)) ||
+			(cfg.filterCardAds && isCardAd(article))
+		)
+			hit = "__ad__";
 		if (cfg.filterParodyAccounts && isParodyAccount(article))
 			hit = "__parody__";
 		if (cfg.filterFanAccounts && isFanAccount(article)) hit = "__fan__";
+		if (cfg.filterCommentaryAccounts && isCommentaryAccount(article))
+			hit = "__commentary__";
 		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
 			hit = "__automated__";
 		if (hit) {
@@ -602,14 +1190,12 @@ function evaluate(article: Element): {
 			return { fresh: true, log };
 		}
 		const identity = readAuthorIdentity(article, accountListsActive);
-		const accountMatch = cfg.accountListEnabled
-			? matchAccountIndex(
-					cfg.externalAccountListsEnabled ? accountIndex : undefined,
-					identity,
-					cfg.accountWhitelist,
-					cfg.accountBlacklist,
-				)
-			: null;
+		const accountMatch = matchAccountIndex(
+			externalAccountSourcesActive ? accountIndex : undefined,
+			identity,
+			ruleView.accountWhitelist,
+			ruleView.accountBlacklist,
+		);
 		if (accountMatch === "blacklist") {
 			hit = "account:blacklist";
 			log = {
@@ -733,10 +1319,17 @@ function flush(): void {
 		pending.clear();
 		return;
 	}
-	const queuedCount = pending.size;
+	// Take a snapshot so mutations caused while evaluating do not get lost when
+	// the current batch is cleared. Any unfinished work is put back below.
+	const queue = [...pending];
+	pending.clear();
+	const queuedCount = queue.length;
 	const logs: FilteredLog[] = [];
 	let evaluatedCount = 0;
-	for (const article of pending) {
+	const startedAt = performance.now();
+	let processed = 0;
+	for (let i = 0; i < queue.length; i++) {
+		const article = queue[i];
 		if (!article.isConnected) continue;
 		try {
 			const result = evaluate(article);
@@ -745,14 +1338,35 @@ function flush(): void {
 		} catch (error) {
 			console.error("[BlueNoise] Failed to process an item:", error);
 		}
+		processed++;
+		// Always make progress on at least one article, even if one unusually
+		// complex rule consumes the whole budget by itself.
+		if (
+			processed >= FLUSH_MAX_ARTICLES ||
+			(processed > 0 && performance.now() - startedAt >= FLUSH_BUDGET_MS)
+		) {
+			for (let rest = i + 1; rest < queue.length; rest++)
+				pending.add(queue[rest]);
+			break;
+		}
 	}
-	pending.clear();
 	debugLog("Scan completed", {
 		queuedArticleCount: queuedCount,
 		evaluatedCount,
+		processedArticleCount: processed,
+		remainingArticleCount: pending.size,
+		durationMs: Math.round(performance.now() - startedAt),
 		filteredCount: document.querySelectorAll(`.${HIT_CLASS}`).length,
 	});
 	if (logs.length) emitFilteredLogs(logs);
+	if (pending.size) {
+		schedule();
+		return;
+	}
+	// Run after every queued reply has received its filtering mark, so the
+	// number mirrors what remains in the conversation rather than X's total.
+	if (isStatusPage()) updateDisplayedReplyCount();
+	else if (isHomeTimeline()) updateTimelineReplyCounts();
 	scheduleBadge();
 }
 
@@ -787,12 +1401,13 @@ function queueArticle(node: Node): void {
 	}
 }
 
-function fullScan(): void {
+function fullScan(options: { markTextDirty?: boolean } = {}): void {
 	if (!active || !cfg.enabled) return;
 	let articleCount = 0;
 	for (const a of document.querySelectorAll(ARTICLE_SEL)) {
 		if (a.closest(".xsf-reveal")) continue;
 		articleCount++;
+		if (options.markTextDirty) textDirty.add(a);
 		pending.add(a);
 	}
 	debugLog("Scan queued", { articleCount });
@@ -802,21 +1417,19 @@ function fullScan(): void {
 // ==================== Incremental observation ====================
 
 function onMutations(records: MutationRecord[]): void {
-	// The header logo applies on every X page and X re-renders it on SPA
-	// navigation, so re-apply before the filterable-page guard below.
-	applyLogo();
-	applyPageCustomizations();
-	for (const node of records.flatMap((record) => [...record.addedNodes]))
-		if (node.nodeType === Node.ELEMENT_NODE) applyPageCustomizations();
 	// Content scripts run in an isolated world, so wrapping history.pushState is
 	// not sufficient to observe X's own SPA navigation. Any route change also
 	// changes the page DOM; notice it before processing stale rows.
 	if (refreshForUrlChange()) return;
 	if (!active || !cfg.enabled) return;
 	if (records.length > MUTATION_BURST) {
-		fullScan();
+		// The per-record dirty check below is deliberately skipped for a burst.
+		// Force existing rows through text extraction so content updates cannot be
+		// mistaken for a clean cache hit when the full scan drains the queue.
+		fullScan({ markTextDirty: true });
 		return;
 	}
+	let conversationChanged = false;
 	for (const rec of records) {
 		for (const node of rec.addedNodes) queueArticle(node);
 		const target = rec.target;
@@ -827,9 +1440,44 @@ function onMutations(records: MutationRecord[]): void {
 				? (target as Element)
 				: target.parentElement;
 		const article = targetElement?.closest(ARTICLE_SEL);
-		if (article) pending.add(article);
+		if (article) {
+			pending.add(article);
+			// A childList target can be the article itself when X replaces the
+			// text container, so inspect added nodes as well as the target.
+			const textChanged = Boolean(
+				targetElement?.closest(`${TEXT_SEL}, ${NAME_SEL}`) ??
+					((targetElement?.matches(ARTICLE_SEL) &&
+						[...rec.addedNodes].some(
+							(node) => node.nodeType === Node.TEXT_NODE,
+						)) ||
+						[...rec.addedNodes].some(
+							(node) =>
+								node.nodeType === Node.ELEMENT_NODE &&
+								((node as Element).matches(`${TEXT_SEL}, ${NAME_SEL}`) ||
+									(node as Element).querySelector(`${TEXT_SEL}, ${NAME_SEL}`)),
+						)),
+			);
+			if (textChanged) textDirty.add(article);
+		}
+		if (
+			rec.type === "childList" &&
+			targetElement?.closest('section[role="region"]')
+		)
+			conversationChanged = true;
 	}
-	if (pending.size) schedule();
+	if (pending.size || conversationChanged) schedule();
+}
+
+/** Page cleanup has its own observer so filtering mutations do not run global
+ * header/sidebar queries on the content-filtering hot path. */
+function onCleanupMutations(): void {
+	if (!cfg.pageCleanupEnabled) return;
+	applyLogo();
+	applySidebarCompactLayout();
+	applySidebarComposeIcons();
+	applyPageCustomizations();
+	// Also catch route changes made by X without relying solely on history hooks.
+	refreshForUrlChange();
 }
 
 function startObserving(): void {
@@ -840,6 +1488,20 @@ function startObserving(): void {
 		characterData: true,
 		subtree: true,
 	});
+}
+
+function startCleanupObserving(): void {
+	if (cleanupObserver || !cfg.pageCleanupEnabled || !document.body) return;
+	cleanupObserver = new MutationObserver(onCleanupMutations);
+	cleanupObserver.observe(document.body, {
+		childList: true,
+		subtree: true,
+	});
+}
+
+function stopCleanupObserving(): void {
+	cleanupObserver?.disconnect();
+	cleanupObserver = null;
 }
 
 // ==================== Badge count ====================
@@ -894,25 +1556,15 @@ function hookMessages(): void {
 
 // ==================== Tweet ⋯ menu injection ====================
 
-/**
- * Inject "Add author to BlueNoise whitelist / blacklist" items into X's tweet
- * "⋯" dropdown menu. The menu is a React portal rendered outside the tweet, so
- * we associate an open menu with the tweet that opened it via a one-shot token:
- * a capture-phase click on the menu-opening button (aria-haspopup="menu")
- * stashes its closest tweet; a dedicated observer then injects when the menu
- * enters the DOM and immediately clears the token.
- */
-
-/** X's dropdown menu container. role="menu" is broader (covers non-tweet
- *  menus), but the one-shot token + isConnected guard keep us safe. */
+/** X renders dropdowns in a portal, so remember which tweet opened the menu. */
 const MENU_SEL = '[data-testid="Dropdown"]';
-/** The menu-opening button (⋯ / caret). Stable and not localized. */
-const MENU_OPENER_SEL = '[aria-haspopup="menu"]';
-/** Marker class on our injected items; also used for dedupe. */
+/** X's per-post overflow button. Stable and not localized. */
+const MENU_OPENER_SEL = '[data-testid="caret"][aria-haspopup="menu"]';
 const MENU_ITEM_CLASS = "xsf-menu-item";
 
 let menuSourceArticle: Element | null = null;
 let menuObserver: MutationObserver | null = null;
+let menuTokenTimer = 0;
 
 function buildMenuAction(
 	article: Element,
@@ -922,10 +1574,10 @@ function buildMenuAction(
 		list === "whitelist"
 			? t("contextMenu_addToWhitelist")
 			: t("contextMenu_addToBlacklist");
-	const el = document.createElement("div");
+	const el = document.createElement("button");
+	el.type = "button";
 	el.className = MENU_ITEM_CLASS;
 	el.setAttribute("role", "menuitem");
-	el.setAttribute("tabindex", "-1");
 	const span = document.createElement("span");
 	span.textContent = label;
 	el.append(span);
@@ -951,7 +1603,11 @@ function injectMenuItems(menu: HTMLElement): void {
 		hideTweetMenuToken();
 		return;
 	}
-	if (menu.querySelector(`.${MENU_ITEM_CLASS}`)) return;
+	// X may reuse the same portal; replace old actions so their author closure
+	// always matches the tweet that opened this menu.
+	for (const oldItem of menu.querySelectorAll(`.${MENU_ITEM_CLASS}`)) {
+		oldItem.remove();
+	}
 	// Append after X's native items; never add data-testid (see sanitizeRevealClone).
 	const whitelist = buildMenuAction(article, "whitelist");
 	const blacklist = buildMenuAction(article, "blacklist");
@@ -961,6 +1617,8 @@ function injectMenuItems(menu: HTMLElement): void {
 
 function hideTweetMenuToken(): void {
 	menuSourceArticle = null;
+	if (menuTokenTimer) window.clearTimeout(menuTokenTimer);
+	menuTokenTimer = 0;
 }
 
 /** Add the tweet's author to a local account list via storage, deduped. */
@@ -969,15 +1627,13 @@ async function addMenuAccount(
 	list: "whitelist" | "blacklist",
 ): Promise<void> {
 	const identity = readAuthorIdentity(article, true);
-	const stored = accountIdentityToStored(identity);
-	if (!stored) return;
-	const { config } = await chrome.storage.local.get(CONFIG_KEY);
-	const latest = loadConfig(config);
-	const field = list === "whitelist" ? "accountWhitelist" : "accountBlacklist";
-	const next = addAccountToList(latest[field], stored);
-	if (next === null) return; // already present or invalid
-	await chrome.storage.local.set({ config: { ...latest, [field]: next } });
-	// Writing config fires storage.onChanged → watchConfig → refresh(),
+	const result = await chrome.storage.local.get(RULE_DATA_KEY);
+	const latest = loadRuleData(result[RULE_DATA_KEY]);
+	const field = list === "whitelist" ? "allow" : "block";
+	const next = addAccountRule(latest, field, identity);
+	if (!next) return;
+	await chrome.storage.local.set({ [RULE_DATA_KEY]: next });
+	// Writing rule data fires storage.onChanged -> watchConfig -> refresh(),
 	// which re-scans and applies the list immediately.
 }
 
@@ -989,7 +1645,11 @@ function onMenuClickCapture(event: Event): void {
 	const opener = target.closest(MENU_OPENER_SEL);
 	if (!opener) return;
 	const article = opener.closest(ARTICLE_SEL);
-	if (article) menuSourceArticle = article;
+	if (!article) return;
+	hideTweetMenuToken();
+	menuSourceArticle = article;
+	// Do not let a cancelled/closed menu bind a later dropdown to this tweet.
+	menuTokenTimer = window.setTimeout(hideTweetMenuToken, 1500);
 }
 
 /** Wire up tweet-menu injection. Call once from init(); works on every X page
@@ -1003,7 +1663,7 @@ function hookTweetMenu(): void {
 				if (!(node instanceof Element)) continue;
 				const menu = node.matches(MENU_SEL)
 					? node
-					: node.querySelector(MENU_SEL);
+					: (node.closest(MENU_SEL) ?? node.querySelector(MENU_SEL));
 				if (menu instanceof HTMLElement) injectMenuItems(menu);
 			}
 		}
@@ -1047,6 +1707,7 @@ function stop(): void {
 	clearRescanTimers();
 	pending.clear();
 	clearAllMarks();
+	clearDisplayedReplyCounts();
 	applyStyleVars();
 	scheduleBadge();
 }
@@ -1072,23 +1733,32 @@ function teardown(): void {
 	observer?.disconnect();
 	observer = null;
 	unhookTweetMenu();
+	cleanupObserver?.disconnect();
+	cleanupObserver = null;
 	document.removeEventListener("pointermove", onPointerMove);
 	window.removeEventListener("scroll", hideReveal, { capture: true });
 	window.removeEventListener("resize", hideReveal);
 	window.removeEventListener("popstate", onUrlChange);
 	window.removeEventListener("pageshow", onPageShow);
 	document.removeEventListener("visibilitychange", onVisibility);
+	restoreSidebarComposeIcons();
+	restoreSidebarStyles();
+	restoreSidebarClasses();
 	hideReveal();
 	pending.clear();
 }
 
-function refresh(options: { rebuild?: boolean } = {}): void {
+function refresh(
+	options: { rebuild?: boolean; clearReplyCountCache?: boolean } = {},
+): void {
 	if (options.rebuild) refreshMatchers();
+	if (options.rebuild || options.clearReplyCountCache) clearReplyCountCaches();
 	generation++;
 	// A visual clone is owned by this script rather than X's virtualized list.
 	// It must never survive a SPA route transition.
 	hideReveal();
 	pending.clear();
+	clearDisplayedReplyCounts();
 	active = isFilterablePage();
 
 	if (!cfg.enabled || !active) {
@@ -1151,61 +1821,78 @@ function hookHistory(): void {
 // ==================== Config ====================
 
 function loadStoredConfig(): Promise<void> {
-	return new Promise((resolve) => {
-		chrome.storage.local.get(CONFIG_KEY, (result) => {
-			cfg = loadConfig(result.config);
-			setLanguage(cfg.language);
-			resolve();
-		});
+	return readStoredState().then(() => {
+		refreshMatchers();
+		setLanguage(cfg.language);
 	});
+}
+
+async function readStoredState(): Promise<void> {
+	const [synced, local] = await Promise.all([
+		chrome.storage.sync.get(SETTINGS_KEY),
+		chrome.storage.local.get(RULE_DATA_KEY),
+	]);
+	cfg = loadConfig(synced[SETTINGS_KEY] ?? defaultConfig());
+	rules = loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData());
 }
 
 const MATCH_KEYS = [
 	"enabled",
 	"filterAds",
+	"filterMediaAds",
+	"filterCardAds",
 	"filterParodyAccounts",
 	"filterFanAccounts",
+	"filterCommentaryAccounts",
 	"filterAutomatedAccounts",
 	"matchNames",
 	"ignoreSpaces",
 	"caseSensitive",
 ] as const;
-const MATCH_LIST_KEYS = ["userKeywords", "subscriptions", "whitelist"] as const;
-
-function listSignature(value: unknown): string {
-	return Array.isArray(value) ? value.join("\n") : `factory${SEP}`;
-}
 
 function matchingChanged(prev: AppConfig, next: AppConfig): boolean {
 	for (const key of MATCH_KEYS) {
 		if (prev[key] !== next[key]) return true;
 	}
-	for (const key of MATCH_LIST_KEYS) {
-		if (listSignature(prev[key]) !== listSignature(next[key])) return true;
-	}
-	if (prev.accountListEnabled !== next.accountListEnabled) return true;
-	if (prev.externalAccountListsEnabled !== next.externalAccountListsEnabled)
+	if (
+		JSON.stringify(prev.accountSourceEnabled) !==
+		JSON.stringify(next.accountSourceEnabled)
+	)
 		return true;
-	for (const key of ["accountWhitelist", "accountBlacklist"] as const) {
-		if (listSignature(prev[key]) !== listSignature(next[key])) return true;
-	}
 	return false;
 }
 
 function watchConfig(): void {
 	chrome.storage.onChanged.addListener((changes, area) => {
-		if (area !== "local" || !changes.config) return;
+		if (
+			(area !== "sync" || !changes[SETTINGS_KEY]) &&
+			(area !== "local" || !changes[RULE_DATA_KEY])
+		)
+			return;
 		const prev = cfg;
-		cfg = loadConfig(changes.config.newValue);
-		setLanguage(cfg.language);
-		applyLogo();
-
-		if (matchingChanged(prev, cfg)) {
-			refresh({ rebuild: true });
-		} else {
-			applyStyleVars();
+		const rulesChanged = Boolean(changes[RULE_DATA_KEY]);
+		void readStoredState().then(() => {
+			const accountSnapshotValue = accountSnapshot(rules);
+			accountIndex = accountSnapshotValue
+				? buildAccountListIndex(accountSnapshotValue)
+				: undefined;
+			accountListVersion = accountSnapshotValue?.version ?? 0;
+			setLanguage(cfg.language);
+			applyLogo();
+			if (cfg.pageCleanupEnabled) startCleanupObserving();
+			else stopCleanupObserving();
+			if (rulesChanged || matchingChanged(prev, cfg)) {
+				refresh({ rebuild: true });
+			} else {
+				applyStyleVars();
+			}
+			if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
+		});
+		if (prev.showActualReplyCount !== cfg.showActualReplyCount) {
+			if (!cfg.showActualReplyCount) clearDisplayedReplyCounts();
+			else if (isHomeTimeline()) updateTimelineReplyCounts();
+			else updateDisplayedReplyCount();
 		}
-		if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
 
 		if (!prev.debugLogging && cfg.debugLogging) {
 			debugLog("Debug logging enabled", {
@@ -1220,13 +1907,11 @@ function watchConfig(): void {
 		}
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {
-		if (area !== "local" || !changes[ACCOUNT_LIST_KEY]) return;
-		const next = changes[ACCOUNT_LIST_KEY].newValue as
-			| AccountListSnapshot
-			| undefined;
+		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
+		const next = accountSnapshot(loadRuleData(changes[RULE_DATA_KEY].newValue));
 		accountIndex = next ? buildAccountListIndex(next) : undefined;
 		accountListVersion = next?.version ?? 0;
-		if (cfg.enabled && active) refresh();
+		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
 	});
 }
 
@@ -1243,6 +1928,7 @@ async function init(): Promise<void> {
 	// Keep the observer alive off status pages as well. It is the reliable
 	// fallback that notices a later X SPA transition back to a status page.
 	startObserving();
+	startCleanupObserving();
 	applyLogo();
 
 	active = isFilterablePage();
@@ -1251,7 +1937,7 @@ async function init(): Promise<void> {
 		filtering: active,
 		enabled: cfg.enabled,
 		matcherCount: matchers.count,
-		userKeywordCount: cfg.userKeywords.length,
+		userKeywordCount: ruleView.userKeywords.length,
 	});
 	if (cfg.enabled && active) start();
 	else applyStyleVars();
@@ -1264,8 +1950,18 @@ function onVisibility(): void {
 }
 
 async function loadAccountList(): Promise<void> {
-	const result = await chrome.storage.local.get(ACCOUNT_LIST_KEY);
-	const snapshot = result[ACCOUNT_LIST_KEY] as AccountListSnapshot | undefined;
+	const result = await chrome.storage.local.get(RULE_DATA_KEY);
+	const snapshot = accountSnapshot(loadRuleData(result[RULE_DATA_KEY]));
 	accountIndex = snapshot ? buildAccountListIndex(snapshot) : undefined;
 	accountListVersion = snapshot?.version ?? 0;
+}
+
+function accountSnapshot(data: RuleData): AccountListSnapshot | undefined {
+	return mergeAccountListSnapshots(
+		DEFAULT_ACCOUNT_LIST_SOURCES.filter(
+			(source) => cfg.accountSourceEnabled[source.id],
+		)
+			.map((source) => data.accounts.external[source.id])
+			.filter((snapshot): snapshot is AccountListSnapshot => Boolean(snapshot)),
+	);
 }

@@ -164,6 +164,117 @@ body,
 	display: grid;
 	margin: 0;
 }
+.about-hero {
+	display: flex;
+	align-items: flex-start;
+	gap: 20px;
+	margin-top: 32px;
+	padding: 28px;
+	border: 1px solid var(--x-border);
+	border-radius: 18px;
+	background:
+		radial-gradient(
+			circle at 0 0,
+			color-mix(in srgb, var(--x-accent) 14%, transparent),
+			transparent 42%
+		),
+		var(--x-surface);
+}
+.about-brand {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+.about-brand img {
+	width: 48px;
+	height: 48px;
+	border-radius: 14px;
+}
+.about-brand span {
+	color: var(--x-muted);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 11px;
+	font-weight: 400;
+	letter-spacing: 0.04em;
+	line-height: 1;
+}
+.about-hero h2,
+.about-card h2 {
+	margin: 0;
+	color: var(--x-fg);
+	font-size: 17px;
+	font-weight: 650;
+	letter-spacing: -0.03em;
+}
+.about-hero p:last-child,
+.about-card p:last-child {
+	margin: 9px 0 0;
+	color: var(--x-muted);
+	font-size: 14px;
+	line-height: 1.65;
+}
+.about-card p:last-child {
+	max-width: 62ch;
+}
+.about-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+	margin-top: 12px;
+}
+.about-card {
+	padding: 22px;
+	border: 1px solid var(--x-border);
+	border-radius: 16px;
+	background: var(--x-surface);
+}
+.about-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 24px;
+}
+.about-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	min-height: 42px;
+	border: 1px solid var(--x-border);
+	border-radius: 999px;
+	padding: 0 16px;
+	background: var(--x-surface);
+	color: var(--x-fg);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+	transition:
+		background 160ms ease,
+		color 160ms ease,
+		transform 160ms ease;
+}
+.about-action:hover {
+	background: var(--x-hover);
+	transform: translateY(-1px);
+}
+.about-action:focus-visible {
+	outline: 2px solid var(--x-accent);
+	outline-offset: 2px;
+}
+.about-action svg {
+	width: 15px;
+	height: 15px;
+}
+.about-action-primary {
+	border-color: var(--x-accent);
+	background: var(--x-accent);
+	color: var(--x-accent-fg);
+}
+.about-action-primary:hover {
+	background: var(--x-accent);
+	filter: brightness(0.94);
+}
 .settings-group {
 	margin-top: 28px;
 }
@@ -261,5 +372,12 @@ body,
 	}
 	.options-workspace {
 		padding: 32px 20px 56px;
+	}
+	.about-hero {
+		gap: 14px;
+		padding: 20px;
+	}
+	.about-grid {
+		grid-template-columns: 1fr;
 	}
 }

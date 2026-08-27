@@ -4,14 +4,13 @@
 
 > Make X readable again.
 
-BlueNoise is an open-source browser extension that blurs or hides noisy replies on X (formerly Twitter) post-detail pages and posts on the home timeline with local, reversible keyword rules. It improves reading without calling X APIs, reading cookies, or changing your
-account state.
+BlueNoise is an open-source, privacy-first browser extension for filtering and redesigning X (formerly Twitter): locally blur or hide noisy replies, posts, and ads with reversible keyword and account rules, then hide clutter and restore a cleaner classic look. It never calls X APIs, reads cookies, or changes your account state.
 
 Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
 ## Installation
 
-<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="https://storage.googleapis.com/web-dev-uploads/image/WlD8wC6g8khjGJcVzh1J3I8B5oE1/aU1sJbxmQ1yCXS5MYRDu.svg" alt="Available in the Chrome Web Store" width="220"></a>
+<a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="Available in the Chrome Web Store" width="220"></a>
 
 Install BlueNoise from the [Chrome Web Store](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid).
 
@@ -24,13 +23,18 @@ Prefer to install manually? Download `bluenoise-<version>-chrome.zip` from the [
 
 - Blur or hide noisy replies on post-detail pages and posts on the home timeline
   (it never filters the post you opened). Turning the extension off restores everything instantly.
-- Match by keyword and by account: plain keywords, `/regex/` patterns, and account IDs or @handles.
+- Match by keyword and by account: plain keywords, safe `/regex/` patterns, and account IDs or @handles.
 - Ships with built-in community keyword lists (X Spam Filter, X Comment Blocker) and community
   account lists (Make X Great Again) that stay up to date automatically, plus your own personal
   keyword lists and a local account blacklist/whitelist.
+- Import, export, merge, append, or replace your personal keyword and account rules with a portable JSON backup.
 - Right-click any selected text to add it as a keyword or an account ban.
 - A toolbar badge shows how many posts were filtered; hovering a blurred reply reveals it around your cursor.
-- Handles evasive forms (spaces and zero-width characters) and includes a whitelist to correct false positives.
+- Optionally filter promoted posts, media/card ads, and X-labeled parody, fan, commentary, or automated accounts.
+- Includes an independent X makeover: hide selected recommendations, promos, footer, counters, and navigation controls;
+  compact the sidebar; or restore the classic Twitter blue bird.
+- Handles evasive forms (spaces and zero-width characters), supports light/dark themes and English/Chinese UI, and
+  includes a whitelist to correct false positives.
 - New replies and posts are filtered automatically as they load, with no page refresh.
 
 ## Privacy and permissions
@@ -39,7 +43,8 @@ BlueNoise collects no telemetry or analytics. It does not read cookies, access a
 
 The extension requests these permissions:
 
-- `storage` and `unlimitedStorage`: save your settings, rules, and whitelist, and cache keyword lists locally.
+- `storage` and `unlimitedStorage`: sync behavioral settings through Chrome Sync; save personal rules and cached
+  community lists locally. BlueNoise does not use this storage for telemetry.
 - `alarms`: periodically refresh subscribed keyword and account lists in the background.
 - `contextMenus`: add **Add keyword** / **Add account** to the right-click menu for selected text.
 - `https://raw.githubusercontent.com/*`: download public keyword lists.
