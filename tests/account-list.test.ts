@@ -6,6 +6,7 @@ import {
 	addAccountToList,
 	buildAccountListIndex,
 	matchAccountIndex,
+	matchAccountSources,
 	mergeAccountListSnapshots,
 	normalizeAccountHandle,
 	parseAccountText,
@@ -43,6 +44,21 @@ function liteRows(n: number, prefix = "100000"): [string, string, string][] {
 }
 
 describe("account list providers", () => {
+	it("retains the source of account-list matches without returning the account", () => {
+		const index = buildAccountListIndex(snapshot);
+		expect(
+			matchAccountSources([{ id: "mxga", index }], { handle: "spam_bot" }),
+		).toEqual({ decision: "blacklist", source: "mxga" });
+		expect(
+			matchAccountSources(
+				[{ id: "mxga", index }],
+				{ handle: "local_bot" },
+				[],
+				["@local_bot"],
+			),
+		).toEqual({ decision: "blacklist", source: "user" });
+	});
+
 	it("normalizes handles", () => {
 		expect(normalizeAccountHandle(" @Spam_Bot ")).toBe("spam_bot");
 	});
