@@ -14,6 +14,8 @@ export interface AppConfig {
 	mode: "dim" | "hide";
 	/** In Blur mode, reveal a circular area around the cursor while hovering a filtered reply. */
 	revealOnHover: boolean;
+	/** In Blur mode, show a short explanation on filtered posts and replies. */
+	showFilterReason: boolean;
 	/** Show the number of filtered replies on the browser toolbar icon. */
 	showBadgeCount: boolean;
 	/** Replace X's total with the loaded, unfiltered reply count on post pages. */

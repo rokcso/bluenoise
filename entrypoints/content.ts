@@ -596,7 +596,7 @@ function applyMark(
 		row.classList.add(HIT_CLASS);
 		row.setAttribute(HIT_ATTR, hit);
 		let label = row.querySelector<HTMLElement>(`:scope > .${REASON_CLASS}`);
-		if (reason && cfg.mode === "dim") {
+		if (reason && cfg.mode === "dim" && cfg.showFilterReason) {
 			const detail = formatFilterReason(reason, t);
 			const text = t("filter_reason_label", detail);
 			if (!label) {
@@ -1994,6 +1994,7 @@ function watchConfig(): void {
 				rulesChanged ||
 				matchingChanged(prev, cfg) ||
 				prev.mode !== cfg.mode ||
+				prev.showFilterReason !== cfg.showFilterReason ||
 				prev.language !== cfg.language
 			) {
 				refresh({ rebuild: true });

@@ -281,6 +281,10 @@
 	"reveal_on_hover_hint": {
 		"message": "In Blur mode, show a clear area around the cursor."
 	},
+	"show_filter_reason": { "message": "Show filter reason" },
+	"show_filter_reason_hint": {
+		"message": "Show the matched rule in the top-right corner of blurred posts and replies."
+	},
 	"match_names": { "message": "Match names and @handles" },
 	"match_names_hint": {
 		"message": "Include the author's display name and @handle when matching keywords."

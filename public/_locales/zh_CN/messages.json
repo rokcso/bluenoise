@@ -273,6 +273,10 @@
 	"reveal_on_hover_hint": {
 		"message": "在模糊模式下，以光标为中心显示清晰区域。"
 	},
+	"show_filter_reason": { "message": "显示过滤原因" },
+	"show_filter_reason_hint": {
+		"message": "在模糊的帖子和评论右上角显示具体命中的规则。"
+	},
 	"match_names": { "message": "匹配昵称和 @用户名" },
 	"match_names_hint": {
 		"message": "匹配关键词时，同时检查作者的显示名称和 @用户名。"
