@@ -88,10 +88,20 @@ export function createPageMakeoverController(options: {
 		}
 		if (cfg.hideTimelineFollowSuggestions) {
 			const primary = document.querySelector('[data-testid="primaryColumn"]');
-			const hasTimelineHeading = [
+			const followHeadingRe = /推荐关注|who to follow/i;
+			const followHeadings = [
 				...(primary?.querySelectorAll("h2") ?? []),
-			].some((h) => /推荐关注|who to follow/i.test(h.textContent ?? ""));
+			].filter((h) => followHeadingRe.test(h.textContent ?? ""));
+			const hasTimelineHeading = followHeadings.length > 0;
 			if (hasTimelineHeading) {
+				// X may virtualize the heading into its own cell, separate from the
+				// UserCell rows. Hide that heading cell as well to avoid a leftover
+				// "Who to follow"/"推荐关注" label.
+				for (const heading of followHeadings) {
+					heading
+						.closest<HTMLElement>('[data-testid="cellInnerDiv"]')
+						?.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+				}
 				for (const cell of primary?.querySelectorAll<HTMLElement>(
 					`[data-testid="${"cellInnerDiv"}"]:has([data-testid="UserCell"]), [data-testid="cellInnerDiv"]:has(a[href^="/i/connect_people"])`,
 				) ?? [])
