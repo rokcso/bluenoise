@@ -27,6 +27,12 @@ export interface PageMakeoverController {
 	reset(): void;
 }
 
+export function findNewPostsPromptButton(label: Element): Element | null {
+	const pill = label.parentElement;
+	if (!pill?.querySelector('[data-testid="userAvatars"]')) return null;
+	return label.closest("button");
+}
+
 export function createPageMakeoverController(options: {
 	birdSvg: string;
 	isStatusPage(): boolean;
@@ -173,11 +179,8 @@ export function createPageMakeoverController(options: {
 			for (const label of document.querySelectorAll<HTMLElement>(
 				'[data-testid="primaryColumn"] [data-testid="pillLabel"]',
 			)) {
-				const pill = label.parentElement;
-				// X wraps the avatar stack in an extra layout container. Match it
-				// anywhere inside the pill rather than requiring a direct child.
-				if (pill?.querySelector('[data-testid="userAvatars"]'))
-					hideAncestors(pill, 0);
+				const button = findNewPostsPromptButton(label);
+				if (button) hideAncestors(button, 0);
 			}
 		}
 		if (cfg.hideGrokButton) {
