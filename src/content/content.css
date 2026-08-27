@@ -37,6 +37,16 @@
 	pointer-events: none;
 }
 
+/* Cut the spotlight out of the reason text so revealed content stays on top. */
+.xsf-filter-reason-revealing {
+	mask-image: radial-gradient(
+		circle var(--xsf-reason-reveal-radius) at var(--xsf-reason-reveal-x)
+			var(--xsf-reason-reveal-y),
+		transparent calc(100% - 1px),
+		black 100%
+	);
+}
+
 @media (prefers-color-scheme: dark) {
 	.xsf-filter-reason {
 		color: rgb(139 152 165 / 72%);
