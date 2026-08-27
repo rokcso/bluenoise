@@ -298,5 +298,11 @@
 	},
 	"contextMenu_addAccountWhitelist": {
 		"message": "Add selected account to the account whitelist"
+	},
+	"contextMenu_addToWhitelist": {
+		"message": "Add author to the account whitelist"
+	},
+	"contextMenu_addToBlacklist": {
+		"message": "Add author to the account blacklist"
 	}
 }

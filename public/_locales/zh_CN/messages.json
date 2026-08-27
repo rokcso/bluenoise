@@ -290,5 +290,11 @@
 	},
 	"contextMenu_addAccountWhitelist": {
 		"message": "将选中的账号加入账号白名单"
+	},
+	"contextMenu_addToWhitelist": {
+		"message": "将作者加入账号白名单"
+	},
+	"contextMenu_addToBlacklist": {
+		"message": "将作者加入账号黑名单"
 	}
 }
