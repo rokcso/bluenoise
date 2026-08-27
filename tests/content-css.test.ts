@@ -20,3 +20,12 @@ describe("collapsed navigation sidebar styles", () => {
 		);
 	});
 });
+
+describe("hover reveal styles", () => {
+	it("uses an in-place backdrop overlay instead of a cloned tweet layer", () => {
+		expect(css).toContain(".xsf-filtered.xsf-revealing::after");
+		expect(css).toContain("backdrop-filter: blur(3px)");
+		expect(css).toContain("mask-image: radial-gradient(");
+		expect(css).not.toContain(".xsf-reveal {");
+	});
+});

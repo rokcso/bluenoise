@@ -140,14 +140,31 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	display: none !important;
 }
 
-/* A pointer-events-free clone reveals just the cursor-sized circle of a blurred reply. */
-.xsf-reveal {
-	position: fixed;
-	z-index: 2147483646;
+/* Keep the source DOM intact: an overlay blurs everything except the cursor hole. */
+.xsf-filtered.xsf-revealing > :not(.xsf-filter-reason) {
+	opacity: 1;
+	filter: none;
+}
+
+.xsf-filtered.xsf-revealing::after {
+	position: absolute;
+	z-index: 1;
+	inset: 0;
 	pointer-events: none;
-	clip-path: circle(
-		var(--xsf-reveal-radius) at var(--xsf-reveal-x) var(--xsf-reveal-y)
+	content: "";
+	background: rgb(255 255 255 / 85%);
+	backdrop-filter: blur(3px);
+	mask-image: radial-gradient(
+		circle var(--xsf-reveal-radius) at var(--xsf-reveal-x) var(--xsf-reveal-y),
+		transparent calc(100% - 1px),
+		black 100%
 	);
+}
+
+@media (prefers-color-scheme: dark) {
+	.xsf-filtered.xsf-revealing::after {
+		background: rgb(0 0 0 / 85%);
+	}
 }
 
 [data-xsf-hide-grok] [data-testid="GrokDrawer"] {
