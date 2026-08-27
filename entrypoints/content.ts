@@ -203,7 +203,11 @@ let lastUrl = typeof location !== "undefined" ? location.href : "";
 const rescanTimers: number[] = [];
 let badgeTimer = 0;
 let lastBadge = -1;
-let reveal: { el: HTMLElement; row: Element } | null = null;
+let reveal: {
+	el: HTMLElement;
+	row: Element;
+	reason: HTMLElement | null;
+} | null = null;
 function reportInitError(error: unknown): void {
 	console.error("[BlueNoise] Content script initialization failed:", error);
 }
@@ -246,6 +250,12 @@ function setRowInert(row: Element, inert: boolean): void {
 }
 
 function hideReveal(): void {
+	if (reveal?.reason) {
+		reveal.reason.classList.remove("xsf-filter-reason-revealing");
+		reveal.reason.style.removeProperty("--xsf-reason-reveal-x");
+		reveal.reason.style.removeProperty("--xsf-reason-reveal-y");
+		reveal.reason.style.removeProperty("--xsf-reason-reveal-radius");
+	}
 	reveal?.el.remove();
 	reveal = null;
 }
@@ -306,13 +316,33 @@ function showReveal(row: Element, x: number, y: number): void {
 		const initialRect = el.getBoundingClientRect();
 		el.style.left = `${rect.left + (rect.left - initialRect.left)}px`;
 		el.style.top = `${rect.top + (rect.top - initialRect.top)}px`;
-		reveal = { el, row };
+		reveal = {
+			el,
+			row,
+			reason: row.querySelector<HTMLElement>(`:scope > .${REASON_CLASS}`),
+		};
 	}
 
 	const cloneRect = reveal.el.getBoundingClientRect();
 	reveal.el.style.setProperty("--xsf-reveal-x", `${x - cloneRect.left}px`);
 	reveal.el.style.setProperty("--xsf-reveal-y", `${y - cloneRect.top}px`);
 	reveal.el.style.setProperty("--xsf-reveal-radius", `${REVEAL_RADIUS}px`);
+	if (reveal.reason) {
+		const reasonRect = reveal.reason.getBoundingClientRect();
+		reveal.reason.classList.add("xsf-filter-reason-revealing");
+		reveal.reason.style.setProperty(
+			"--xsf-reason-reveal-x",
+			`${x - reasonRect.left}px`,
+		);
+		reveal.reason.style.setProperty(
+			"--xsf-reason-reveal-y",
+			`${y - reasonRect.top}px`,
+		);
+		reveal.reason.style.setProperty(
+			"--xsf-reason-reveal-radius",
+			`${REVEAL_RADIUS}px`,
+		);
+	}
 }
 
 function onPointerMove(event: PointerEvent): void {
