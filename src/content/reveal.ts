@@ -22,6 +22,8 @@ export function createRevealController(
 	options: RevealOptions,
 ): RevealController {
 	let reveal: RevealState | null = null;
+	let pointer: { x: number; y: number } | null = null;
+	let syncFrame = 0;
 	let started = false;
 
 	function hide(): void {
@@ -86,6 +88,7 @@ export function createRevealController(
 	}
 
 	function onPointerMove(event: PointerEvent): void {
+		pointer = { x: event.clientX, y: event.clientY };
 		const target = event.target;
 		const row =
 			target instanceof Element
@@ -95,23 +98,47 @@ export function createRevealController(
 		else hide();
 	}
 
+	function syncToPointer(): void {
+		syncFrame = 0;
+		if (!pointer) {
+			hide();
+			return;
+		}
+		const target = document.elementFromPoint(pointer.x, pointer.y);
+		const row = target?.closest(`.${options.filteredClass}`) ?? null;
+		if (row) show(row, pointer.x, pointer.y);
+		else hide();
+	}
+
+	function schedulePointerSync(): void {
+		if (syncFrame) return;
+		syncFrame = window.requestAnimationFrame(syncToPointer);
+	}
+
 	return {
 		start() {
 			if (started) return;
 			started = true;
 			document.addEventListener("pointermove", onPointerMove);
-			window.addEventListener("scroll", hide, {
+			window.addEventListener("scroll", schedulePointerSync, {
 				capture: true,
 				passive: true,
 			});
-			window.addEventListener("resize", hide, { passive: true });
+			window.addEventListener("resize", schedulePointerSync, {
+				passive: true,
+			});
 		},
 		stop() {
 			if (!started) return;
 			started = false;
 			document.removeEventListener("pointermove", onPointerMove);
-			window.removeEventListener("scroll", hide, { capture: true });
-			window.removeEventListener("resize", hide);
+			window.removeEventListener("scroll", schedulePointerSync, {
+				capture: true,
+			});
+			window.removeEventListener("resize", schedulePointerSync);
+			if (syncFrame) window.cancelAnimationFrame(syncFrame);
+			syncFrame = 0;
+			pointer = null;
 			hide();
 		},
 		hide,
