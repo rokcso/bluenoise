@@ -25,8 +25,8 @@ export const DEFAULTS: AppConfig = {
 	hideMessageButton: false,
 	keywordSourceEnabled: {
 		bluenoise: true,
-		"x-spam-filter": true,
-		community: true,
+		"x-spam-filter": false,
+		"x-comment-blocker": false,
 	},
 	matchNames: false,
 	ignoreSpaces: true,
@@ -39,7 +39,7 @@ export const DEFAULTS: AppConfig = {
 	filterFanAccounts: false,
 	filterCommentaryAccounts: false,
 	filterAutomatedAccounts: false,
-	accountSourceEnabled: { bluenoise: true, mxga: true },
+	accountSourceEnabled: { bluenoise: true, mxga: false },
 };
 
 export const DEFAULT_RULE_DATA: RuleData = {
