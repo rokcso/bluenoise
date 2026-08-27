@@ -1,12 +1,19 @@
 import "../src/content/content.css";
 import { setLanguage, t } from "@/lib/i18n";
+import {
+	classifyArticle,
+	type FilteredLog,
+} from "@/src/content/article-classifier";
 import { readFiberUserId } from "@/src/content/fiber";
 import {
 	type FilterReason,
 	formatFilterReason,
 } from "@/src/content/filter-reason";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
+import { createPageMakeoverController } from "@/src/content/page-makeover";
 import { isPromotedPost } from "@/src/content/promoted";
+import { createReplyCountController } from "@/src/content/reply-count";
+import { createRevealController } from "@/src/content/reveal";
 import type {
 	AppConfig,
 	Matchers,
@@ -19,7 +26,6 @@ import {
 	type AccountListSnapshot,
 	buildAccountListIndex,
 	DEFAULT_ACCOUNT_LIST_SOURCES,
-	matchAccountSources,
 	mergeAccountListSnapshots,
 } from "@/src/domain/account-list";
 import {
@@ -27,7 +33,7 @@ import {
 	defaultRuleData,
 	loadConfig,
 } from "@/src/domain/defaults";
-import { buildMatchers, matchDetail } from "@/src/domain/matcher";
+import { buildMatchers } from "@/src/domain/matcher";
 import {
 	addAccountRule,
 	createRuleView,
@@ -46,51 +52,6 @@ const REASON_CLASS = "xsf-filter-reason";
 const INERT_ATTR = "data-xsf-inert";
 const MODE_ATTR = "data-xsf-mode";
 const INVISIBLE_ATTR = "data-xsf-invisible";
-/** When present, hides X's "Subscribe to Premium" upsell card (CSS-driven). */
-const PREMIUM_ATTR = "data-xsf-hide-premium";
-/** When present, hides X's site footer (CSS-driven). */
-const FOOTER_ATTR = "data-xsf-hide-footer";
-/** When present, hides X's current trends panel (CSS-driven). */
-const TRENDS_ATTR = "data-xsf-hide-trends";
-/** When present, hides X's "Who to follow" panel (CSS-driven). */
-const FOLLOW_ATTR = "data-xsf-hide-follow";
-const TITLE_COUNT_ATTR = "data-xsf-hide-title-count";
-const BADGES_ATTR = "data-xsf-hide-notification-badges";
-const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
-const GROK_ATTR = "data-xsf-hide-grok";
-const MESSAGE_ATTR = "data-xsf-hide-message";
-const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
-const SIDEBAR_ATTR = "data-xsf-collapse-sidebar";
-const COMPOSE_ICON_MARK = "data-xsf-compose-icon";
-const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
-/** X's "Live on X" module heading, localized by X's UI language. */
-const LIVE_STREAMS_HEADING_RE = /^(?:X \u4e0a\u7684\u76f4\u64ad|live on x)$/i;
-const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
-
-/** X's header logo link — its aria-label is the stable "X" brand name. */
-const LOGO_SEL = 'a[aria-label="X"] svg';
-/** Marker attribute set on an <svg> while it shows the Twitter blue bird. */
-const BIRD_MARK = "data-xsf-bird";
-let birdData: { viewBox: string; fill: string; path: string } | undefined;
-const TITLE_COUNT_RE = /^\(\d+\+?\)\s*/;
-let titleBeforeCount = "";
-const originalFavicons = new Map<HTMLLinkElement, string>();
-const CLEAN_FAVICON = "https://x.com/favicon.ico";
-
-function getBirdData(): { viewBox: string; fill: string; path: string } {
-	if (birdData) return birdData;
-	const doc = new DOMParser().parseFromString(birdSvg, "image/svg+xml");
-	const source = doc.querySelector("svg");
-	const path = source?.querySelector("path");
-	if (!source || !path) throw new Error("Invalid Twitter logo SVG");
-	const next = {
-		viewBox: source.getAttribute("viewBox") ?? "0 0 248 204",
-		fill: path.getAttribute("fill") ?? "#1d9bf0",
-		path: path.getAttribute("d") ?? "",
-	};
-	birdData = next;
-	return next;
-}
 const OPACITY_VAR = "--xsf-opacity";
 const DIM_OPACITY = 0.15;
 const REVEAL_RADIUS = 40;
@@ -102,6 +63,9 @@ const MUTATION_BURST = 800;
 /** Keep filtering work below a frame budget so X remains responsive. */
 const FLUSH_BUDGET_MS = 8;
 const FLUSH_MAX_ARTICLES = 50;
+const ACCOUNT_SOURCE_NAMES = new Map(
+	DEFAULT_ACCOUNT_LIST_SOURCES.map((source) => [source.id, source.name]),
+);
 
 export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
@@ -128,39 +92,6 @@ let matchers: Matchers = {
 let accountSourceIndexes: { id: string; index: AccountListIndex }[] = [];
 let accountListVersion = 0;
 
-interface DisplayedReplyCountState {
-	button: HTMLButtonElement;
-	text: HTMLElement;
-	originalText: string;
-	injectedText: string;
-	originalAria: string | null;
-	injectedAria: string | null;
-	group: HTMLElement | null;
-	originalGroupAria: string | null;
-	injectedGroupAria: string | null;
-}
-
-interface ComposeIconState {
-	originalChildren: DocumentFragment;
-}
-
-/** Reply-count DOM touched by this script, so it can always be restored. */
-const displayedReplyCounts = new Set<DisplayedReplyCountState>();
-/** Counts learned from a detail page during this SPA session, keyed by tweet id. */
-const replyCountCache = new Map<string, number>();
-/**
- * Every loaded reply in a detail view, keyed by root tweet then reply tweet id.
- * X virtualizes its list, so a reply can leave the DOM while it must remain in
- * the displayed count for the rest of this browsing session.
- */
-const replyLedgers = new Map<string, Map<string, boolean>>();
-const MAX_CACHED_REPLY_THREADS = 50;
-const composeOriginalChildren = new Map<HTMLElement, ComposeIconState>();
-/** Inline styles owned by the compact-sidebar feature, restored on disable. */
-const sidebarOriginalStyles = new Map<HTMLElement, string>();
-/** Original classes for the structural nodes switched to X's native compact form. */
-const sidebarOriginalClasses = new Map<HTMLElement, string>();
-
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
 /** Bumped on config change to invalidate stale results cached in the WeakMap. */
@@ -179,22 +110,6 @@ const pending = new Set<Element>();
 /** Articles whose text/name subtree changed since the last evaluation. */
 const textDirty = new WeakSet<Element>();
 
-/** A single filtered reply, recorded only when debug logging is enabled. */
-interface FilteredLog {
-	handle?: string;
-	id?: string;
-	/** Why it was filtered: a keyword rule or the account blacklist. */
-	category: "keyword" | "account";
-	/** Which text matched, body or display name (keyword hits only). */
-	field?: "body" | "name";
-	/** The raw rule (keyword or /regex/) that matched. */
-	rule?: string;
-	/** Which list the rule came from: a subscription name or "user". */
-	source?: string;
-	kind?: "plain" | "regex";
-	/** Short excerpt of the offending text around the match. */
-	snippet?: string;
-}
 let flushScheduled = false;
 let rafId = 0;
 let flushTimer = 0;
@@ -204,11 +119,14 @@ let lastUrl = typeof location !== "undefined" ? location.href : "";
 const rescanTimers: number[] = [];
 let badgeTimer = 0;
 let lastBadge = -1;
-let reveal: {
-	el: HTMLElement;
-	row: Element;
-	reason: HTMLElement | null;
-} | null = null;
+const revealController = createRevealController({
+	filteredClass: HIT_CLASS,
+	hitAttribute: HIT_ATTR,
+	reasonClass: REASON_CLASS,
+	radius: REVEAL_RADIUS,
+	isEnabled: () =>
+		cfg.enabled && active && cfg.mode === "dim" && cfg.revealOnHover,
+});
 function reportInitError(error: unknown): void {
 	console.error("[BlueNoise] Content script initialization failed:", error);
 }
@@ -248,119 +166,6 @@ function setRowInert(row: Element, inert: boolean): void {
 	if (!el.hasAttribute(INERT_ATTR)) return;
 	el.inert = false;
 	el.removeAttribute(INERT_ATTR);
-}
-
-function hideReveal(): void {
-	if (reveal?.reason) {
-		reveal.reason.classList.remove("xsf-filter-reason-revealing");
-		reveal.reason.style.removeProperty("--xsf-reason-reveal-x");
-		reveal.reason.style.removeProperty("--xsf-reason-reveal-y");
-		reveal.reason.style.removeProperty("--xsf-reason-reveal-radius");
-	}
-	reveal?.el.remove();
-	reveal = null;
-}
-
-/**
- * Strip X's structural testid markers from the reveal overlay. X's virtualized
- * list reconciliation decides which tweets to aria-hide partly by scanning for
- * its own `data-testid` markers. If the overlay kept them, X would see an
- * "extra copy" of the tweet, lose track of the active row, and apply
- * `aria-hidden` to a focused real link — producing the DevTools warning
- * "Blocked aria-hidden on an element because its descendant retained focus."
- * `data-testid` has no layout effect, so visual fidelity is preserved.
- */
-function sanitizeRevealClone(el: HTMLElement): void {
-	for (const node of el.querySelectorAll<HTMLElement>("[data-testid]")) {
-		node.removeAttribute("data-testid");
-	}
-	el.removeAttribute("data-testid");
-}
-
-function showReveal(row: Element, x: number, y: number): void {
-	if (!cfg.enabled || !active || cfg.mode !== "dim" || !cfg.revealOnHover) {
-		hideReveal();
-		return;
-	}
-
-	if (!reveal || reveal.row !== row) {
-		const rect = row.getBoundingClientRect();
-		if (!rect.width || !rect.height) {
-			hideReveal();
-			return;
-		}
-		hideReveal();
-		const el = row.cloneNode(true) as HTMLElement;
-		el.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
-		el.classList.remove(HIT_CLASS);
-		el.classList.add("xsf-reveal");
-		el.removeAttribute(HIT_ATTR);
-		sanitizeRevealClone(el);
-		// The clone contains X links; inert keeps this purely visual overlay out of
-		// both sequential focus navigation and the accessibility tree.
-		el.inert = true;
-		// Do not add a cloned X component into its React-managed list. X reuses
-		// those rows during SPA navigation and can otherwise reconcile focus and
-		// aria-hidden against our extra copy.
-		document.body.append(el);
-		el.style.left = `${rect.left}px`;
-		el.style.top = `${rect.top}px`;
-		el.style.width = `${rect.width}px`;
-		el.style.height = `${rect.height}px`;
-		el.style.margin = "0";
-		el.style.setProperty("opacity", "1", "important");
-		el.style.setProperty("filter", "none", "important");
-
-		// X can transform an ancestor, changing the containing block for fixed
-		// children. Correct that offset once when the clone is created; repeatedly
-		// correcting it during pointer movement causes the reveal to drift.
-		const initialRect = el.getBoundingClientRect();
-		el.style.left = `${rect.left + (rect.left - initialRect.left)}px`;
-		el.style.top = `${rect.top + (rect.top - initialRect.top)}px`;
-		reveal = {
-			el,
-			row,
-			reason: row.querySelector<HTMLElement>(`:scope > .${REASON_CLASS}`),
-		};
-	}
-
-	const cloneRect = reveal.el.getBoundingClientRect();
-	reveal.el.style.setProperty("--xsf-reveal-x", `${x - cloneRect.left}px`);
-	reveal.el.style.setProperty("--xsf-reveal-y", `${y - cloneRect.top}px`);
-	reveal.el.style.setProperty("--xsf-reveal-radius", `${REVEAL_RADIUS}px`);
-	if (reveal.reason) {
-		const reasonRect = reveal.reason.getBoundingClientRect();
-		reveal.reason.classList.add("xsf-filter-reason-revealing");
-		reveal.reason.style.setProperty(
-			"--xsf-reason-reveal-x",
-			`${x - reasonRect.left}px`,
-		);
-		reveal.reason.style.setProperty(
-			"--xsf-reason-reveal-y",
-			`${y - reasonRect.top}px`,
-		);
-		reveal.reason.style.setProperty(
-			"--xsf-reason-reveal-radius",
-			`${REVEAL_RADIUS}px`,
-		);
-	}
-}
-
-function onPointerMove(event: PointerEvent): void {
-	const target = event.target;
-	const row =
-		target instanceof Element ? target.closest(`.${HIT_CLASS}`) : null;
-	if (row) showReveal(row, event.clientX, event.clientY);
-	else hideReveal();
-}
-
-function hookReveal(): void {
-	document.addEventListener("pointermove", onPointerMove);
-	window.addEventListener("scroll", hideReveal, {
-		capture: true,
-		passive: true,
-	});
-	window.addEventListener("resize", hideReveal, { passive: true });
 }
 
 // ==================== DOM reading ====================
@@ -431,190 +236,16 @@ function rowOf(article: Element): Element {
 	return article.closest(CELL_SEL) ?? article;
 }
 
-/** Replace only X's leading metric in an accessible action label. */
-function replaceLabelCount(label: string | null, count: string): string | null {
-	return label?.replace(COUNT_PREFIX_RE, `$1${count} `) ?? null;
-}
-
-function clearDisplayedReplyCounts(): void {
-	for (const state of displayedReplyCounts) {
-		if (state.text.isConnected && state.text.textContent === state.injectedText)
-			state.text.textContent = state.originalText;
-		if (
-			state.button.isConnected &&
-			state.button.getAttribute("aria-label") === state.injectedAria
-		) {
-			if (state.originalAria === null)
-				state.button.removeAttribute("aria-label");
-			else state.button.setAttribute("aria-label", state.originalAria);
-		}
-		if (
-			state.group?.isConnected &&
-			state.group.getAttribute("aria-label") === state.injectedGroupAria
-		) {
-			if (state.originalGroupAria === null)
-				state.group.removeAttribute("aria-label");
-			else state.group.setAttribute("aria-label", state.originalGroupAria);
-		}
-	}
-	displayedReplyCounts.clear();
-}
-
-function isNestedArticle(article: Element): boolean {
-	return Boolean(article.parentElement?.closest(ARTICLE_SEL));
-}
-
-function isAfter(first: Node, second: Node): boolean {
-	return Boolean(
-		first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
-	);
-}
-
-function replyLedgerFor(rootId: string): Map<string, boolean> {
-	const existing = replyLedgers.get(rootId);
-	if (existing) {
-		// Move this thread to the end so the map acts as a small LRU cache.
-		replyLedgers.delete(rootId);
-		replyLedgers.set(rootId, existing);
-		return existing;
-	}
-	const ledger = new Map<string, boolean>();
-	replyLedgers.set(rootId, ledger);
-	while (replyLedgers.size > MAX_CACHED_REPLY_THREADS) {
-		const oldest = replyLedgers.keys().next().value;
-		if (!oldest) break;
-		replyLedgers.delete(oldest);
-		replyCountCache.delete(oldest);
-	}
-	return ledger;
-}
-
-function clearReplyCountCaches(): void {
-	replyCountCache.clear();
-	replyLedgers.clear();
-}
-
-/**
- * Record loaded top-level replies in the current conversation, then count the
- * retained ledger entries. X also puts promoted and "Discover more" content in
- * this region, so neither can be recorded as a reply.
- */
-function recordDisplayedReplyCount(mainTweet: Element): number | null {
-	const conversation = mainTweet.closest('section[role="region"]');
-	if (!conversation) return null;
-	const rootId = tweetIdOf(mainTweet);
-	if (!rootId) return null;
-	const ledger = replyLedgerFor(rootId);
-	const discoverMore = [...conversation.querySelectorAll("h1, h2, h3")].find(
-		(heading) => DISCOVER_MORE_RE.test(heading.textContent?.trim() ?? ""),
-	);
-	for (const article of conversation.querySelectorAll(ARTICLE_SEL)) {
-		if (
-			article === mainTweet ||
-			isNestedArticle(article) ||
-			!isAfter(mainTweet, article) ||
-			(discoverMore && isAfter(discoverMore, article)) ||
-			isPromotedPost(article)
-		)
-			continue;
-		const replyId = tweetIdOf(article);
-		if (replyId)
-			ledger.set(replyId, !rowOf(article).classList.contains(HIT_CLASS));
-	}
-	return [...ledger.values()].filter(Boolean).length;
-}
-
-function tweetIdOf(article: Element): string | null {
-	for (const link of article.querySelectorAll<HTMLAnchorElement>(
-		'a[href*="/status/"]',
-	)) {
-		// The timestamp link belongs to this tweet, unlike a link in quoted media.
-		if (!link.querySelector("time")) continue;
-		const id = link.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1];
-		if (id) return id;
-	}
-	return null;
-}
-
-function renderDisplayedReplyCount(article: Element, count: number): void {
-	const button = article.querySelector<HTMLButtonElement>(
-		'button[data-testid="reply"]',
-	);
-	const container = button?.querySelector<HTMLElement>(
-		'[data-testid="app-text-transition-container"]',
-	);
-	const text = container?.firstElementChild;
-	if (!button || !(text instanceof HTMLElement)) return;
-
-	const formatted = count.toLocaleString();
-	let state = [...displayedReplyCounts].find((item) => item.button === button);
-	if (!state) {
-		const group = button.closest<HTMLElement>('[role="group"]');
-		state = {
-			button,
-			text,
-			originalText: text.textContent ?? "",
-			injectedText: "",
-			originalAria: button.getAttribute("aria-label"),
-			injectedAria: null,
-			group,
-			originalGroupAria: group?.getAttribute("aria-label") ?? null,
-			injectedGroupAria: null,
-		};
-		displayedReplyCounts.add(state);
-	} else {
-		// A React update can replace X's server count in place; retain that latest
-		// value so disabling the extension restores the correct native metric.
-		if (text.textContent !== state.injectedText)
-			state.originalText = text.textContent ?? "";
-		const aria = button.getAttribute("aria-label");
-		if (aria !== state.injectedAria) state.originalAria = aria;
-		const groupAria = state.group?.getAttribute("aria-label") ?? null;
-		if (groupAria !== state.injectedGroupAria)
-			state.originalGroupAria = groupAria;
-	}
-
-	const aria = replaceLabelCount(state.originalAria, formatted);
-	const groupAria = replaceLabelCount(state.originalGroupAria, formatted);
-	if (text.textContent !== formatted) text.textContent = formatted;
-	if (aria !== null && button.getAttribute("aria-label") !== aria)
-		button.setAttribute("aria-label", aria);
-	if (
-		state.group &&
-		groupAria !== null &&
-		state.group.getAttribute("aria-label") !== groupAria
-	)
-		state.group.setAttribute("aria-label", groupAria);
-	state.injectedText = formatted;
-	state.injectedAria = aria;
-	state.injectedGroupAria = groupAria;
-}
-
-function updateDisplayedReplyCount(): void {
-	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isStatusPage()) {
-		clearDisplayedReplyCounts();
-		return;
-	}
-	const mainTweet = [...document.querySelectorAll(ARTICLE_SEL)].find(
-		isMainTweet,
-	);
-	if (!mainTweet) return;
-	const count = recordDisplayedReplyCount(mainTweet);
-	if (count === null) return;
-	const id = tweetIdOf(mainTweet);
-	if (id) replyCountCache.set(id, count);
-	renderDisplayedReplyCount(mainTweet, count);
-}
-
-function updateTimelineReplyCounts(): void {
-	if (!active || !cfg.enabled || !cfg.showActualReplyCount || !isHomeTimeline())
-		return;
-	for (const article of document.querySelectorAll(ARTICLE_SEL)) {
-		const id = tweetIdOf(article);
-		const count = id ? replyCountCache.get(id) : undefined;
-		if (count !== undefined) renderDisplayedReplyCount(article, count);
-	}
-}
+const replyCounts = createReplyCountController({
+	articleSelector: ARTICLE_SEL,
+	filteredClass: HIT_CLASS,
+	isStatusPage,
+	isHomeTimeline,
+	isMainTweet,
+	isPromotedPost,
+	rowOf,
+});
+const pageMakeover = createPageMakeoverController({ birdSvg, isStatusPage });
 
 function applyMark(
 	article: Element,
@@ -666,6 +297,25 @@ function isCardAd(article: Element): boolean {
 	);
 }
 
+function readPresetFilter(
+	article: Element,
+): "ad" | "parody" | "fan" | "commentary" | "automated" | undefined {
+	let preset: ReturnType<typeof readPresetFilter>;
+	if (
+		(cfg.filterAds && isPromotedPost(article)) ||
+		(cfg.filterMediaAds && isMediaAd(article)) ||
+		(cfg.filterCardAds && isCardAd(article))
+	)
+		preset = "ad";
+	if (cfg.filterParodyAccounts && isParodyAccount(article)) preset = "parody";
+	if (cfg.filterFanAccounts && isFanAccount(article)) preset = "fan";
+	if (cfg.filterCommentaryAccounts && isCommentaryAccount(article))
+		preset = "commentary";
+	if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
+		preset = "automated";
+	return preset;
+}
+
 /** Read X's localized account label from its official authenticity link. */
 function getAccountLabel(article: Element): string {
 	return (
@@ -703,477 +353,20 @@ function syncMarkedRowsInteractivity(): void {
 	}
 }
 
-function applyPageCustomizations(): void {
-	const enabled = cfg.pageCleanupEnabled;
-	for (const el of document.querySelectorAll(`[${CUSTOM_HIDDEN_ATTR}]`))
-		el.removeAttribute(CUSTOM_HIDDEN_ATTR);
-	// Title/favicon state must also be restored when the master switch is off.
-	applyTitleAndFavicon();
-	if (!enabled) return;
-
-	const hideAncestors = (element: Element, levels: number): void => {
-		let current: Element | null = element;
-		for (let i = 0; i <= levels && current; i++) {
-			if (current instanceof HTMLElement)
-				current.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-			current = current.parentElement;
-		}
-	};
-	if (cfg.hideFollowSuggestions) {
-		for (const aside of document.querySelectorAll<HTMLElement>(
-			'aside[role="complementary"]:has(> div > h2[role="heading"]):has(> ul[role="list"] > li[data-testid="UserCell"])',
-		))
-			hideAncestors(aside, 2);
-	}
-	if (cfg.hideTimelineFollowSuggestions) {
-		const primary = document.querySelector('[data-testid="primaryColumn"]');
-		const hasTimelineHeading = [
-			...(primary?.querySelectorAll("h2") ?? []),
-		].some((h) => /推荐关注|who to follow/i.test(h.textContent ?? ""));
-		if (hasTimelineHeading) {
-			for (const cell of primary?.querySelectorAll<HTMLElement>(
-				`[data-testid="${"cellInnerDiv"}"]:has([data-testid="UserCell"]), [data-testid="cellInnerDiv"]:has(a[href^="/i/connect_people"])`,
-			) ?? [])
-				cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-		}
-	}
-	if (cfg.hideDiscoverMore && isStatusPage()) {
-		for (const heading of document.querySelectorAll<HTMLElement>(
-			'h2[role="heading"][aria-level="2"]',
-		)) {
-			if (!/发现更多|discover more/i.test(heading.textContent ?? "")) continue;
-			const cell = heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
-			if (!cell) continue;
-			cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-			// Discover more is the final recommendation block on a status page;
-			// its virtualized content is rendered as following sibling cells.
-			for (
-				let next = cell.nextElementSibling;
-				next?.matches('[data-testid="cellInnerDiv"]');
-				next = next.nextElementSibling
-			)
-				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-		}
-	}
-	if (cfg.hideLiveStreams) {
-		for (const heading of document.querySelectorAll<HTMLElement>(
-			'h2[role="heading"][aria-level="2"]',
-		)) {
-			if (!LIVE_STREAMS_HEADING_RE.test(heading.textContent?.trim() ?? ""))
-				continue;
-			// The module root is the closest ancestor that also contains the live
-			// cards, identified by X's impression-tracking marker. Cap the climb so
-			// a heading rendered in its own cell can never hide the whole page.
-			let root: HTMLElement | null = heading.parentElement;
-			for (let depth = 0; root && depth < 6; depth++) {
-				if (root.querySelector('[data-testid="placementTracking"]')) break;
-				root = root.parentElement;
-			}
-			if (root?.querySelector('[data-testid="placementTracking"]'))
-				root.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-			const cell = heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]');
-			if (!cell) {
-				// No cell wrapper: hide the heading and its direct wrappers.
-				hideAncestors(heading, 2);
-				continue;
-			}
-			cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-			// Live-stream rows render as following sibling cells carrying the same
-			// marker; stop at the first cell without it so ordinary tweets after
-			// the module are never hidden.
-			for (
-				let next = cell.nextElementSibling;
-				next?.matches('[data-testid="cellInnerDiv"]');
-				next = next.nextElementSibling
-			) {
-				if (!next.querySelector('[data-testid="placementTracking"]')) break;
-				next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-			}
-		}
-	}
-	if (cfg.hideTrends) {
-		for (const section of document.querySelectorAll<HTMLElement>(
-			'section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"])',
-		))
-			hideAncestors(section, 1);
-	}
-	if (cfg.hideFooter) {
-		for (const nav of document.querySelectorAll<HTMLElement>(
-			'nav[role="navigation"]:has(a[href$="/tos"])',
-		))
-			hideAncestors(nav, 1);
-	}
-	if (cfg.hideNotificationBadges) {
-		for (const badge of document.querySelectorAll<HTMLElement>(
-			'[data-testid="AppTabBar_Home_Link"] svg + div[aria-label], [data-testid="AppTabBar_Notifications_Link"] svg + div[aria-label]',
-		))
-			badge.setAttribute(CUSTOM_HIDDEN_ATTR, "");
-	}
-	if (cfg.hideNewPostsPrompt) {
-		for (const label of document.querySelectorAll<HTMLElement>(
-			'[data-testid="primaryColumn"] [data-testid="pillLabel"]',
-		)) {
-			const pill = label.parentElement;
-			// X wraps the avatar stack in an extra layout container. Match it
-			// anywhere inside the pill rather than requiring a direct child.
-			if (pill?.querySelector('[data-testid="userAvatars"]'))
-				hideAncestors(pill, 0);
-		}
-	}
-	if (cfg.hideGrokButton) {
-		for (const drawer of document.querySelectorAll<HTMLElement>(
-			'[data-testid="GrokDrawer"]',
-		))
-			hideAncestors(drawer, 2);
-	}
-	if (cfg.hideMessageButton) {
-		for (const drawer of document.querySelectorAll<HTMLElement>(
-			'[data-testid="chat-drawer-root"]',
-		))
-			hideAncestors(drawer, 2);
-	}
-}
-
-function applyTitleAndFavicon(): void {
-	const hide = cfg.pageCleanupEnabled && cfg.hideTitleCount;
-	if (hide && document.title && TITLE_COUNT_RE.test(document.title)) {
-		titleBeforeCount ||= document.title;
-		document.title = document.title.replace(TITLE_COUNT_RE, "");
-	} else if (!hide && titleBeforeCount) {
-		if (!TITLE_COUNT_RE.test(document.title)) document.title = titleBeforeCount;
-		titleBeforeCount = "";
-	}
-	const links = document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]');
-	if (hide) {
-		for (const link of links) {
-			if (!originalFavicons.has(link)) originalFavicons.set(link, link.href);
-			link.href = CLEAN_FAVICON;
-		}
-	} else {
-		for (const [link, href] of originalFavicons)
-			if (link.isConnected) link.href = href;
-		originalFavicons.clear();
-	}
-}
-
-function createComposeIcon(): SVGSVGElement {
-	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-	svg.setAttribute("viewBox", "0 0 24 24");
-	svg.setAttribute("aria-hidden", "true");
-	svg.setAttribute("class", "xsf-compose-icon");
-	svg.setAttribute(COMPOSE_ICON_MARK, "");
-	const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-	for (const [pathData, fillRule] of [
-		[
-			"M10.938 4.5H9.9c-1.136 0-1.929 0-2.546.05-.605.05-.953.143-1.216.277-.564.288-1.023.747-1.31 1.31-.135.264-.228.612-.277 1.218C4.5 7.97 4.5 8.765 4.5 9.9v4.2c0 1.136 0 1.929.05 2.546.05.605.143.953.277 1.216.288.565.747 1.023 1.31 1.31.264.135.612.228 1.217.277.617.05 1.41.051 2.546.051h4.2c1.136 0 1.929 0 2.545-.05.606-.05.954-.143 1.217-.277.565-.288 1.023-.746 1.31-1.31.135-.264.228-.612.277-1.217.05-.617.051-1.41.051-2.546v-1.037h2V14.1c0 1.103.001 1.992-.058 2.709-.06.728-.185 1.368-.487 1.96-.48.941-1.245 1.707-2.185 2.186-.593.302-1.233.428-1.961.488-.718.058-1.606.057-2.71.057H9.9c-1.103 0-1.991.001-2.709-.058-.728-.06-1.368-.185-1.96-.487-.941-.48-1.707-1.245-2.186-2.185-.302-.593-.428-1.233-.487-1.961-.059-.718-.058-1.606-.058-2.71V9.9c0-1.103-.001-1.991.058-2.709.06-.728.185-1.368.487-1.96.48-.941 1.245-1.707 2.185-2.186.593-.302 1.233-.428 1.961-.487.718-.059 1.606-.058 2.71-.058h1.037v2z",
-			undefined,
-		],
-		[
-			"M16.293 3.293c1.219-1.219 3.195-1.219 4.414 0 1.219 1.219 1.219 3.195 0 4.414l-5.491 5.491c-.533.533-.89.896-1.31 1.179-.356.24-.742.433-1.148.574-.478.167-.983.234-1.729.341l-2.708.387.387-2.708c.107-.746.174-1.25.34-1.729.142-.405.335-.792.575-1.148.283-.42.646-.777 1.179-1.31l5.491-5.491zm3 1.414c-.438-.438-1.148-.438-1.586 0l-5.491 5.491c-.587.587-.784.79-.934 1.013-.144.214-.26.445-.345.688-.088.254-.131.533-.248 1.354l-.01.067.068-.008c.82-.118 1.1-.161 1.354-.25.243-.084.474-.2.688-.344.223-.15.426-.347 1.013-.934l5.491-5.491c.438-.438.438-1.148 0-1.586z",
-			"evenodd",
-		],
-	] as const) {
-		const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-		path.setAttribute("d", pathData);
-		if (fillRule) {
-			path.setAttribute("clip-rule", fillRule);
-			path.setAttribute("fill-rule", fillRule);
-		}
-		group.append(path);
-	}
-	svg.append(group);
-	return svg;
-}
-
-function restoreSidebarComposeIcons(): void {
-	for (const [content, state] of composeOriginalChildren) {
-		if (
-			content.isConnected &&
-			content.querySelector(`[${COMPOSE_ICON_MARK}]`)
-		) {
-			content.replaceChildren();
-			content.append(state.originalChildren);
-		}
-	}
-	composeOriginalChildren.clear();
-	for (const button of document.querySelectorAll<HTMLElement>(
-		"[data-xsf-compact-compose]",
-	))
-		button.removeAttribute("data-xsf-compact-compose");
-}
-
-function setSidebarStyle(element: HTMLElement, cssText: string): void {
-	if (sidebarOriginalStyles.has(element)) return;
-	sidebarOriginalStyles.set(element, element.style.cssText);
-	element.style.cssText += `;${cssText}`;
-}
-
-function restoreSidebarStyles(): void {
-	for (const [element, cssText] of sidebarOriginalStyles)
-		if (element.isConnected) element.style.cssText = cssText;
-	sidebarOriginalStyles.clear();
-}
-
-function setSidebarClasses(
-	element: HTMLElement,
-	remove: string[],
-	add: string[],
-): void {
-	if (!sidebarOriginalClasses.has(element))
-		sidebarOriginalClasses.set(element, element.className);
-	element.classList.remove(...remove);
-	element.classList.add(...add);
-}
-
-function restoreSidebarClasses(): void {
-	for (const [element, className] of sidebarOriginalClasses)
-		if (element.isConnected) element.className = className;
-	sidebarOriginalClasses.clear();
-	for (const button of document.querySelectorAll<HTMLElement>(
-		"[data-xsf-compact-account]",
-	))
-		button.removeAttribute("data-xsf-compact-account");
-}
-
-/** Remove width declarations written by earlier versions of this feature. */
-function clearLegacySidebarGeometry(element: HTMLElement): void {
-	for (const property of [
-		"width",
-		"min-width",
-		"max-width",
-		"margin-left",
-		"margin-right",
-		"box-sizing",
-		"flex",
-		"transition",
-	]) {
-		if (element.style.getPropertyPriority(property) === "important")
-			element.style.removeProperty(property);
-	}
-}
-
-function applyCompactComposeClasses(button: HTMLAnchorElement): void {
-	button.setAttribute("data-xsf-compact-compose", "");
-	setSidebarStyle(
-		button,
-		"width:52px !important; min-width:52px !important; height:52px !important; min-height:52px !important; border-radius:9999px !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 !important",
-	);
-	const container = button.parentElement;
-	if (container instanceof HTMLElement)
-		setSidebarStyle(
-			container,
-			"width:52px !important; min-width:52px !important; max-width:52px !important; margin-left:0 !important; margin-right:0 !important; align-self:flex-start !important",
-		);
-}
-
-/**
- * Switch the expanded sidebar shell to the same classes X uses when it renders
- * compact navigation itself. Elements are located solely by stable structure.
- */
-function applySidebarCompactLayout(): void {
-	if (!cfg.pageCleanupEnabled || !cfg.collapseSidebar) {
-		restoreSidebarStyles();
-		restoreSidebarClasses();
-		return;
-	}
-	for (const header of document.querySelectorAll<HTMLElement>(
-		'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
-	)) {
-		const widthContainer = header.querySelector<HTMLElement>(":scope > div");
-		const layoutContainer = header.querySelector<HTMLElement>(
-			":scope > div > div > div",
-		);
-		const sidebarColumn =
-			layoutContainer?.querySelector<HTMLElement>(":scope > div");
-		if (widthContainer) clearLegacySidebarGeometry(widthContainer);
-		if (layoutContainer) clearLegacySidebarGeometry(layoutContainer);
-		if (sidebarColumn) clearLegacySidebarGeometry(sidebarColumn);
-		if (widthContainer)
-			setSidebarClasses(widthContainer, ["r-o96wvk"], ["r-1gymjhz"]);
-		if (layoutContainer)
-			setSidebarClasses(layoutContainer, ["r-o96wvk"], ["r-1gymjhz"]);
-		if (sidebarColumn)
-			setSidebarClasses(sidebarColumn, ["r-1habvwh"], ["r-1awozwy"]);
-		const nav = header.querySelector<HTMLElement>('nav[role="navigation"]');
-		if (nav) {
-			const navContainer = nav.parentElement;
-			if (navContainer instanceof HTMLElement) {
-				clearLegacySidebarGeometry(navContainer);
-				setSidebarClasses(navContainer, ["r-1habvwh"], ["r-1awozwy"]);
-			}
-			clearLegacySidebarGeometry(nav);
-			setSidebarClasses(nav, ["r-1habvwh"], ["r-1awozwy"]);
-			for (const control of nav.querySelectorAll<HTMLElement>(
-				":scope > a, :scope > button",
-			)) {
-				clearLegacySidebarGeometry(control);
-				setSidebarClasses(control, ["r-1habvwh"], ["r-cnw61z", "r-1awozwy"]);
-			}
-		}
-		const accountButton = header.querySelector<HTMLElement>(
-			'[data-testid="SideNav_AccountSwitcher_Button"]',
-		);
-		if (accountButton) {
-			accountButton.setAttribute("data-xsf-compact-account", "");
-			const accountContainer = accountButton.parentElement;
-			if (accountContainer instanceof HTMLElement)
-				setSidebarClasses(accountContainer, ["r-1habvwh"], ["r-1awozwy"]);
-			setSidebarClasses(accountButton, ["r-1habvwh"], ["r-1awozwy"]);
-		}
-	}
-}
-
-/** The expanded sidebar has no compose SVG, so reproduce X's compact DOM. */
-function applySidebarComposeIcons(): void {
-	if (!cfg.pageCleanupEnabled || !cfg.collapseSidebar) {
-		restoreSidebarComposeIcons();
-		return;
-	}
-	for (const button of document.querySelectorAll<HTMLAnchorElement>(
-		'a[data-testid="SideNav_NewTweet_Button"]',
-	)) {
-		if (
-			!button.closest(
-				'header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])',
-			)
-		)
-			continue;
-		const content = button.querySelector<HTMLElement>(":scope > div[dir]");
-		if (!content) continue;
-		const injectedIcon = content.querySelector<SVGSVGElement>(
-			`:scope > svg[${COMPOSE_ICON_MARK}]`,
-		);
-		const nativeIcon = [...content.querySelectorAll(":scope > svg")].find(
-			(svg) => svg !== injectedIcon,
-		);
-		// X can append its compact SVG after a partial expanded render. When that
-		// happens, discard our temporary icon and preserve X's native one.
-		if (nativeIcon) {
-			const spacer = injectedIcon?.nextElementSibling;
-			injectedIcon?.remove();
-			if (spacer?.hasAttribute("data-xsf-compose-spacer")) spacer.remove();
-			composeOriginalChildren.delete(content);
-			continue;
-		}
-		if (injectedIcon) {
-			applyCompactComposeClasses(button);
-			continue;
-		}
-		const originalChildren = document.createDocumentFragment();
-		while (content.firstChild) originalChildren.append(content.firstChild);
-		composeOriginalChildren.set(content, {
-			originalChildren,
-		});
-		applyCompactComposeClasses(button);
-		content.append(createComposeIcon());
-		const spacer = document.createElement("div");
-		spacer.setAttribute("data-xsf-compose-spacer", "");
-		const emptyLabel = document.createElement("span");
-		spacer.append(emptyLabel);
-		content.append(spacer);
-	}
-}
-
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
 function applyStyleVars(): void {
 	const root = document.documentElement;
-	// Page customizations apply on every X page, including profile pages. The
-	// filtering effect below remains limited to the home timeline and status
-	// pages via `active`.
-	if (cfg.pageCleanupEnabled && cfg.hidePremiumPromo)
-		root.setAttribute(PREMIUM_ATTR, "");
-	else root.removeAttribute(PREMIUM_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideFooter)
-		root.setAttribute(FOOTER_ATTR, "");
-	else root.removeAttribute(FOOTER_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideTrends)
-		root.setAttribute(TRENDS_ATTR, "");
-	else root.removeAttribute(TRENDS_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideFollowSuggestions)
-		root.setAttribute(FOLLOW_ATTR, "");
-	else root.removeAttribute(FOLLOW_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideTitleCount)
-		root.setAttribute(TITLE_COUNT_ATTR, "");
-	else root.removeAttribute(TITLE_COUNT_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideNotificationBadges)
-		root.setAttribute(BADGES_ATTR, "");
-	else root.removeAttribute(BADGES_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideNewPostsPrompt)
-		root.setAttribute(NEW_POSTS_ATTR, "");
-	else root.removeAttribute(NEW_POSTS_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideGrokButton)
-		root.setAttribute(GROK_ATTR, "");
-	else root.removeAttribute(GROK_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.hideMessageButton)
-		root.setAttribute(MESSAGE_ATTR, "");
-	else root.removeAttribute(MESSAGE_ATTR);
-	if (cfg.pageCleanupEnabled && cfg.collapseSidebar)
-		root.setAttribute(SIDEBAR_ATTR, "");
-	else root.removeAttribute(SIDEBAR_ATTR);
-	applySidebarCompactLayout();
-	applySidebarComposeIcons();
-
-	applyPageCustomizations();
+	pageMakeover.apply(cfg);
 	if (!cfg.enabled || !active) {
 		root.removeAttribute(INVISIBLE_ATTR);
-		hideReveal();
+		revealController.hide();
 		return;
 	}
 	root.setAttribute(MODE_ATTR, cfg.mode === "hide" ? "hide" : "dim");
 	root.style.setProperty(OPACITY_VAR, String(DIM_OPACITY));
 	root.removeAttribute(INVISIBLE_ATTR);
 	syncMarkedRowsInteractivity();
-	if (cfg.mode !== "dim" || !cfg.revealOnHover) hideReveal();
-}
-
-// ==================== Logo replacement ====================
-
-/**
- * Swap X's header "X" mark for the classic Twitter blue bird (or restore it).
- * This is DOM surgery (CSS cannot rewrite an <svg> path), so the original
- * viewBox/path/fill are cached on the element before overwriting so the change
- * is fully reversible. Runs on every X page (not just filterable ones); the
- * BIRD_MARK dedupes re-application when X re-renders the logo during SPA
- * navigation or while the same <svg> is re-scanned.
- */
-function applyLogo(): void {
-	const replace = cfg.pageCleanupEnabled && cfg.useBlueBird;
-	const bird = replace ? getBirdData() : null;
-	for (const svg of document.querySelectorAll<SVGSVGElement>(LOGO_SEL)) {
-		const path = svg.querySelector("path");
-		if (!path) continue;
-		if (replace) {
-			if (!svg.hasAttribute(BIRD_MARK)) {
-				svg.setAttribute(BIRD_MARK, "");
-				svg.dataset.xsfOrigViewBox = svg.getAttribute("viewBox") ?? "";
-				svg.dataset.xsfOrigPath = path.getAttribute("d") ?? "";
-				svg.dataset.xsfOrigFill = path.getAttribute("fill") ?? "";
-			}
-			// X can reconcile the same SVG in place and restore its own path.
-			// Re-apply the bird whenever the current path no longer matches it.
-			if (
-				path.getAttribute("d") === bird?.path &&
-				svg.getAttribute("viewBox") === bird?.viewBox
-			)
-				continue;
-			svg.setAttribute("viewBox", bird?.viewBox ?? "0 0 248 204");
-			path.setAttribute("d", bird?.path ?? "");
-			path.setAttribute("fill", bird?.fill ?? "#1d9bf0");
-		} else if (svg.hasAttribute(BIRD_MARK)) {
-			svg.setAttribute("viewBox", svg.dataset.xsfOrigViewBox || "0 0 24 24");
-			if (svg.dataset.xsfOrigPath)
-				path.setAttribute("d", svg.dataset.xsfOrigPath);
-			if (svg.dataset.xsfOrigFill) {
-				path.setAttribute("fill", svg.dataset.xsfOrigFill);
-			} else {
-				path.removeAttribute("fill");
-			}
-			svg.removeAttribute(BIRD_MARK);
-			delete svg.dataset.xsfOrigViewBox;
-			delete svg.dataset.xsfOrigPath;
-			delete svg.dataset.xsfOrigFill;
-		}
-	}
+	if (cfg.mode !== "dim" || !cfg.revealOnHover) revealController.hide();
 }
 
 // ==================== Evaluation ====================
@@ -1204,11 +397,6 @@ function evaluate(article: Element): {
 		return { fresh: false, log: null };
 	}
 
-	const mainTweet = isMainTweet(article);
-	let hit: string | null = null;
-	let reason: FilterReason | null = null;
-	let log: FilteredLog | null = null;
-
 	// Account matching needs the numeric user id (React internals); keyword
 	// matching only needs the @handle from the DOM.
 	const externalAccountSourcesActive = Object.values(
@@ -1219,8 +407,11 @@ function evaluate(article: Element): {
 		ruleView.accountWhitelist.length > 0 ||
 		ruleView.accountBlacklist.length > 0;
 
+	let decision = { hit: null, reason: null, log: null } as ReturnType<
+		typeof classifyArticle
+	>;
 	if (
-		!mainTweet &&
+		!isMainTweet(article) &&
 		(matchers.count > 0 ||
 			accountListsActive ||
 			cfg.filterAds ||
@@ -1231,106 +422,30 @@ function evaluate(article: Element): {
 			cfg.filterCommentaryAccounts ||
 			cfg.filterAutomatedAccounts)
 	) {
-		if (
-			(cfg.filterAds && isPromotedPost(article)) ||
-			(cfg.filterMediaAds && isMediaAd(article)) ||
-			(cfg.filterCardAds && isCardAd(article))
-		) {
-			hit = "__ad__";
-			reason = { category: "preset", type: "ad" };
-		}
-		if (cfg.filterParodyAccounts && isParodyAccount(article)) {
-			hit = "__parody__";
-			reason = { category: "preset", type: "parody" };
-		}
-		if (cfg.filterFanAccounts && isFanAccount(article)) {
-			hit = "__fan__";
-			reason = { category: "preset", type: "fan" };
-		}
-		if (cfg.filterCommentaryAccounts && isCommentaryAccount(article)) {
-			hit = "__commentary__";
-			reason = { category: "preset", type: "commentary" };
-		}
-		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article)) {
-			hit = "__automated__";
-			reason = { category: "preset", type: "automated" };
-		}
-		if (hit) {
-			state.set(article, { sig, hit, reason, log });
-			applyMark(article, hit, reason);
-			return { fresh: true, log };
-		}
-		const identity = readAuthorIdentity(article, accountListsActive);
-		const accountMatch = matchAccountSources(
-			externalAccountSourcesActive ? accountSourceIndexes : [],
-			identity,
-			ruleView.accountWhitelist,
-			ruleView.accountBlacklist,
+		const preset = readPresetFilter(article);
+		decision = classifyArticle(
+			{
+				body: text,
+				name,
+				identity: preset ? {} : readAuthorIdentity(article, accountListsActive),
+				preset,
+			},
+			{
+				matchers,
+				accountSources: externalAccountSourcesActive
+					? accountSourceIndexes
+					: [],
+				accountWhitelist: ruleView.accountWhitelist,
+				accountBlacklist: ruleView.accountBlacklist,
+				accountSourceNames: ACCOUNT_SOURCE_NAMES,
+				debugLogging: cfg.debugLogging,
+			},
 		);
-		if (accountMatch?.decision === "blacklist") {
-			hit = "account:blacklist";
-			const source =
-				accountMatch.source === "user"
-					? "user"
-					: (DEFAULT_ACCOUNT_LIST_SOURCES.find(
-							(item) => item.id === accountMatch.source,
-						)?.name ?? accountMatch.source);
-			reason = { category: "account", source };
-			log = {
-				handle: identity.handle,
-				id: identity.id,
-				category: "account",
-			};
-		} else if (accountMatch?.decision !== "whitelist") {
-			const bodyMatch = matchDetail(matchers, text);
-			const nameMatch = name ? matchDetail(matchers, name) : null;
-			if (bodyMatch) {
-				hit = bodyMatch.hit;
-				reason = {
-					category: "keyword",
-					kind: bodyMatch.kind,
-					rule: bodyMatch.rule,
-					source: bodyMatch.source ?? "user",
-				};
-				if (cfg.debugLogging) {
-					log = {
-						handle: identity.handle,
-						id: identity.id,
-						category: "keyword",
-						field: "body",
-						rule: bodyMatch.hit,
-						source: bodyMatch.source ?? undefined,
-						kind: bodyMatch.kind,
-						snippet: bodyMatch.snippet,
-					};
-				}
-			} else if (nameMatch) {
-				hit = nameMatch.hit;
-				reason = {
-					category: "keyword",
-					kind: nameMatch.kind,
-					rule: nameMatch.rule,
-					source: nameMatch.source ?? "user",
-				};
-				if (cfg.debugLogging) {
-					log = {
-						handle: identity.handle,
-						id: identity.id,
-						category: "keyword",
-						field: "name",
-						rule: nameMatch.hit,
-						source: nameMatch.source ?? undefined,
-						kind: nameMatch.kind,
-						snippet: nameMatch.snippet,
-					};
-				}
-			}
-		}
 	}
 
-	state.set(article, { sig, hit, reason, log });
-	applyMark(article, hit, reason);
-	return { fresh: true, log };
+	state.set(article, { sig, ...decision });
+	applyMark(article, decision.hit, decision.reason);
+	return { fresh: true, log: decision.log };
 }
 
 /** One readable log line per filtered reply, then a reason breakdown. */
@@ -1454,8 +569,12 @@ function flush(): void {
 	}
 	// Run after every queued reply has received its filtering mark, so the
 	// number mirrors what remains in the conversation rather than X's total.
-	if (isStatusPage()) updateDisplayedReplyCount();
-	else if (isHomeTimeline()) updateTimelineReplyCounts();
+	if (isStatusPage())
+		replyCounts.updateDetail(active && cfg.enabled && cfg.showActualReplyCount);
+	else if (isHomeTimeline())
+		replyCounts.updateTimeline(
+			active && cfg.enabled && cfg.showActualReplyCount,
+		);
 	scheduleBadge();
 }
 
@@ -1561,10 +680,7 @@ function onMutations(records: MutationRecord[]): void {
  * header/sidebar queries on the content-filtering hot path. */
 function onCleanupMutations(): void {
 	if (!cfg.pageCleanupEnabled) return;
-	applyLogo();
-	applySidebarCompactLayout();
-	applySidebarComposeIcons();
-	applyPageCustomizations();
+	pageMakeover.apply(cfg);
 	// Also catch route changes made by X without relying solely on history hooks.
 	refreshForUrlChange();
 }
@@ -1828,7 +944,7 @@ function scheduleRescans(): void {
 	for (const delay of RESCAN_DELAYS) {
 		rescanTimers.push(
 			window.setTimeout(() => {
-				applyLogo();
+				pageMakeover.apply(cfg);
 				fullScan();
 			}, delay),
 		);
@@ -1845,7 +961,7 @@ function stop(): void {
 	clearRescanTimers();
 	pending.clear();
 	clearAllMarks();
-	clearDisplayedReplyCounts();
+	replyCounts.clearRendered();
 	applyStyleVars();
 	scheduleBadge();
 }
@@ -1873,16 +989,12 @@ function teardown(): void {
 	unhookTweetMenu();
 	cleanupObserver?.disconnect();
 	cleanupObserver = null;
-	document.removeEventListener("pointermove", onPointerMove);
-	window.removeEventListener("scroll", hideReveal, { capture: true });
-	window.removeEventListener("resize", hideReveal);
+	revealController.stop();
 	window.removeEventListener("popstate", onUrlChange);
 	window.removeEventListener("pageshow", onPageShow);
 	document.removeEventListener("visibilitychange", onVisibility);
-	restoreSidebarComposeIcons();
-	restoreSidebarStyles();
-	restoreSidebarClasses();
-	hideReveal();
+	pageMakeover.reset();
+	revealController.hide();
 	pending.clear();
 }
 
@@ -1890,13 +1002,14 @@ function refresh(
 	options: { rebuild?: boolean; clearReplyCountCache?: boolean } = {},
 ): void {
 	if (options.rebuild) refreshMatchers();
-	if (options.rebuild || options.clearReplyCountCache) clearReplyCountCaches();
+	if (options.rebuild || options.clearReplyCountCache)
+		replyCounts.clearCaches();
 	generation++;
 	// A visual clone is owned by this script rather than X's virtualized list.
 	// It must never survive a SPA route transition.
-	hideReveal();
+	revealController.hide();
 	pending.clear();
-	clearDisplayedReplyCounts();
+	replyCounts.clearRendered();
 	active = isFilterablePage();
 
 	if (!cfg.enabled || !active) {
@@ -2012,7 +1125,7 @@ function watchConfig(): void {
 		void readStoredState().then(() => {
 			updateAccountSources(rules);
 			setLanguage(cfg.language);
-			applyLogo();
+			pageMakeover.apply(cfg);
 			if (cfg.pageCleanupEnabled) startCleanupObserving();
 			else stopCleanupObserving();
 			if (
@@ -2029,9 +1142,9 @@ function watchConfig(): void {
 			if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
 		});
 		if (prev.showActualReplyCount !== cfg.showActualReplyCount) {
-			if (!cfg.showActualReplyCount) clearDisplayedReplyCounts();
-			else if (isHomeTimeline()) updateTimelineReplyCounts();
-			else updateDisplayedReplyCount();
+			if (!cfg.showActualReplyCount) replyCounts.clearRendered();
+			else if (isHomeTimeline()) replyCounts.updateTimeline(true);
+			else replyCounts.updateDetail(true);
 		}
 
 		if (!prev.debugLogging && cfg.debugLogging) {
@@ -2061,14 +1174,14 @@ async function init(): Promise<void> {
 	refreshMatchers();
 	watchConfig();
 	hookHistory();
-	hookReveal();
+	revealController.start();
 	// Tweet-menu injection works on every X page, independent of filtering state.
 	hookTweetMenu();
 	// Keep the observer alive off status pages as well. It is the reliable
 	// fallback that notices a later X SPA transition back to a status page.
 	startObserving();
 	startCleanupObserving();
-	applyLogo();
+	pageMakeover.apply(cfg);
 
 	active = isFilterablePage();
 	debugLog("Initialized", {
