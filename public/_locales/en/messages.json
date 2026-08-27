@@ -213,6 +213,10 @@
 	"hide_premium_promo_hint": {
 		"message": "Remove the \"Subscribe to Premium\" card from your timeline."
 	},
+	"hide_premium_feature_prompt": { "message": "Hide Premium feature prompts" },
+	"hide_premium_feature_prompt_hint": {
+		"message": "Remove timeline cards describing your unlocked Premium features."
+	},
 	"layout": { "message": "Layout" },
 	"hide_follow_suggestions": { "message": "Hide follow suggestions" },
 	"hide_follow_suggestions_hint": {

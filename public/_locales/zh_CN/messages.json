@@ -209,6 +209,10 @@
 	"hide_premium_promo_hint": {
 		"message": "从你的时间线中移除「订阅 Premium」卡片。"
 	},
+	"hide_premium_feature_prompt": { "message": "隐藏 Premium 功能提示" },
+	"hide_premium_feature_prompt_hint": {
+		"message": "移除时间线中的「你已解锁 20 多项 Premium 功能」提示卡片。"
+	},
 	"layout": { "message": "布局" },
 	"hide_follow_suggestions": { "message": "隐藏推荐关注" },
 	"hide_follow_suggestions_hint": {

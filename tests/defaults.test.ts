@@ -6,4 +6,9 @@ describe("configuration defaults", () => {
 		expect(loadConfig(undefined).showFilterReason).toBe(true);
 		expect(loadConfig({ enabled: true }).showFilterReason).toBe(true);
 	});
+
+	it("leaves the Premium feature prompt visible until explicitly hidden", () => {
+		expect(loadConfig(undefined).hidePremiumFeaturePrompt).toBe(false);
+		expect(loadConfig({ enabled: true }).hidePremiumFeaturePrompt).toBe(false);
+	});
 });

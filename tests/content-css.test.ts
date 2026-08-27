@@ -29,3 +29,11 @@ describe("hover reveal styles", () => {
 		expect(css).not.toContain(".xsf-reveal {");
 	});
 });
+
+describe("Premium feature prompt styles", () => {
+	it("hide the entire timeline cell using stable prompt markers", () => {
+		expect(css).toContain("[data-xsf-hide-premium-feature-prompt]");
+		expect(css).toContain('[data-testid="inlinePrompt"] a[href^="/i/premium"]');
+		expect(css).not.toContain("你已解锁");
+	});
+});

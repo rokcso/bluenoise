@@ -152,6 +152,7 @@ export function SettingsApp({
 		| "hideLiveStreams"
 		| "hideFooter"
 		| "hidePremiumPromo"
+		| "hidePremiumFeaturePrompt"
 		| "useBlueBird";
 
 	/**
@@ -442,6 +443,13 @@ export function SettingsApp({
 									hint={t("hide_premium_promo_hint")}
 									checked={config.hidePremiumPromo}
 									onChange={toggleMakeover("hidePremiumPromo")}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_premium_feature_prompt")}
+									hint={t("hide_premium_feature_prompt_hint")}
+									checked={config.hidePremiumFeaturePrompt}
+									onChange={toggleMakeover("hidePremiumFeaturePrompt")}
 								/>
 								<SettingsDivider />
 								<XToggle
