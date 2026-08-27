@@ -53,11 +53,11 @@
 		}
 	},
 	"keyword_count_one": {
-		"message": "$1 个关键词",
+		"message": "$1 个屏蔽关键词",
 		"placeholders": { "count": { "content": "$1" } }
 	},
 	"keyword_count_other": {
-		"message": "$1 个关键词",
+		"message": "$1 个屏蔽关键词",
 		"placeholders": { "count": { "content": "$1" } }
 	},
 	"not_synced": { "message": "未同步" },
