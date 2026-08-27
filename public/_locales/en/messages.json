@@ -34,7 +34,7 @@
 	"filter_reason_fan": { "message": "Fan account" },
 	"filter_reason_commentary": { "message": "Commentary account" },
 	"filter_reason_automated": { "message": "Automated account" },
-	"external_keywords": { "message": "External keywords" },
+	"external_keywords": { "message": "External keyword blacklists" },
 	"account_source_link": { "message": "View public data and audit history" },
 	"account_blacklist_hint": {
 		"message": "Local account blacklist. Enter one numeric X ID or @handle per line."
@@ -109,12 +109,12 @@
 	},
 	"rule_import_confirm": { "message": "Confirm import" },
 	"cancel": { "message": "Cancel" },
-	"my_keywords": { "message": "My keywords" },
+	"my_keywords": { "message": "My keyword blacklist" },
 	"my_keywords_hint": {
 		"message": "Add words or regular expressions that should trigger filtering. Use one rule per line."
 	},
 	"my_keywords_placeholder": { "message": "spam\n/keyword/i" },
-	"whitelist_title": { "message": "Whitelist" },
+	"whitelist_title": { "message": "My keyword whitelist" },
 	"whitelist_hint": {
 		"message": "Replies or posts matching these rules are never filtered. Use one rule per line."
 	},
@@ -131,13 +131,13 @@
 	"general": { "message": "General" },
 	"appearance": { "message": "Appearance" },
 	"extension": { "message": "Toolbar" },
-	"keywords": { "message": "Keywords" },
-	"accounts": { "message": "Accounts" },
+	"keywords": { "message": "Keyword rules" },
+	"accounts": { "message": "Account rules" },
 	"filtering": { "message": "Filtering" },
 	"advanced": { "message": "Advanced" },
 	"content_filters": { "message": "Content filters" },
 	"account_filtering": { "message": "Account filtering" },
-	"external_account_sources": { "message": "External account sources" },
+	"external_account_sources": { "message": "External account blacklist" },
 	"account_blacklist_title": { "message": "My account blacklist" },
 	"account_whitelist_title": { "message": "My account whitelist" },
 	"about": { "message": "About" },

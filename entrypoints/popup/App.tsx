@@ -114,8 +114,8 @@ export default function App() {
 
 export type SettingsSection =
 	| "general"
-	| "keywords"
-	| "accounts"
+	| "keyword-rules"
+	| "account-rules"
 	| "backup"
 	| "filtering"
 	| "advanced"
@@ -124,7 +124,7 @@ export type SettingsSection =
 
 /** Full configuration screen rendered from the extension's Options page. */
 export function SettingsApp({
-	activeSection = "keywords",
+	activeSection = "keyword-rules",
 }: {
 	activeSection?: SettingsSection;
 }) {
@@ -197,7 +197,7 @@ export function SettingsApp({
 					</>
 				)}
 
-				{activeSection === "keywords" && (
+				{activeSection === "keyword-rules" && (
 					<>
 						<PageHeading title={t("keywords")} />
 						<div className="options-panel-stack">
@@ -242,7 +242,7 @@ export function SettingsApp({
 					</>
 				)}
 
-				{activeSection === "accounts" && (
+				{activeSection === "account-rules" && (
 					<>
 						<PageHeading title={t("accounts")} />
 						<SettingsGroup
@@ -756,7 +756,8 @@ function AccountListSettings({
 				.map((source) => {
 					const snapshot = snapshots[source.id];
 					const status = snapshot
-						? source.format === "one-per-line"
+						? source.format === "one-per-line" ||
+							source.includeWhitelist === false
 							? `${t("account_blacklist_count", String(snapshot.blacklistCount))} · ${t("last_synced", new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(snapshot.syncedAt))}`
 							: t(
 									"account_status",

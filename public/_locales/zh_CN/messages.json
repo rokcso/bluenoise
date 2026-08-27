@@ -34,7 +34,7 @@
 	"filter_reason_fan": { "message": "粉丝账号" },
 	"filter_reason_commentary": { "message": "评论账号" },
 	"filter_reason_automated": { "message": "自动发帖账号" },
-	"external_keywords": { "message": "外部关键词" },
+	"external_keywords": { "message": "外部关键词黑名单" },
 	"account_source_link": { "message": "查看公开数据与审计历史" },
 	"account_blacklist_hint": {
 		"message": "本地账号黑名单。每行填写一个 X 数字 ID 或 @用户名。"
@@ -109,12 +109,12 @@
 	},
 	"rule_import_confirm": { "message": "确认导入" },
 	"cancel": { "message": "取消" },
-	"my_keywords": { "message": "我的关键词" },
+	"my_keywords": { "message": "我的关键词黑名单" },
 	"my_keywords_hint": {
 		"message": "添加要触发过滤的关键词或正则表达式，每行一条。"
 	},
 	"my_keywords_placeholder": { "message": "推广\n/关键词/i" },
-	"whitelist_title": { "message": "白名单" },
+	"whitelist_title": { "message": "我的关键词白名单" },
 	"whitelist_hint": {
 		"message": "命中这些规则的回复或推文不会被过滤，每行一条。"
 	},
@@ -127,13 +127,13 @@
 	"general": { "message": "常规" },
 	"appearance": { "message": "外观" },
 	"extension": { "message": "工具栏" },
-	"keywords": { "message": "关键词" },
-	"accounts": { "message": "账号" },
+	"keywords": { "message": "关键词规则" },
+	"accounts": { "message": "账号规则" },
 	"filtering": { "message": "过滤" },
 	"advanced": { "message": "高级设置" },
 	"content_filters": { "message": "内容过滤" },
 	"account_filtering": { "message": "账号过滤" },
-	"external_account_sources": { "message": "外部账号来源" },
+	"external_account_sources": { "message": "外部账号黑名单" },
 	"account_blacklist_title": { "message": "我的账号黑名单" },
 	"account_whitelist_title": { "message": "我的账号白名单" },
 	"about": { "message": "关于" },
