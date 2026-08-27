@@ -141,30 +141,30 @@
 	"account_blacklist_title": { "message": "My account blacklist" },
 	"account_whitelist_title": { "message": "My account whitelist" },
 	"about": { "message": "About" },
-	"about_intro_before_platform": { "message": "An " },
+	"about_intro_before_platform": { "message": "A calmer way to read " },
 	"about_intro_after_platform": {
-		"message": " reading tool that runs in your browser. You define the rules and the boundaries."
+		"message": ", right in your browser. Set the rules, then get back to what you came for."
 	},
-	"about_idea_title": { "message": "Put the feed back in the reader's hands" },
+	"about_idea_title": { "message": "A feed with room to think" },
 	"about_idea_body_after_platform": {
-		"message": " has never lacked information. What it often lacks is room for your own judgment. BlueNoise gives the filtering decisions back to you. All data and logic stay in your browser. It never touches your account, calls the "
+		"message": " is full of information, but too much of it competes for your attention. BlueNoise lets you decide what stays visible. Your rules and data remain in your browser. It never touches your account, calls the "
 	},
 	"about_idea_body_after_api": {
-		"message": " API, or collects your data. The controls are deliberately detailed because you should decide what appears in your timeline and what stops appearing there."
+		"message": " API, or collects personal data."
 	},
 	"x_platform": { "message": "X" },
 	"twitter_platform": { "message": "Twitter" },
 	"about_name_title": { "message": "Why BlueNoise" },
 	"about_name_body": {
-		"message": "Blue noise appears in image and signal processing. It spreads interference out instead of letting it gather into distracting clumps. The name does not mean eliminating every bit of noise. A good feed can still have surprise and disagreement. It just should not waste your attention on repetition, manipulation, or empty interruption."
+		"message": "Blue noise is used in image and signal processing. It spreads interference out instead of letting it collect in distracting patches. That is the idea here. A good feed still has surprise and disagreement; it just does not need to keep asking for your attention with repetition, bait, and clutter."
 	},
-	"about_open_title": { "message": "You should be able to see what it does" },
+	"about_open_title": { "message": "Open to inspection" },
 	"about_open_body": {
-		"message": "BlueNoise is open source. You can inspect the code, ask questions, and help improve it. We do not think you should have to trust an extension before you are allowed to use it. Its behavior should be clear in its features and code, not buried in permission text or vague promises."
+		"message": "BlueNoise is open source. You can read the code, ask questions, or help improve it. An extension should earn your trust by making its behavior easy to inspect, not by asking you to take its word for it."
 	},
 	"about_studio_title": { "message": "Built by Coryso Studio" },
 	"about_studio_body": {
-		"message": "BlueNoise is made by Coryso Studio, an independent product studio creating thoughtful digital tools for clearer, calmer work. Visit us to discover more products built with the same care."
+		"message": "Coryso Studio is an independent product studio. We make focused digital tools that fit the way people actually work. BlueNoise is one of them. Visit us to see what else we are building."
 	},
 	"about_links_label": { "message": "BlueNoise links" },
 	"about_github": { "message": "View on GitHub" },
