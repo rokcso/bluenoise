@@ -11,9 +11,7 @@
 [data-xsf-mode] .xsf-filtered > :not(.xsf-filter-reason) {
 	opacity: var(--xsf-opacity);
 	filter: blur(3px);
-	transition:
-		opacity 0.2s ease,
-		filter 0.2s ease;
+	transition: opacity 0.2s ease;
 }
 
 .xsf-filtered {

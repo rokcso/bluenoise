@@ -28,6 +28,11 @@ describe("hover reveal styles", () => {
 		expect(css).toContain("mask-image: radial-gradient(");
 		expect(css).not.toContain(".xsf-reveal {");
 	});
+
+	it("restores blur without transitioning through a clear frame", () => {
+		expect(css).toContain("transition: opacity 0.2s ease;");
+		expect(css).not.toContain("filter 0.2s ease");
+	});
 });
 
 describe("Premium feature prompt styles", () => {
