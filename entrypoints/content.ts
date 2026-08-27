@@ -1,6 +1,10 @@
 import "../src/content/content.css";
 import { setLanguage, t } from "@/lib/i18n";
 import { readFiberUserId } from "@/src/content/fiber";
+import {
+	type FilterReason,
+	formatFilterReason,
+} from "@/src/content/filter-reason";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import type {
 	AppConfig,
@@ -14,7 +18,7 @@ import {
 	type AccountListSnapshot,
 	buildAccountListIndex,
 	DEFAULT_ACCOUNT_LIST_SOURCES,
-	matchAccountIndex,
+	matchAccountSources,
 	mergeAccountListSnapshots,
 } from "@/src/domain/account-list";
 import {
@@ -22,7 +26,7 @@ import {
 	defaultRuleData,
 	loadConfig,
 } from "@/src/domain/defaults";
-import { buildMatchers, matchAny, matchDetail } from "@/src/domain/matcher";
+import { buildMatchers, matchDetail } from "@/src/domain/matcher";
 import {
 	addAccountRule,
 	createRuleView,
@@ -37,6 +41,7 @@ const NAME_SEL = '[data-testid="User-Name"], [data-testid="userName"]';
 const HIT_CLASS = "xsf-filtered";
 const SEP = "\u001f";
 const HIT_ATTR = "data-xsf-keyword";
+const REASON_CLASS = "xsf-filter-reason";
 const INERT_ATTR = "data-xsf-inert";
 const MODE_ATTR = "data-xsf-mode";
 const INVISIBLE_ATTR = "data-xsf-invisible";
@@ -119,7 +124,7 @@ let matchers: Matchers = {
 	custom: [],
 	count: 0,
 };
-let accountIndex: AccountListIndex | undefined;
+let accountSourceIndexes: { id: string; index: AccountListIndex }[] = [];
 let accountListVersion = 0;
 
 interface DisplayedReplyCountState {
@@ -162,7 +167,12 @@ let generation = 0;
 
 const state = new WeakMap<
 	Element,
-	{ sig: string; hit: string | null; log: FilteredLog | null }
+	{
+		sig: string;
+		hit: string | null;
+		reason: FilterReason | null;
+		log: FilteredLog | null;
+	}
 >();
 const pending = new Set<Element>();
 /** Articles whose text/name subtree changed since the last evaluation. */
@@ -211,6 +221,7 @@ function clearAllMarks(): void {
 	for (const el of document.querySelectorAll(`.${HIT_CLASS}`)) {
 		el.classList.remove(HIT_CLASS);
 		el.removeAttribute(HIT_ATTR);
+		el.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
 		setRowInert(el, false);
 	}
 }
@@ -269,6 +280,7 @@ function showReveal(row: Element, x: number, y: number): void {
 		}
 		hideReveal();
 		const el = row.cloneNode(true) as HTMLElement;
+		el.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
 		el.classList.remove(HIT_CLASS);
 		el.classList.add("xsf-reveal");
 		el.removeAttribute(HIT_ATTR);
@@ -573,15 +585,34 @@ function updateTimelineReplyCounts(): void {
 	}
 }
 
-function applyMark(article: Element, hit: string | null): void {
+function applyMark(
+	article: Element,
+	hit: string | null,
+	reason: FilterReason | null = null,
+): void {
 	const row = rowOf(article);
 	if (hit) {
 		setRowInert(row, cfg.mode === "hide");
 		row.classList.add(HIT_CLASS);
 		row.setAttribute(HIT_ATTR, hit);
+		let label = row.querySelector<HTMLElement>(`:scope > .${REASON_CLASS}`);
+		if (reason && cfg.mode === "dim") {
+			const detail = formatFilterReason(reason, t);
+			const text = t("filter_reason_label", detail);
+			if (!label) {
+				label = document.createElement("div");
+				label.className = REASON_CLASS;
+				row.append(label);
+			}
+			label.textContent = text;
+			label.title = text;
+		} else {
+			label?.remove();
+		}
 	} else if (row.classList.contains(HIT_CLASS)) {
 		row.classList.remove(HIT_CLASS);
 		row.removeAttribute(HIT_ATTR);
+		row.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
 		setRowInert(row, false);
 	}
 }
@@ -1134,19 +1165,23 @@ function evaluate(article: Element): {
 		cached &&
 		!textDirty.has(article) &&
 		cached.sig.startsWith(`${generation}${SEP}${accountListVersion}${SEP}`)
-	)
+	) {
+		applyMark(article, cached.hit, cached.reason);
 		return { fresh: false, log: null };
+	}
 	textDirty.delete(article);
 	const text = readText(article.querySelector(TEXT_SEL));
 	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
 	const sig = [generation, accountListVersion, text, name].join(SEP);
 
 	if (cached && cached.sig === sig) {
+		applyMark(article, cached.hit, cached.reason);
 		return { fresh: false, log: null };
 	}
 
 	const mainTweet = isMainTweet(article);
 	let hit: string | null = null;
+	let reason: FilterReason | null = null;
 	let log: FilteredLog | null = null;
 
 	// Account matching needs the numeric user id (React internals); keyword
@@ -1175,40 +1210,64 @@ function evaluate(article: Element): {
 			(cfg.filterAds && isPromotedPost(article)) ||
 			(cfg.filterMediaAds && isMediaAd(article)) ||
 			(cfg.filterCardAds && isCardAd(article))
-		)
+		) {
 			hit = "__ad__";
-		if (cfg.filterParodyAccounts && isParodyAccount(article))
+			reason = { category: "preset", type: "ad" };
+		}
+		if (cfg.filterParodyAccounts && isParodyAccount(article)) {
 			hit = "__parody__";
-		if (cfg.filterFanAccounts && isFanAccount(article)) hit = "__fan__";
-		if (cfg.filterCommentaryAccounts && isCommentaryAccount(article))
+			reason = { category: "preset", type: "parody" };
+		}
+		if (cfg.filterFanAccounts && isFanAccount(article)) {
+			hit = "__fan__";
+			reason = { category: "preset", type: "fan" };
+		}
+		if (cfg.filterCommentaryAccounts && isCommentaryAccount(article)) {
 			hit = "__commentary__";
-		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
+			reason = { category: "preset", type: "commentary" };
+		}
+		if (cfg.filterAutomatedAccounts && isAutomatedAccount(article)) {
 			hit = "__automated__";
+			reason = { category: "preset", type: "automated" };
+		}
 		if (hit) {
-			state.set(article, { sig, hit, log });
-			applyMark(article, hit);
+			state.set(article, { sig, hit, reason, log });
+			applyMark(article, hit, reason);
 			return { fresh: true, log };
 		}
 		const identity = readAuthorIdentity(article, accountListsActive);
-		const accountMatch = matchAccountIndex(
-			externalAccountSourcesActive ? accountIndex : undefined,
+		const accountMatch = matchAccountSources(
+			externalAccountSourcesActive ? accountSourceIndexes : [],
 			identity,
 			ruleView.accountWhitelist,
 			ruleView.accountBlacklist,
 		);
-		if (accountMatch === "blacklist") {
+		if (accountMatch?.decision === "blacklist") {
 			hit = "account:blacklist";
+			const source =
+				accountMatch.source === "user"
+					? "user"
+					: (DEFAULT_ACCOUNT_LIST_SOURCES.find(
+							(item) => item.id === accountMatch.source,
+						)?.name ?? accountMatch.source);
+			reason = { category: "account", source };
 			log = {
 				handle: identity.handle,
 				id: identity.id,
 				category: "account",
 			};
-		} else if (accountMatch !== "whitelist") {
-			if (cfg.debugLogging) {
-				const bodyMatch = matchDetail(matchers, text);
-				const nameMatch = name ? matchDetail(matchers, name) : null;
-				if (bodyMatch) {
-					hit = bodyMatch.hit;
+		} else if (accountMatch?.decision !== "whitelist") {
+			const bodyMatch = matchDetail(matchers, text);
+			const nameMatch = name ? matchDetail(matchers, name) : null;
+			if (bodyMatch) {
+				hit = bodyMatch.hit;
+				reason = {
+					category: "keyword",
+					kind: bodyMatch.kind,
+					rule: bodyMatch.rule,
+					source: bodyMatch.source ?? "user",
+				};
+				if (cfg.debugLogging) {
 					log = {
 						handle: identity.handle,
 						id: identity.id,
@@ -1219,8 +1278,16 @@ function evaluate(article: Element): {
 						kind: bodyMatch.kind,
 						snippet: bodyMatch.snippet,
 					};
-				} else if (nameMatch) {
-					hit = nameMatch.hit;
+				}
+			} else if (nameMatch) {
+				hit = nameMatch.hit;
+				reason = {
+					category: "keyword",
+					kind: nameMatch.kind,
+					rule: nameMatch.rule,
+					source: nameMatch.source ?? "user",
+				};
+				if (cfg.debugLogging) {
 					log = {
 						handle: identity.handle,
 						id: identity.id,
@@ -1232,15 +1299,12 @@ function evaluate(article: Element): {
 						snippet: nameMatch.snippet,
 					};
 				}
-			} else {
-				hit =
-					matchAny(matchers, text) ?? (name ? matchAny(matchers, name) : null);
 			}
 		}
 	}
 
-	state.set(article, { sig, hit, log });
-	applyMark(article, hit);
+	state.set(article, { sig, hit, reason, log });
+	applyMark(article, hit, reason);
 	return { fresh: true, log };
 }
 
@@ -1921,16 +1985,17 @@ function watchConfig(): void {
 		const prev = cfg;
 		const rulesChanged = Boolean(changes[RULE_DATA_KEY]);
 		void readStoredState().then(() => {
-			const accountSnapshotValue = accountSnapshot(rules);
-			accountIndex = accountSnapshotValue
-				? buildAccountListIndex(accountSnapshotValue)
-				: undefined;
-			accountListVersion = accountSnapshotValue?.version ?? 0;
+			updateAccountSources(rules);
 			setLanguage(cfg.language);
 			applyLogo();
 			if (cfg.pageCleanupEnabled) startCleanupObserving();
 			else stopCleanupObserving();
-			if (rulesChanged || matchingChanged(prev, cfg)) {
+			if (
+				rulesChanged ||
+				matchingChanged(prev, cfg) ||
+				prev.mode !== cfg.mode ||
+				prev.language !== cfg.language
+			) {
 				refresh({ rebuild: true });
 			} else {
 				applyStyleVars();
@@ -1957,9 +2022,7 @@ function watchConfig(): void {
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
-		const next = accountSnapshot(loadRuleData(changes[RULE_DATA_KEY].newValue));
-		accountIndex = next ? buildAccountListIndex(next) : undefined;
-		accountListVersion = next?.version ?? 0;
+		updateAccountSources(loadRuleData(changes[RULE_DATA_KEY].newValue));
 		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
 	});
 }
@@ -1967,7 +2030,8 @@ function watchConfig(): void {
 // ==================== Startup ====================
 
 async function init(): Promise<void> {
-	await Promise.all([loadStoredConfig(), loadAccountList(), waitForBody()]);
+	await loadStoredConfig();
+	await Promise.all([loadAccountList(), waitForBody()]);
 	refreshMatchers();
 	watchConfig();
 	hookHistory();
@@ -2000,9 +2064,18 @@ function onVisibility(): void {
 
 async function loadAccountList(): Promise<void> {
 	const result = await chrome.storage.local.get(RULE_DATA_KEY);
-	const snapshot = accountSnapshot(loadRuleData(result[RULE_DATA_KEY]));
-	accountIndex = snapshot ? buildAccountListIndex(snapshot) : undefined;
-	accountListVersion = snapshot?.version ?? 0;
+	updateAccountSources(loadRuleData(result[RULE_DATA_KEY]));
+}
+
+function updateAccountSources(data: RuleData): void {
+	accountSourceIndexes = DEFAULT_ACCOUNT_LIST_SOURCES.flatMap((source) => {
+		if (!cfg.accountSourceEnabled[source.id]) return [];
+		const snapshot = data.accounts.external[source.id];
+		return snapshot
+			? [{ id: source.id, index: buildAccountListIndex(snapshot) }]
+			: [];
+	});
+	accountListVersion = accountSnapshot(data)?.version ?? 0;
 }
 
 function accountSnapshot(data: RuleData): AccountListSnapshot | undefined {

@@ -74,6 +74,16 @@ export interface AccountListIndex {
 	blacklistHandles: Set<string>;
 }
 
+export interface AccountMatchSource {
+	id: string;
+	index: AccountListIndex;
+}
+
+export interface AccountMatchResult {
+	decision: "whitelist" | "blacklist";
+	source: "user" | string;
+}
+
 // ----- Remote payload validation limits (mirror MXGA's own guardrails) -----
 
 /** The published blacklist must not silently shrink below this on a sync. */
@@ -513,23 +523,44 @@ export function matchAccountIndex(
 	localWhitelist: string[] = [],
 	localBlacklist: string[] = [],
 ): "whitelist" | "blacklist" | null {
+	return (
+		matchAccountSources(
+			index ? [{ id: "external", index }] : [],
+			identity,
+			localWhitelist,
+			localBlacklist,
+		)?.decision ?? null
+	);
+}
+
+/** Match with the same precedence as matchAccountIndex while retaining provenance. */
+export function matchAccountSources(
+	sources: AccountMatchSource[],
+	identity: AccountIdentity,
+	localWhitelist: string[] = [],
+	localBlacklist: string[] = [],
+): AccountMatchResult | null {
 	// Local rules always win over external ones: local whitelist, then local
 	// blacklist, then external whitelist, then external blacklist.
-	if (matchesEntries(localWhitelist, identity)) return "whitelist";
-	if (matchesEntries(localBlacklist, identity)) return "blacklist";
+	if (matchesEntries(localWhitelist, identity))
+		return { decision: "whitelist", source: "user" };
+	if (matchesEntries(localBlacklist, identity))
+		return { decision: "blacklist", source: "user" };
 	const id = identity.id;
 	const handle = normalizeAccountHandle(identity.handle);
-	if (
-		index &&
-		((id && index.whitelistIds.has(id)) ||
-			(handle && index.whitelistHandles.has(handle)))
-	)
-		return "whitelist";
-	if (!index) return null;
-	if (
-		(id && index.blacklistIds.has(id)) ||
-		(handle && index.blacklistHandles.has(handle))
-	)
-		return "blacklist";
+	for (const source of sources) {
+		if (
+			(id && source.index.whitelistIds.has(id)) ||
+			(handle && source.index.whitelistHandles.has(handle))
+		)
+			return { decision: "whitelist", source: source.id };
+	}
+	for (const source of sources) {
+		if (
+			(id && source.index.blacklistIds.has(id)) ||
+			(handle && source.index.blacklistHandles.has(handle))
+		)
+			return { decision: "blacklist", source: source.id };
+	}
 	return null;
 }

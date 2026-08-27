@@ -49,6 +49,7 @@ export function buildMatchers(
 
 	const plain: string[] = [];
 	const plainSources = new Map<string, string>();
+	const plainRules = new Map<string, string>();
 	const seenPlain = new Set<string>();
 	const seenRegex = new Set<string>();
 	const custom: { source: string; re: RegExp }[] = [];
@@ -81,6 +82,7 @@ export function buildMatchers(
 		seenPlain.add(normalized);
 		plain.push(normalized);
 		plainSources.set(normalized, item.source);
+		plainRules.set(normalized, kw);
 	}
 
 	// Longest first, so a match reports the most specific word.
@@ -105,6 +107,7 @@ export function buildMatchers(
 		custom,
 		count: plain.length + custom.length,
 		plainSources,
+		plainRules,
 		customSources,
 	};
 }
@@ -113,6 +116,8 @@ export function buildMatchers(
 export interface MatchResult {
 	/** The matched rule in its raw form (a plain keyword or /regex/ source). */
 	hit: string;
+	/** Original rule text before plain-keyword normalization. */
+	rule: string;
 	/** Which list it came from: a subscription name or "user". Null if unknown. */
 	source: string | null;
 	/** Plain keyword vs user-written custom regex. */
@@ -151,6 +156,7 @@ function matchCore(matchers: Matchers, text: string): MatchResult | null {
 				const hit = match[0];
 				return {
 					hit,
+					rule: matchers.plainRules?.get(hit) ?? hit,
 					source: matchers.plainSources?.get(hit) ?? null,
 					kind: "plain",
 					snippet: makeSnippet(plainText, match.index, hit.length),
@@ -168,6 +174,7 @@ function matchCore(matchers: Matchers, text: string): MatchResult | null {
 			const hit = c.source;
 			return {
 				hit,
+				rule: hit,
 				source: matchers.customSources?.get(hit) ?? null,
 				kind: "regex",
 				snippet: makeSnippet(

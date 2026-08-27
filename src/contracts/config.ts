@@ -134,6 +134,8 @@ export interface Matchers {
 	count: number;
 	/** Source label (subscription name or "user") of each plain keyword, keyed by normalized form. */
 	plainSources?: Map<string, string>;
+	/** Original plain rule text, keyed by normalized form. */
+	plainRules?: Map<string, string>;
 	/** Source label (subscription name or "user") of each custom regex, keyed by raw rule. */
 	customSources?: Map<string, string>;
 }

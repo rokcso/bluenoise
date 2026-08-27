@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppConfig } from "@/src/contracts/config";
 import { DEFAULTS } from "@/src/domain/defaults";
-import { buildMatchers, matchAny } from "@/src/domain/matcher";
+import { buildMatchers, matchAny, matchDetail } from "@/src/domain/matcher";
 import { KEYWORD_SOURCES } from "@/src/domain/rules";
 
 function cfg(overrides: Partial<AppConfig> = {}): AppConfig {
@@ -30,6 +30,18 @@ describe("buildMatchers", () => {
 	it("长词优先，命中报告最具体的词", () => {
 		const m = buildMatchers(cfg({ userKeywords: ["微信", "加微信"] }));
 		expect(matchAny(m, "请加微信联系")).toBe("加微信");
+	});
+
+	it("详细结果保留用户输入的原始关键词", () => {
+		const m = buildMatchers(
+			cfg({ ignoreSpaces: true, userKeywords: ["免费 领取"] }),
+		);
+		expect(matchDetail(m, "免费领取")).toMatchObject({
+			hit: "免费领取",
+			rule: "免费 领取",
+			source: "user",
+			kind: "plain",
+		});
 	});
 
 	it("去重：同样的词只算一次", () => {
