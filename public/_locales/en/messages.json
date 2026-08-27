@@ -162,7 +162,7 @@
 	"about_open_body": {
 		"message": "BlueNoise is open source. You can read the code, ask questions, or help improve it. An extension should earn your trust by making its behavior easy to inspect, not by asking you to take its word for it."
 	},
-	"about_studio_title": { "message": "Built by Coryso Studio" },
+	"about_studio_title": { "message": "Made by Coryso Studio" },
 	"about_studio_body": {
 		"message": "Coryso Studio is an independent product studio. We make focused digital tools that fit the way people actually work. BlueNoise is one of them. Visit us to see what else we are building."
 	},

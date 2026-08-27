@@ -240,14 +240,12 @@ body,
 	transition:
 		border-color 160ms ease,
 		background 160ms ease,
-		box-shadow 160ms ease,
-		transform 160ms ease;
+		box-shadow 160ms ease;
 }
 .about-studio:hover {
 	border-color: color-mix(in srgb, var(--x-accent) 45%, var(--x-border));
 	background: color-mix(in srgb, var(--x-accent) 5%, var(--x-surface));
 	box-shadow: 0 8px 24px rgb(15 20 25 / 7%);
-	transform: translateY(-1px);
 }
 .about-studio:focus-visible {
 	outline: 2px solid var(--x-accent);
@@ -267,11 +265,9 @@ body,
 	width: 15px;
 	height: 15px;
 	color: var(--x-muted);
-	transition: transform 160ms ease;
 }
 .about-studio:hover h2 svg {
 	color: var(--x-accent);
-	transform: translate(2px, -2px);
 }
 .about-studio p {
 	margin: 9px 0 0;
@@ -305,7 +301,6 @@ body,
 }
 .about-action:hover {
 	background: var(--x-hover);
-	transform: translateY(-1px);
 }
 .about-action:focus-visible {
 	outline: 2px solid var(--x-accent);
