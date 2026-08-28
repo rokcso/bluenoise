@@ -68,6 +68,9 @@ describe("sidebar loading state cleanup", () => {
 	it("hides the trends loader before trend rows are rendered", () => {
 		expect(css).toContain('[data-testid="sidebarColumn"]');
 		expect(css).toContain(
+			'div[aria-label]:has([role="search"])\n\t> div:has(> div > div > [role="progressbar"])',
+		);
+		expect(css).not.toContain(
 			'div[aria-label]:has([role="search"]):has([role="progressbar"])',
 		);
 	});
