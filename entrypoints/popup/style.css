@@ -190,7 +190,7 @@ body::-webkit-scrollbar {
 }
 
 .debug-log-panel {
-	margin: 14px 8px 8px;
+	margin-top: 12px;
 	overflow: hidden;
 	border: 1px solid var(--x-border);
 	border-radius: 14px;

@@ -143,7 +143,9 @@ export function SettingsApp({
 
 	useEffect(() => {
 		if (config?.subscriptions?.some((s) => s.keywords === null)) {
-			void chrome.runtime.sendMessage({ type: "XSF_ENSURE_SUBSCRIPTIONS" });
+			void chrome.runtime.sendMessage({
+				type: "BLUENOISE_ENSURE_SUBSCRIPTIONS",
+			});
 		}
 	}, [config?.subscriptions]);
 
@@ -591,6 +593,7 @@ export function SettingsApp({
 									update={update}
 								/>
 							</SettingsPanel>
+							{config.debugLogging && <DebugLogPanel />}
 						</SettingsGroup>
 					</>
 				)}
@@ -747,7 +750,7 @@ function AccountListSettings({
 		setSyncingSource(sourceId);
 		try {
 			await chrome.runtime.sendMessage({
-				type: "XSF_SYNC_ACCOUNT_LIST",
+				type: "BLUENOISE_SYNC_ACCOUNT_LIST",
 				sourceId,
 			});
 		} finally {
@@ -875,7 +878,7 @@ function AccountListSettings({
 										});
 										if (v)
 											void chrome.runtime.sendMessage({
-												type: "XSF_SYNC_ACCOUNT_LIST",
+												type: "BLUENOISE_SYNC_ACCOUNT_LIST",
 												sourceId: source.id,
 											});
 									}}
@@ -1564,20 +1567,12 @@ function Advanced({
 					/>
 				</>
 			) : (
-				<>
-					<XToggle
-						label={t("debug_logging")}
-						hint={t("debug_logging_hint")}
-						checked={config.debugLogging}
-						onChange={(v) => update({ debugLogging: v })}
-					/>
-					{config.debugLogging && (
-						<>
-							<SettingsDivider />
-							<DebugLogPanel />
-						</>
-					)}
-				</>
+				<XToggle
+					label={t("debug_logging")}
+					hint={t("debug_logging_hint")}
+					checked={config.debugLogging}
+					onChange={(v) => update({ debugLogging: v })}
+				/>
 			)}
 		</div>
 	);
@@ -1639,7 +1634,7 @@ function DebugLogPanel() {
 	async function clearLogs() {
 		setClearing(true);
 		try {
-			await chrome.runtime.sendMessage({ type: "XSF_DEBUG_CLEAR" });
+			await chrome.runtime.sendMessage({ type: "BLUENOISE_DEBUG_CLEAR" });
 			setEntries([]);
 		} finally {
 			setClearing(false);
