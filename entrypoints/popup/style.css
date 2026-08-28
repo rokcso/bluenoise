@@ -267,14 +267,11 @@ body::-webkit-scrollbar {
 .debug-log-viewport {
 	height: 340px;
 	overflow: auto;
-	background:
-		linear-gradient(rgb(15 20 25 / 2%) 1px, transparent 1px) 0 0 / 100% 24px,
-		var(--x-bg);
+	background: var(--x-bg);
 	scrollbar-color: var(--x-border) transparent;
 }
 .debug-log-entry {
 	padding: 10px 14px;
-	border-bottom: 1px solid color-mix(in srgb, var(--x-border) 65%, transparent);
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 .debug-log-entry-line {

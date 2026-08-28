@@ -301,7 +301,7 @@
 	"debug_log_recording": { "message": "正在记录" },
 	"debug_log_empty": { "message": "等待 X 上的过滤活动…" },
 	"debug_log_privacy": {
-		"message": "日志仅保存在此设备上，可能包含帖子片段、账号 ID 和命中规则；分享前请检查内容。"
+		"message": "仅存储在此设备上。可能含帖子文本、账号 ID 和命中规则，分享前请检查。"
 	},
 	"debug_log_clear": { "message": "清空" },
 	"debug_log_copy": { "message": "复制" },

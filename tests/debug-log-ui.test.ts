@@ -9,6 +9,10 @@ const styles = readFileSync(
 	new URL("../entrypoints/popup/style.css", import.meta.url),
 	"utf8",
 );
+const wxtConfig = readFileSync(
+	new URL("../wxt.config.ts", import.meta.url),
+	"utf8",
+);
 
 describe("debug log panel", () => {
 	it("only mounts the panel while debug logging is enabled", () => {
@@ -35,6 +39,10 @@ describe("debug log panel", () => {
 		expect(app).toContain('type: "BLUENOISE_DEBUG_CLEAR"');
 		expect(app).toContain("copyDebugText(debugLogToJsonl(entries))");
 		expect(app).toContain('type: "application/x-ndjson;charset=utf-8"');
+	});
+
+	it("declares permission to write debug logs to the clipboard", () => {
+		expect(wxtConfig).toContain('"clipboardWrite"');
 	});
 
 	it("uses a bounded scrolling viewport", () => {
