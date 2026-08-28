@@ -545,28 +545,20 @@ export function SettingsApp({
 									checked={config.showActualReplyCount}
 									onChange={(v) => update({ showActualReplyCount: v })}
 								/>
-								{config.mode !== "hide" && (
-									<>
-										<SettingsDivider />
-										<XToggle
-											label={t("show_filter_reason")}
-											hint={t("show_filter_reason_hint")}
-											checked={config.showFilterReason}
-											onChange={(v) => update({ showFilterReason: v })}
-										/>
-										{config.mode === "dim" && (
-											<>
-												<SettingsDivider />
-												<XToggle
-													label={t("reveal_on_hover")}
-													hint={t("reveal_on_hover_hint")}
-													checked={config.revealOnHover}
-													onChange={(v) => update({ revealOnHover: v })}
-												/>
-											</>
-										)}
-									</>
-								)}
+								<SettingsDivider />
+								<XToggle
+									label={t("show_filter_reason")}
+									hint={t("show_filter_reason_hint")}
+									checked={config.showFilterReason}
+									onChange={(v) => update({ showFilterReason: v })}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("reveal_on_hover")}
+									hint={t("reveal_on_hover_hint")}
+									checked={config.revealOnHover}
+									onChange={(v) => update({ revealOnHover: v })}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 					</>
