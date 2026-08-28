@@ -10,11 +10,11 @@ export interface AppConfig {
 	enabled: boolean;
 	/** Master switch for X's own interface cleanup, independent of content filtering. */
 	pageCleanupEnabled: boolean;
-	/** "dim" = fade the whole reply; "hide" = make it disappear. Mutually exclusive. */
-	mode: "dim" | "hide";
+	/** How matched posts are presented. Mutually exclusive. */
+	mode: "dim" | "collapse" | "hide";
 	/** In Blur mode, reveal a circular area around the cursor while hovering a filtered reply. */
 	revealOnHover: boolean;
-	/** In Blur mode, show a short explanation on filtered posts and replies. */
+	/** In Blur and Collapse modes, show why a post or reply was filtered. */
 	showFilterReason: boolean;
 	/** Show the number of filtered replies on the browser toolbar icon. */
 	showBadgeCount: boolean;

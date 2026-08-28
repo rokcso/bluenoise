@@ -11,4 +11,8 @@ describe("configuration defaults", () => {
 		expect(loadConfig(undefined).hidePremiumFeaturePrompt).toBe(false);
 		expect(loadConfig({ enabled: true }).hidePremiumFeaturePrompt).toBe(false);
 	});
+
+	it("accepts collapse as a persisted filtering mode", () => {
+		expect(loadConfig({ mode: "collapse" }).mode).toBe("collapse");
+	});
 });

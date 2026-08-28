@@ -8,9 +8,11 @@
 }
 
 /* Blur the row's content while leaving the reason overlay crisp. */
-[data-bluenoise-mode] .bluenoise-filtered > :not(.bluenoise-filter-reason) {
+[data-bluenoise-mode="dim"]
+	.bluenoise-filtered
+	> :not(.bluenoise-filter-reason) {
 	opacity: var(--bluenoise-opacity);
-	filter: blur(3px);
+	filter: blur(6px);
 }
 
 .bluenoise-filtered {
@@ -60,6 +62,69 @@
 [data-bluenoise-mode="hide"] .bluenoise-filtered {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
+}
+
+/* Collapse mode keeps X's DOM mounted and replaces its layout with one
+ * accessible, reversible summary row. */
+[data-bluenoise-mode="collapse"]
+	.bluenoise-filtered:not(.bluenoise-collapse-expanded)
+	> :not(.bluenoise-collapse-placeholder) {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
+.bluenoise-collapse-placeholder {
+	box-sizing: border-box;
+	padding: 10px 16px;
+	color: rgb(83 100 113);
+}
+
+.bluenoise-collapse-placeholder button {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font:
+		500 13px / 1.4 ui-sans-serif,
+		sans-serif;
+	text-align: start;
+	cursor: pointer;
+}
+
+.bluenoise-collapse-placeholder button:focus-visible {
+	outline: 2px solid rgb(29 155 240);
+	outline-offset: 4px;
+}
+
+.bluenoise-collapse-summary {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.bluenoise-collapse-action {
+	flex: none;
+	color: rgb(29 155 240);
+}
+
+.bluenoise-collapse-expanded > .bluenoise-collapse-placeholder {
+	border-bottom: 1px solid rgb(239 243 244);
+}
+
+@media (prefers-color-scheme: dark) {
+	.bluenoise-collapse-placeholder {
+		color: rgb(139 152 165);
+	}
+
+	.bluenoise-collapse-expanded > .bluenoise-collapse-placeholder {
+		border-bottom-color: rgb(47 51 54);
+	}
 }
 
 [data-bluenoise-custom-hidden] {
@@ -177,7 +242,7 @@ aside[role="complementary"][aria-label*="Premium"],
 	pointer-events: none;
 	content: "";
 	background: rgb(255 255 255 / 85%);
-	backdrop-filter: blur(3px);
+	backdrop-filter: blur(6px);
 	mask-image: radial-gradient(
 		circle var(--bluenoise-reveal-radius) at var(--bluenoise-reveal-x)
 			var(--bluenoise-reveal-y),
