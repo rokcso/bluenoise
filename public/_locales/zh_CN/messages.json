@@ -175,10 +175,6 @@
 	"matching": { "message": "匹配选项" },
 	"diagnostics": { "message": "诊断" },
 	"ads": { "message": "广告" },
-	"filter_ads": { "message": "过滤广告推文" },
-	"filter_ads_hint": {
-		"message": "按照当前选择的过滤模式模糊或隐藏标记为广告的推文。"
-	},
 	"filter_media_ads": { "message": "过滤媒体广告" },
 	"filter_media_ads_hint": {
 		"message": "模糊或隐藏包含视频或图片媒体的推广推文。"

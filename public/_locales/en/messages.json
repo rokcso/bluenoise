@@ -179,10 +179,6 @@
 	"matching": { "message": "Match options" },
 	"diagnostics": { "message": "Diagnostics" },
 	"ads": { "message": "Ads" },
-	"filter_ads": { "message": "Filter promoted posts" },
-	"filter_ads_hint": {
-		"message": "Blur or hide posts marked as ads using your selected filtering mode."
-	},
 	"filter_media_ads": { "message": "Filter media ads" },
 	"filter_media_ads_hint": {
 		"message": "Blur or hide promoted posts with video or image media."

@@ -55,8 +55,6 @@ export interface AppConfig {
 	caseSensitive: boolean;
 	/** Emit local diagnostic messages in the page DevTools console. */
 	debugLogging: boolean;
-	/** Filter promoted/ad posts using the selected filtering mode. */
-	filterAds: boolean;
 	/** Filter promoted posts whose creative contains video or media. */
 	filterMediaAds: boolean;
 	/** Filter promoted posts containing an external website card. */
