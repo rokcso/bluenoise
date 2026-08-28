@@ -280,11 +280,11 @@
 	},
 	"reveal_on_hover": { "message": "在光标附近显示内容" },
 	"reveal_on_hover_hint": {
-		"message": "在模糊模式下，以光标为中心显示清晰区域。"
+		"message": "以光标为中心显示清晰区域，仅在模糊模式下生效。"
 	},
 	"show_filter_reason": { "message": "显示过滤原因" },
 	"show_filter_reason_hint": {
-		"message": "在模糊的帖子和评论右上角显示具体命中的规则。"
+		"message": "在被过滤的帖子和评论中显示具体命中的规则，仅在模糊和折叠模式下生效。"
 	},
 	"match_names": { "message": "匹配昵称和 @用户名" },
 	"match_names_hint": {
