@@ -17,7 +17,7 @@ export default defineConfig({
 		short_name: "BlueNoise",
 		description: "__MSG_extDescription__",
 		homepage_url: "https://github.com/rokcso/bluenoise",
-		version: "0.4.0",
+		version: "0.5.0",
 		minimum_chrome_version: "116",
 		default_locale: "en",
 		permissions: ["storage", "unlimitedStorage", "alarms", "contextMenus"],
