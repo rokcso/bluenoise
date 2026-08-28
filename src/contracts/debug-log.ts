@@ -17,6 +17,16 @@ export interface DebugLogEntry {
 	details: Record<string, unknown>;
 }
 
+export function serializeDebugError(error: unknown): Record<string, string> {
+	if (!(error instanceof Error))
+		return { message: String(error).slice(0, 1000) };
+	return {
+		name: error.name,
+		message: error.message.slice(0, 1000),
+		...(error.stack ? { stack: error.stack.slice(0, 3000) } : {}),
+	};
+}
+
 export function isDebugLogEntry(value: unknown): value is DebugLogEntry {
 	if (!value || typeof value !== "object") return false;
 	const entry = value as Partial<DebugLogEntry>;

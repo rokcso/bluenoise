@@ -13,6 +13,7 @@ import {
 	type FilterReason,
 	formatFilterReason,
 } from "@/src/content/filter-reason";
+import { handleContentProcessingError } from "@/src/content/lifecycle";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import { createPageMakeoverController } from "@/src/content/page-makeover";
 import { isPromotedPost } from "@/src/content/promoted";
@@ -25,7 +26,11 @@ import type {
 	RuleView,
 } from "@/src/contracts/config";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
-import type { DebugLogEntry, DebugLogLevel } from "@/src/contracts/debug-log";
+import {
+	type DebugLogEntry,
+	type DebugLogLevel,
+	serializeDebugError,
+} from "@/src/contracts/debug-log";
 import {
 	type AccountListIndex,
 	type AccountListSnapshot,
@@ -73,6 +78,20 @@ const ACCOUNT_SOURCE_NAMES = new Map(
 );
 const DEBUG_SESSION_ID = crypto.randomUUID();
 let debugSequence = 0;
+let nextScanId = 0;
+
+type ScanTrigger =
+	| "initial"
+	| "navigation"
+	| "pageshow"
+	| "mutation"
+	| "mutation-burst"
+	| "visibility"
+	| "config-change"
+	| "rules-change"
+	| "account-list-change"
+	| "debug-enabled"
+	| "continuation";
 
 export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
@@ -121,6 +140,8 @@ const textDirty = new WeakSet<Element>();
 let flushScheduled = false;
 let rafId = 0;
 let flushTimer = 0;
+let scheduledScanId = 0;
+const scheduledScanTriggers = new Set<ScanTrigger>();
 let observer: MutationObserver | null = null;
 let cleanupObserver: MutationObserver | null = null;
 let lastUrl = typeof location !== "undefined" ? location.href : "";
@@ -136,7 +157,14 @@ const revealController = createRevealController({
 		cfg.enabled && active && cfg.mode === "dim" && cfg.revealOnHover,
 });
 function reportInitError(error: unknown): void {
-	console.error("[BlueNoise] Content script initialization failed:", error);
+	handleContentProcessingError(error, teardown, (cause) => {
+		console.error("[BlueNoise] Content script initialization failed:", cause);
+		debugLog(
+			"content.init_failed",
+			{ error: serializeDebugError(cause) },
+			"error",
+		);
+	});
 }
 
 function debugLog(
@@ -156,6 +184,46 @@ function debugLog(
 	};
 	console[level](`[BlueNoise] ${event}`, details);
 	sendToBackground({ type: "BLUENOISE_DEBUG_LOG", entry });
+}
+
+function debugConfigSnapshot(
+	reason: "initialized" | "enabled" | "changed",
+): void {
+	debugLog("config.snapshot", {
+		reason,
+		extensionVersion: chrome.runtime.getManifest().version,
+		filtering: active,
+		enabled: cfg.enabled,
+		mode: cfg.mode,
+		filters: {
+			mediaAds: cfg.filterMediaAds,
+			cardAds: cfg.filterCardAds,
+			parodyAccounts: cfg.filterParodyAccounts,
+			fanAccounts: cfg.filterFanAccounts,
+			commentaryAccounts: cfg.filterCommentaryAccounts,
+			automatedAccounts: cfg.filterAutomatedAccounts,
+		},
+		matching: {
+			matchNames: cfg.matchNames,
+			ignoreSpaces: cfg.ignoreSpaces,
+			caseSensitive: cfg.caseSensitive,
+			matcherCount: matchers.count,
+		},
+		sources: {
+			keywords: Object.entries(cfg.keywordSourceEnabled)
+				.filter(([, enabled]) => enabled)
+				.map(([id]) => id),
+			accounts: Object.entries(cfg.accountSourceEnabled)
+				.filter(([, enabled]) => enabled)
+				.map(([id]) => id),
+		},
+		rules: {
+			userKeywords: ruleView.userKeywords.length,
+			keywordWhitelist: ruleView.whitelist.length,
+			accountBlacklist: ruleView.accountBlacklist.length,
+			accountWhitelist: ruleView.accountWhitelist.length,
+		},
+	});
 }
 
 function refreshMatchers(): void {
@@ -396,6 +464,12 @@ function applyStyleVars(): void {
 function evaluate(article: Element): {
 	fresh: boolean;
 	log: FilteredLog | null;
+	outcome:
+		| "cache-hit"
+		| "filtered"
+		| "main-tweet"
+		| "no-active-rules"
+		| "no-match";
 } {
 	// X can add promotion/account labels after the article is first rendered.
 	// Include this cheap structural state in the cache key so those changes
@@ -418,7 +492,7 @@ function evaluate(article: Element): {
 		})
 	) {
 		applyMark(article, cached.hit, cached.reason);
-		return { fresh: false, log: null };
+		return { fresh: false, log: null, outcome: "cache-hit" };
 	}
 	textDirty.delete(article);
 	const text = readText(article.querySelector(TEXT_SEL));
@@ -429,7 +503,7 @@ function evaluate(article: Element): {
 
 	if (cached && cached.sig === sig) {
 		applyMark(article, cached.hit, cached.reason);
-		return { fresh: false, log: null };
+		return { fresh: false, log: null, outcome: "cache-hit" };
 	}
 
 	// Account matching needs the numeric user id (React internals); keyword
@@ -445,17 +519,17 @@ function evaluate(article: Element): {
 	let decision = { hit: null, reason: null, log: null } as ReturnType<
 		typeof classifyArticle
 	>;
-	if (
-		!isMainTweet(article) &&
-		(matchers.count > 0 ||
-			accountListsActive ||
-			cfg.filterMediaAds ||
-			cfg.filterCardAds ||
-			cfg.filterParodyAccounts ||
-			cfg.filterFanAccounts ||
-			cfg.filterCommentaryAccounts ||
-			cfg.filterAutomatedAccounts)
-	) {
+	const mainTweet = isMainTweet(article);
+	const hasActiveRules =
+		matchers.count > 0 ||
+		accountListsActive ||
+		cfg.filterMediaAds ||
+		cfg.filterCardAds ||
+		cfg.filterParodyAccounts ||
+		cfg.filterFanAccounts ||
+		cfg.filterCommentaryAccounts ||
+		cfg.filterAutomatedAccounts;
+	if (!mainTweet && hasActiveRules) {
 		decision = classifyArticle(
 			{
 				body: text,
@@ -482,11 +556,21 @@ function evaluate(article: Element): {
 
 	state.set(article, { sig, preset, ...decision });
 	applyMark(article, decision.hit, decision.reason);
-	return { fresh: true, log: decision.log };
+	return {
+		fresh: true,
+		log: decision.log,
+		outcome: mainTweet
+			? "main-tweet"
+			: !hasActiveRules
+				? "no-active-rules"
+				: decision.hit
+					? "filtered"
+					: "no-match",
+	};
 }
 
 /** Emit structured entries for each match, followed by a compact batch summary. */
-function emitFilteredLogs(logs: FilteredLog[]): void {
+function emitFilteredLogs(scanId: number, logs: FilteredLog[]): void {
 	const reasonCount = new Map<string, number>();
 	for (const log of logs) {
 		const key =
@@ -500,6 +584,7 @@ function emitFilteredLogs(logs: FilteredLog[]): void {
 
 	for (const log of logs) {
 		debugLog("item.filtered", {
+			scanId,
 			handle: log.handle,
 			accountId: log.id,
 			reason:
@@ -515,6 +600,7 @@ function emitFilteredLogs(logs: FilteredLog[]): void {
 		});
 	}
 	debugLog("filter.batch", {
+		scanId,
 		filteredCount: logs.length,
 		reasons: Object.fromEntries(
 			[...reasonCount.entries()].sort((a, b) => b[1] - a[1]),
@@ -557,28 +643,74 @@ function readAuthorIdentity(
 }
 
 function flush(): void {
-	if (!active || !cfg.enabled) {
+	if (dead || !active || !cfg.enabled) {
 		pending.clear();
+		scheduledScanTriggers.clear();
+		scheduledScanId = 0;
 		return;
 	}
 	// Take a snapshot so mutations caused while evaluating do not get lost when
 	// the current batch is cleared. Any unfinished work is put back below.
 	const queue = [...pending];
 	pending.clear();
+	const scanId = scheduledScanId;
+	const triggers = [...scheduledScanTriggers];
+	scheduledScanId = 0;
+	scheduledScanTriggers.clear();
 	const queuedCount = queue.length;
 	const logs: FilteredLog[] = [];
 	let evaluatedCount = 0;
+	let cacheHitCount = 0;
+	let filteredCount = 0;
+	let mainTweetSkippedCount = 0;
+	let noActiveRulesCount = 0;
+	let noMatchCount = 0;
+	let disconnectedCount = 0;
+	let errorCount = 0;
 	const startedAt = performance.now();
 	let processed = 0;
 	for (let i = 0; i < queue.length; i++) {
 		const article = queue[i];
-		if (!article.isConnected) continue;
+		if (!article.isConnected) {
+			disconnectedCount++;
+			continue;
+		}
 		try {
 			const result = evaluate(article);
 			if (result.fresh) evaluatedCount++;
 			if (result.log) logs.push(result.log);
+			switch (result.outcome) {
+				case "cache-hit":
+					cacheHitCount++;
+					break;
+				case "filtered":
+					filteredCount++;
+					break;
+				case "main-tweet":
+					mainTweetSkippedCount++;
+					break;
+				case "no-active-rules":
+					noActiveRulesCount++;
+					break;
+				case "no-match":
+					noMatchCount++;
+					break;
+			}
 		} catch (error) {
-			console.error("[BlueNoise] Failed to process an item:", error);
+			errorCount++;
+			const shouldContinue = handleContentProcessingError(
+				error,
+				teardown,
+				(cause) => {
+					console.error("[BlueNoise] Failed to process an item:", cause);
+					debugLog(
+						"item.error",
+						{ scanId, error: serializeDebugError(cause) },
+						"error",
+					);
+				},
+			);
+			if (!shouldContinue) return;
 		}
 		processed++;
 		// Always make progress on at least one article, even if one unusually
@@ -592,17 +724,26 @@ function flush(): void {
 			break;
 		}
 	}
+	if (logs.length) emitFilteredLogs(scanId, logs);
 	debugLog("scan.completed", {
+		scanId,
+		triggers,
 		queuedArticleCount: queuedCount,
 		evaluatedCount,
 		processedArticleCount: processed,
 		remainingArticleCount: pending.size,
 		durationMs: Math.round(performance.now() - startedAt),
-		filteredCount: document.querySelectorAll(`.${HIT_CLASS}`).length,
+		cacheHitCount,
+		filteredCount,
+		mainTweetSkippedCount,
+		noActiveRulesCount,
+		noMatchCount,
+		disconnectedCount,
+		errorCount,
+		totalFilteredOnPage: document.querySelectorAll(`.${HIT_CLASS}`).length,
 	});
-	if (logs.length) emitFilteredLogs(logs);
 	if (pending.size) {
-		schedule();
+		schedule("continuation");
 		return;
 	}
 	// Run after every queued reply has received its filtering mark, so the
@@ -627,11 +768,15 @@ function runFlush(): void {
 }
 
 /** Batch flush: prefer following the render frame (no visual flicker); fall back to a timer in background tabs where rAF is suspended. */
-function schedule(): void {
-	if (flushScheduled) return;
+function schedule(trigger: ScanTrigger): number {
+	if (dead) return 0;
+	scheduledScanTriggers.add(trigger);
+	if (flushScheduled) return scheduledScanId;
 	flushScheduled = true;
+	scheduledScanId = ++nextScanId;
 	rafId = requestAnimationFrame(runFlush);
 	flushTimer = window.setTimeout(runFlush, 300);
+	return scheduledScanId;
 }
 
 function queueArticle(node: Node): void {
@@ -644,7 +789,10 @@ function queueArticle(node: Node): void {
 	for (const a of node.querySelectorAll(ARTICLE_SEL)) pending.add(a);
 }
 
-function fullScan(options: { markTextDirty?: boolean } = {}): void {
+function fullScan(
+	trigger: ScanTrigger,
+	options: { markTextDirty?: boolean } = {},
+): void {
 	if (!active || !cfg.enabled) return;
 	let articleCount = 0;
 	for (const a of document.querySelectorAll(ARTICLE_SEL)) {
@@ -652,8 +800,8 @@ function fullScan(options: { markTextDirty?: boolean } = {}): void {
 		if (options.markTextDirty) textDirty.add(a);
 		pending.add(a);
 	}
-	debugLog("scan.queued", { articleCount });
-	schedule();
+	const scanId = schedule(trigger);
+	debugLog("scan.queued", { scanId, trigger, articleCount });
 }
 
 // ==================== Incremental observation ====================
@@ -668,7 +816,7 @@ function onMutations(records: MutationRecord[]): void {
 		// The per-record dirty check below is deliberately skipped for a burst.
 		// Force existing rows through text extraction so content updates cannot be
 		// mistaken for a clean cache hit when the full scan drains the queue.
-		fullScan({ markTextDirty: true });
+		fullScan("mutation-burst", { markTextDirty: true });
 		return;
 	}
 	let conversationChanged = false;
@@ -710,7 +858,7 @@ function onMutations(records: MutationRecord[]): void {
 		)
 			conversationChanged = true;
 	}
-	if (pending.size || conversationChanged) schedule();
+	if (pending.size || conversationChanged) schedule("mutation");
 }
 
 /** Page cleanup has its own observer so filtering mutations do not run global
@@ -984,27 +1132,34 @@ function clearRescanTimers(): void {
 	rescanTimers.length = 0;
 }
 
-function scheduleRescans(): void {
+function scheduleRescans(trigger: ScanTrigger): void {
 	clearRescanTimers();
 	for (const delay of RESCAN_DELAYS) {
 		rescanTimers.push(
 			window.setTimeout(() => {
 				pageMakeover.apply(cfg);
-				fullScan();
+				fullScan(trigger);
 			}, delay),
 		);
 	}
 }
 
-function start(): void {
+function start(trigger: ScanTrigger): void {
 	startObserving();
 	applyStyleVars();
-	scheduleRescans();
+	scheduleRescans(trigger);
 }
 
 function stop(): void {
 	clearRescanTimers();
+	if (flushTimer) clearTimeout(flushTimer);
+	if (rafId) cancelAnimationFrame(rafId);
+	flushTimer = 0;
+	rafId = 0;
+	flushScheduled = false;
 	pending.clear();
+	scheduledScanTriggers.clear();
+	scheduledScanId = 0;
 	clearAllMarks();
 	replyCounts.clearRendered();
 	applyStyleVars();
@@ -1027,6 +1182,8 @@ function teardown(): void {
 	flushTimer = 0;
 	rafId = 0;
 	flushScheduled = false;
+	scheduledScanTriggers.clear();
+	scheduledScanId = 0;
 	if (badgeTimer) clearTimeout(badgeTimer);
 	badgeTimer = 0;
 	observer?.disconnect();
@@ -1043,9 +1200,11 @@ function teardown(): void {
 	pending.clear();
 }
 
-function refresh(
-	options: { rebuild?: boolean; clearReplyCountCache?: boolean } = {},
-): void {
+function refresh(options: {
+	rebuild?: boolean;
+	clearReplyCountCache?: boolean;
+	trigger: ScanTrigger;
+}): void {
 	if (options.rebuild) refreshMatchers();
 	if (options.rebuild || options.clearReplyCountCache)
 		replyCounts.clearCaches();
@@ -1062,7 +1221,7 @@ function refresh(
 		return;
 	}
 	clearAllMarks();
-	start();
+	start(options.trigger);
 }
 
 /** SPA navigation. Never location.reload() — just re-evaluate and rescan. */
@@ -1073,13 +1232,13 @@ function onUrlChange(): void {
 function refreshForUrlChange(): boolean {
 	if (location.href === lastUrl) return false;
 	lastUrl = location.href;
-	refresh();
+	refresh({ trigger: "navigation" });
 	return true;
 }
 
 function onPageShow(): void {
 	lastUrl = location.href;
-	refresh();
+	refresh({ trigger: "pageshow" });
 }
 
 function waitForBody(): Promise<void> {
@@ -1179,7 +1338,10 @@ function watchConfig(): void {
 				prev.showFilterReason !== cfg.showFilterReason ||
 				prev.language !== cfg.language
 			) {
-				refresh({ rebuild: true });
+				refresh({
+					rebuild: true,
+					trigger: rulesChanged ? "rules-change" : "config-change",
+				});
 			} else {
 				applyStyleVars();
 			}
@@ -1189,9 +1351,15 @@ function watchConfig(): void {
 					filtering: active,
 					matcherCount: matchers.count,
 				});
+				debugConfigSnapshot("enabled");
 				// Re-evaluate rendered items so the new session includes current matches.
 				generation++;
-				fullScan();
+				fullScan("debug-enabled");
+			} else if (
+				cfg.debugLogging &&
+				(rulesChanged || matchingChanged(prev, cfg) || prev.mode !== cfg.mode)
+			) {
+				debugConfigSnapshot("changed");
 			}
 		});
 		if (prev.showActualReplyCount !== cfg.showActualReplyCount) {
@@ -1203,7 +1371,11 @@ function watchConfig(): void {
 	chrome.storage.onChanged.addListener((changes, area) => {
 		if (area !== "local" || !changes[RULE_DATA_KEY]) return;
 		updateAccountSources(loadRuleData(changes[RULE_DATA_KEY].newValue));
-		if (cfg.enabled && active) refresh({ clearReplyCountCache: true });
+		if (cfg.enabled && active)
+			refresh({
+				clearReplyCountCache: true,
+				trigger: "account-list-change",
+			});
 	});
 }
 
@@ -1231,14 +1403,15 @@ async function init(): Promise<void> {
 		matcherCount: matchers.count,
 		userKeywordCount: ruleView.userKeywords.length,
 	});
-	if (cfg.enabled && active) start();
+	debugConfigSnapshot("initialized");
+	if (cfg.enabled && active) start("initial");
 	else applyStyleVars();
 
 	document.addEventListener("visibilitychange", onVisibility);
 }
 
 function onVisibility(): void {
-	if (!document.hidden) fullScan();
+	if (!document.hidden) fullScan("visibility");
 }
 
 async function loadAccountList(): Promise<void> {
