@@ -4,6 +4,10 @@ import {
 	classifyArticle,
 	type FilteredLog,
 } from "@/src/content/article-classifier";
+import {
+	type ArticlePreset,
+	canReuseFastEvaluation,
+} from "@/src/content/evaluation-cache";
 import { readFiberUserId } from "@/src/content/fiber";
 import {
 	type FilterReason,
@@ -101,6 +105,7 @@ const state = new WeakMap<
 	Element,
 	{
 		sig: string;
+		preset?: ArticlePreset;
 		hit: string | null;
 		reason: FilterReason | null;
 		log: FilteredLog | null;
@@ -385,8 +390,15 @@ function evaluate(article: Element): {
 	// expensive TreeWalker pass entirely.
 	if (
 		cached &&
-		!textDirty.has(article) &&
-		cached.sig.startsWith(`${generation}${SEP}${accountListVersion}${SEP}`)
+		canReuseFastEvaluation({
+			cachedSignature: cached.sig,
+			cachedPreset: cached.preset,
+			currentPreset: preset,
+			textDirty: textDirty.has(article),
+			generation,
+			accountListVersion,
+			separator: SEP,
+		})
 	) {
 		applyMark(article, cached.hit, cached.reason);
 		return { fresh: false, log: null };
@@ -448,7 +460,7 @@ function evaluate(article: Element): {
 		);
 	}
 
-	state.set(article, { sig, ...decision });
+	state.set(article, { sig, preset, ...decision });
 	applyMark(article, decision.hit, decision.reason);
 	return { fresh: true, log: decision.log };
 }
