@@ -3,6 +3,7 @@ import {
 	type DebugLogEntry,
 	debugLogToJsonl,
 	isDebugLogEntry,
+	serializeDebugError,
 	trimDebugLog,
 } from "@/src/contracts/debug-log";
 
@@ -53,5 +54,18 @@ describe("debug log storage", () => {
 	it("rejects malformed messages", () => {
 		expect(isDebugLogEntry(entry("valid"))).toBe(true);
 		expect(isDebugLogEntry({ event: "missing metadata" })).toBe(false);
+	});
+
+	it("serializes errors without allowing unbounded messages or stacks", () => {
+		const error = new Error("m".repeat(1500));
+		error.stack = "s".repeat(4000);
+		expect(serializeDebugError(error)).toEqual({
+			name: "Error",
+			message: "m".repeat(1000),
+			stack: "s".repeat(3000),
+		});
+		expect(serializeDebugError("plain failure")).toEqual({
+			message: "plain failure",
+		});
 	});
 });
