@@ -28,17 +28,17 @@ export function createRevealController(
 
 	function hide(): void {
 		if (reveal?.reason) {
-			reveal.reason.classList.remove("xsf-filter-reason-revealing");
-			reveal.reason.style.removeProperty("--xsf-reason-reveal-x");
-			reveal.reason.style.removeProperty("--xsf-reason-reveal-y");
-			reveal.reason.style.removeProperty("--xsf-reason-reveal-radius");
+			reveal.reason.classList.remove("bluenoise-filter-reason-revealing");
+			reveal.reason.style.removeProperty("--bluenoise-reason-reveal-x");
+			reveal.reason.style.removeProperty("--bluenoise-reason-reveal-y");
+			reveal.reason.style.removeProperty("--bluenoise-reason-reveal-radius");
 		}
 		if (reveal) {
 			const row = reveal.row as HTMLElement;
-			row.classList.remove("xsf-revealing");
-			row.style.removeProperty("--xsf-reveal-x");
-			row.style.removeProperty("--xsf-reveal-y");
-			row.style.removeProperty("--xsf-reveal-radius");
+			row.classList.remove("bluenoise-revealing");
+			row.style.removeProperty("--bluenoise-reveal-x");
+			row.style.removeProperty("--bluenoise-reveal-y");
+			row.style.removeProperty("--bluenoise-reveal-radius");
 		}
 		reveal = null;
 	}
@@ -61,27 +61,36 @@ export function createRevealController(
 					`:scope > .${options.reasonClass}`,
 				),
 			};
-			(row as HTMLElement).classList.add("xsf-revealing");
+			(row as HTMLElement).classList.add("bluenoise-revealing");
 		}
 
 		const rowRect = reveal.row.getBoundingClientRect();
 		const rowElement = reveal.row as HTMLElement;
-		rowElement.style.setProperty("--xsf-reveal-x", `${x - rowRect.left}px`);
-		rowElement.style.setProperty("--xsf-reveal-y", `${y - rowRect.top}px`);
-		rowElement.style.setProperty("--xsf-reveal-radius", `${options.radius}px`);
+		rowElement.style.setProperty(
+			"--bluenoise-reveal-x",
+			`${x - rowRect.left}px`,
+		);
+		rowElement.style.setProperty(
+			"--bluenoise-reveal-y",
+			`${y - rowRect.top}px`,
+		);
+		rowElement.style.setProperty(
+			"--bluenoise-reveal-radius",
+			`${options.radius}px`,
+		);
 		if (reveal.reason) {
 			const reasonRect = reveal.reason.getBoundingClientRect();
-			reveal.reason.classList.add("xsf-filter-reason-revealing");
+			reveal.reason.classList.add("bluenoise-filter-reason-revealing");
 			reveal.reason.style.setProperty(
-				"--xsf-reason-reveal-x",
+				"--bluenoise-reason-reveal-x",
 				`${x - reasonRect.left}px`,
 			);
 			reveal.reason.style.setProperty(
-				"--xsf-reason-reveal-y",
+				"--bluenoise-reason-reveal-y",
 				`${y - reasonRect.top}px`,
 			);
 			reveal.reason.style.setProperty(
-				"--xsf-reason-reveal-radius",
+				"--bluenoise-reason-reveal-radius",
 				`${options.radius}px`,
 			);
 		}

@@ -12,14 +12,23 @@ const styles = readFileSync(
 
 describe("debug log panel", () => {
 	it("only mounts the panel while debug logging is enabled", () => {
-		expect(app).toContain("config.debugLogging && <DebugLogPanel />");
+		expect(app).toContain(
+			"<AnimatedDebugLogPanel visible={config.debugLogging} />",
+		);
 		expect(app).toContain("<DebugLogPanel />");
 	});
 
 	it("renders the panel outside the debug logging settings card", () => {
 		expect(app).toMatch(
-			/<\/SettingsPanel>\s*\{config\.debugLogging && <DebugLogPanel \/>\}/,
+			/<\/SettingsPanel>\s*<AnimatedDebugLogPanel visible=\{config\.debugLogging\} \/>/,
 		);
+	});
+
+	it("animates both mounting and unmounting the panel", () => {
+		expect(app).toContain('visible ? "is-entering" : "is-exiting"');
+		expect(app).toContain("onAnimationEnd=");
+		expect(styles).toContain("@keyframes debug-log-enter");
+		expect(styles).toContain("@keyframes debug-log-exit");
 	});
 
 	it("offers clear, copy, and JSONL download actions", () => {

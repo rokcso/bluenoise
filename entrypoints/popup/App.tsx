@@ -593,7 +593,7 @@ export function SettingsApp({
 									update={update}
 								/>
 							</SettingsPanel>
-							{config.debugLogging && <DebugLogPanel />}
+							<AnimatedDebugLogPanel visible={config.debugLogging} />
 						</SettingsGroup>
 					</>
 				)}
@@ -1574,6 +1574,27 @@ function Advanced({
 					onChange={(v) => update({ debugLogging: v })}
 				/>
 			)}
+		</div>
+	);
+}
+
+function AnimatedDebugLogPanel({ visible }: { visible: boolean }) {
+	const [mounted, setMounted] = useState(visible);
+
+	useEffect(() => {
+		if (visible) setMounted(true);
+	}, [visible]);
+
+	if (!mounted) return null;
+
+	return (
+		<div
+			className={`debug-log-transition ${visible ? "is-entering" : "is-exiting"}`}
+			onAnimationEnd={(event) => {
+				if (event.target === event.currentTarget && !visible) setMounted(false);
+			}}
+		>
+			<DebugLogPanel />
 		</div>
 	);
 }
