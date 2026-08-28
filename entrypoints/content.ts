@@ -307,7 +307,6 @@ function readPresetFilter(
 ): "ad" | "parody" | "fan" | "commentary" | "automated" | undefined {
 	let preset: ReturnType<typeof readPresetFilter>;
 	if (
-		(cfg.filterAds && isPromotedPost(article)) ||
 		(cfg.filterMediaAds && isMediaAd(article)) ||
 		(cfg.filterCardAds && isCardAd(article))
 	)
@@ -432,7 +431,6 @@ function evaluate(article: Element): {
 		!isMainTweet(article) &&
 		(matchers.count > 0 ||
 			accountListsActive ||
-			cfg.filterAds ||
 			cfg.filterMediaAds ||
 			cfg.filterCardAds ||
 			cfg.filterParodyAccounts ||
@@ -1110,7 +1108,6 @@ async function readStoredState(): Promise<void> {
 
 const MATCH_KEYS = [
 	"enabled",
-	"filterAds",
 	"filterMediaAds",
 	"filterCardAds",
 	"filterParodyAccounts",
