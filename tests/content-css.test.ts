@@ -29,8 +29,8 @@ describe("hover reveal styles", () => {
 		expect(css).not.toContain(".xsf-reveal {");
 	});
 
-	it("restores blur without transitioning through a clear frame", () => {
-		expect(css).toContain("transition: opacity 0.2s ease;");
+	it("switches reveal and blur atomically without an opacity transition", () => {
+		expect(css).not.toContain("transition: opacity");
 		expect(css).not.toContain("filter 0.2s ease");
 	});
 });
