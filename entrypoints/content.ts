@@ -50,14 +50,14 @@ const CELL_SEL = 'div[data-testid="cellInnerDiv"]';
 const TEXT_SEL = '[data-testid="tweetText"], [data-testid="postText"]';
 const NAME_SEL = '[data-testid="User-Name"], [data-testid="userName"]';
 
-const HIT_CLASS = "xsf-filtered";
+const HIT_CLASS = "bluenoise-filtered";
 const SEP = "\u001f";
-const HIT_ATTR = "data-xsf-keyword";
-const REASON_CLASS = "xsf-filter-reason";
-const INERT_ATTR = "data-xsf-inert";
-const MODE_ATTR = "data-xsf-mode";
-const INVISIBLE_ATTR = "data-xsf-invisible";
-const OPACITY_VAR = "--xsf-opacity";
+const HIT_ATTR = "data-bluenoise-keyword";
+const REASON_CLASS = "bluenoise-filter-reason";
+const INERT_ATTR = "data-bluenoise-inert";
+const MODE_ATTR = "data-bluenoise-mode";
+const INVISIBLE_ATTR = "data-bluenoise-invisible";
+const OPACITY_VAR = "--bluenoise-opacity";
 const DIM_OPACITY = 0.15;
 const REVEAL_RADIUS = 40;
 
@@ -155,7 +155,7 @@ function debugLog(
 		details,
 	};
 	console[level](`[BlueNoise] ${event}`, details);
-	sendToBackground({ type: "XSF_DEBUG_LOG", entry });
+	sendToBackground({ type: "BLUENOISE_DEBUG_LOG", entry });
 }
 
 function refreshMatchers(): void {
@@ -778,7 +778,7 @@ function scheduleBadge(): void {
 				: 0;
 		if (count === lastBadge) return;
 		lastBadge = count;
-		sendToBackground({ type: "XSF_COUNT", count });
+		sendToBackground({ type: "BLUENOISE_COUNT", count });
 	}, 400);
 }
 
@@ -792,7 +792,7 @@ function currentFilteredCount(): number {
 function hookMessages(): void {
 	chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 		try {
-			if (message?.type === "XSF_GET_COUNT") {
+			if (message?.type === "BLUENOISE_GET_COUNT") {
 				sendResponse({ count: currentFilteredCount() });
 			}
 		} catch {
@@ -807,7 +807,7 @@ function hookMessages(): void {
 const MENU_SEL = '[data-testid="Dropdown"]';
 /** X's per-post overflow button. Stable and not localized. */
 const MENU_OPENER_SEL = '[data-testid="caret"][aria-haspopup="menu"]';
-const MENU_ITEM_CLASS = "xsf-menu-item";
+const MENU_ITEM_CLASS = "bluenoise-menu-item";
 const MENU_ICONS = {
 	whitelist:
 		"M14 14.252V16.3414C13.3744 16.1203 12.7013 16 12 16C8.68629 16 6 18.6863 6 22H4C4 17.5817 7.58172 14 12 14C12.6906 14 13.3608 14.0875 14 14.252ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13ZM12 11C14.21 11 16 9.21 16 7C16 4.79 14.21 3 12 3C9.79 3 8 4.79 8 7C8 9.21 9.79 11 12 11ZM17.7929 19.9142L21.3284 16.3787L22.7426 17.7929L17.7929 22.7426L14.2574 19.2071L15.6716 17.7929L17.7929 19.9142Z",
@@ -839,11 +839,14 @@ function buildMenuAction(
 	const el = document.createElement("button");
 	el.type = "button";
 	el.className = template
-		? `${template.className} ${MENU_ITEM_CLASS} xsf-native-menu-item`
+		? `${template.className} ${MENU_ITEM_CLASS} bluenoise-native-menu-item`
 		: MENU_ITEM_CLASS;
 	el.setAttribute("role", "menuitem");
 	el.tabIndex = 0;
-	el.style.setProperty("--xsf-menu-hover", nativeMenuHoverColor(template));
+	el.style.setProperty(
+		"--bluenoise-menu-hover",
+		nativeMenuHoverColor(template),
+	);
 
 	if (template) {
 		for (const child of template.children) el.append(child.cloneNode(true));

@@ -213,7 +213,7 @@ export default defineBackground(() => {
 
 	// Badge count.
 	chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-		if (message?.type === "XSF_COUNT") {
+		if (message?.type === "BLUENOISE_COUNT") {
 			const count = Number(message.count) || 0;
 			const tabId = sender.tab?.id;
 			if (tabId === undefined) return false;
@@ -225,9 +225,9 @@ export default defineBackground(() => {
 				.setBadgeBackgroundColor({ tabId, color: "#3f6f72" })
 				.catch(() => {});
 			sendResponse({ ok: true });
-		} else if (message?.type === "XSF_DEBUG_LOG") {
+		} else if (message?.type === "BLUENOISE_DEBUG_LOG") {
 			queueDebugLog(message.entry);
-		} else if (message?.type === "XSF_DEBUG_CLEAR") {
+		} else if (message?.type === "BLUENOISE_DEBUG_CLEAR") {
 			clearDebugLogs()
 				.then(() => sendResponse({ ok: true }))
 				.catch((error) =>
@@ -237,11 +237,11 @@ export default defineBackground(() => {
 					}),
 				);
 			return true;
-		} else if (message?.type === "XSF_ENSURE_SUBSCRIPTIONS") {
+		} else if (message?.type === "BLUENOISE_ENSURE_SUBSCRIPTIONS") {
 			// Opening the popup retries a failed first-install download without
 			// replacing a successfully stored snapshot.
 			void syncMissingSubscriptions();
-		} else if (message?.type === "XSF_SYNC_ACCOUNT_LIST") {
+		} else if (message?.type === "BLUENOISE_SYNC_ACCOUNT_LIST") {
 			const sourceId =
 				typeof message.sourceId === "string" ? message.sourceId : undefined;
 			syncAccounts(sourceId ? [sourceId] : undefined)
