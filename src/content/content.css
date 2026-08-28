@@ -4,20 +4,20 @@
  */
 
 :root {
-	--xsf-opacity: 0.15;
+	--bluenoise-opacity: 0.15;
 }
 
 /* Blur the row's content while leaving the reason overlay crisp. */
-[data-xsf-mode] .xsf-filtered > :not(.xsf-filter-reason) {
-	opacity: var(--xsf-opacity);
+[data-bluenoise-mode] .bluenoise-filtered > :not(.bluenoise-filter-reason) {
+	opacity: var(--bluenoise-opacity);
 	filter: blur(3px);
 }
 
-.xsf-filtered {
+.bluenoise-filtered {
 	position: relative;
 }
 
-.xsf-filter-reason {
+.bluenoise-filter-reason {
 	position: absolute;
 	top: 10px;
 	right: 16px;
@@ -35,43 +35,43 @@
 }
 
 /* Cut the spotlight out of the reason text so revealed content stays on top. */
-.xsf-filter-reason-revealing {
+.bluenoise-filter-reason-revealing {
 	mask-image: radial-gradient(
-		circle var(--xsf-reason-reveal-radius) at var(--xsf-reason-reveal-x)
-			var(--xsf-reason-reveal-y),
+		circle var(--bluenoise-reason-reveal-radius) at
+			var(--bluenoise-reason-reveal-x) var(--bluenoise-reason-reveal-y),
 		transparent calc(100% - 1px),
 		black 100%
 	);
 }
 
 @media (prefers-color-scheme: dark) {
-	.xsf-filter-reason {
+	.bluenoise-filter-reason {
 		color: rgb(139 152 165 / 72%);
 	}
 }
 
 /* Opacity maxed: also disable pointer interaction to avoid accidental clicks */
-[data-xsf-mode][data-xsf-invisible] .xsf-filtered {
+[data-bluenoise-mode][data-bluenoise-invisible] .bluenoise-filtered {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	pointer-events: none !important;
 }
 
 /* Hide mode: make the whole reply disappear */
-[data-xsf-mode="hide"] .xsf-filtered {
+[data-bluenoise-mode="hide"] .bluenoise-filtered {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
 
-[data-xsf-custom-hidden] {
+[data-bluenoise-custom-hidden] {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
 
-[data-xsf-hide-notification-badges]
+[data-bluenoise-hide-notification-badges]
 	[data-testid="AppTabBar_Home_Link"]
 	svg
 	+ div[aria-label],
-[data-xsf-hide-notification-badges]
+[data-bluenoise-hide-notification-badges]
 	[data-testid="AppTabBar_Notifications_Link"]
 	svg
 	+ div[aria-label] {
@@ -80,7 +80,7 @@
 }
 
 /* Keep the CSS fallback aligned with the current-trends region structure. */
-[data-xsf-hide-trends]
+[data-bluenoise-hide-trends]
 section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"]) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
@@ -91,8 +91,9 @@ section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"]) {
  * so instead of the label we key on the always-present Terms-of-Service link
  * (href$="/tos") to identify it in any language. Hide the nav and its padded
  * wrapper (via :has) so no blank box is left behind. */
-[data-xsf-hide-footer] nav[role="navigation"]:has(a[href$="/tos"]),
-[data-xsf-hide-footer] div:has(> nav[role="navigation"]:has(a[href$="/tos"])) {
+[data-bluenoise-hide-footer] nav[role="navigation"]:has(a[href$="/tos"]),
+[data-bluenoise-hide-footer]
+	div:has(> nav[role="navigation"]:has(a[href$="/tos"])) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
@@ -100,11 +101,11 @@ section[role="region"]:has(> h1[role="heading"]):has([data-testid="trend"]) {
 /* Hide X's "Who to follow" recommendations panel. The label is localized,
  * while the panel's role and its stable UserCell test IDs are not. Match the
  * complementary aside and hide its padded wrapper as well. */
-[data-xsf-hide-follow]
+[data-bluenoise-hide-follow]
 aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	> ul[role="list"] > li[data-testid="UserCell"]
 ),
-[data-xsf-hide-follow]
+[data-bluenoise-hide-follow]
 	div:has(
 		> div
 			> aside[role="complementary"]:has(
@@ -118,8 +119,9 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
  * stable data-testid="trend" marker on its descendants and the accessible
  * "What's happening" section structure. The direct child section is selected
  * via :has so the surrounding padded wrapper disappears too. */
-[data-xsf-hide-trends] section[aria-labelledby]:has([data-testid="trend"]),
-[data-xsf-hide-trends]
+[data-bluenoise-hide-trends]
+section[aria-labelledby]:has([data-testid="trend"]),
+[data-bluenoise-hide-trends]
 	div:has(> section[aria-labelledby]:has([data-testid="trend"])) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
@@ -130,8 +132,9 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
  * in every language, so that stays stable while the generated r-/css- classes
  * are re-randomized on each session. Hide the aside and its padded wrapper
  * (selected via :has) so the card leaves no blank box behind. */
-[data-xsf-hide-premium] aside[role="complementary"][aria-label*="Premium"],
-[data-xsf-hide-premium]
+[data-bluenoise-hide-premium]
+aside[role="complementary"][aria-label*="Premium"],
+[data-bluenoise-hide-premium]
 	div:has(> aside[role="complementary"][aria-label*="Premium"]) {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
@@ -139,7 +142,7 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 
 /* Hide the timeline prompt describing unlocked Premium features. Match X's
  * stable prompt and destination markers instead of localized copy or classes. */
-[data-xsf-hide-premium-feature-prompt]
+[data-bluenoise-hide-premium-feature-prompt]
 [data-testid="cellInnerDiv"]:has(
 	[data-testid="inlinePrompt"] a[href^="/i/premium"]
 ) {
@@ -148,12 +151,12 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 }
 
 /* Keep the source DOM intact: an overlay blurs everything except the cursor hole. */
-.xsf-filtered.xsf-revealing > :not(.xsf-filter-reason) {
+.bluenoise-filtered.bluenoise-revealing > :not(.bluenoise-filter-reason) {
 	opacity: 1;
 	filter: none;
 }
 
-.xsf-filtered.xsf-revealing::after {
+.bluenoise-filtered.bluenoise-revealing::after {
 	position: absolute;
 	z-index: 1;
 	inset: 0;
@@ -162,30 +165,31 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	background: rgb(255 255 255 / 85%);
 	backdrop-filter: blur(3px);
 	mask-image: radial-gradient(
-		circle var(--xsf-reveal-radius) at var(--xsf-reveal-x) var(--xsf-reveal-y),
+		circle var(--bluenoise-reveal-radius) at var(--bluenoise-reveal-x)
+			var(--bluenoise-reveal-y),
 		transparent calc(100% - 1px),
 		black 100%
 	);
 }
 
 @media (prefers-color-scheme: dark) {
-	.xsf-filtered.xsf-revealing::after {
+	.bluenoise-filtered.bluenoise-revealing::after {
 		background: rgb(0 0 0 / 85%);
 	}
 }
 
-[data-xsf-hide-grok] [data-testid="GrokDrawer"] {
+[data-bluenoise-hide-grok] [data-testid="GrokDrawer"] {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
 
-[data-xsf-hide-message] [data-testid="chat-drawer-root"] {
+[data-bluenoise-hide-message] [data-testid="chat-drawer-root"] {
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
 
 /* Injected items inside X's tweet menu. */
-.xsf-menu-item {
+.bluenoise-menu-item {
 	border: 0;
 	background: transparent;
 	color: inherit;
@@ -194,7 +198,7 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	user-select: none;
 }
 
-.xsf-menu-item:not(.xsf-native-menu-item) {
+.bluenoise-menu-item:not(.bluenoise-native-menu-item) {
 	width: 100%;
 	display: flex;
 	align-items: center;
@@ -203,41 +207,41 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	font: inherit;
 }
 
-.xsf-menu-item:not(.xsf-native-menu-item) svg {
+.bluenoise-menu-item:not(.bluenoise-native-menu-item) svg {
 	width: 24px;
 	height: 24px;
 	flex: none;
 	fill: currentColor;
 }
 
-.xsf-menu-item:is(:hover, :focus-visible) {
-	background: var(--xsf-menu-hover, rgba(0, 0, 0, 0.03));
+.bluenoise-menu-item:is(:hover, :focus-visible) {
+	background: var(--bluenoise-menu-hover, rgba(0, 0, 0, 0.03));
 }
 
-.xsf-native-menu-item {
+.bluenoise-native-menu-item {
 	appearance: none;
 	font: inherit;
 }
 
 /* The expanded tree keeps text nodes, so hide them while compact geometry is active. */
 
-.xsf-compose-icon {
+.bluenoise-compose-icon {
 	width: 24px;
 	height: 24px;
 	fill: currentColor;
 }
 
-[data-xsf-compact-compose] [data-xsf-compose-spacer] {
+[data-bluenoise-compact-compose] [data-bluenoise-compose-spacer] {
 	display: none;
 }
 
 /* Native compact account menus retain only the avatar container. */
-[data-xsf-compact-account] > div:not(:first-child) {
+[data-bluenoise-compact-account] > div:not(:first-child) {
 	/* biome-ignore lint/complexity/noImportantStyles: override X's expanded account details. */
 	display: none !important;
 }
 
-[data-xsf-collapse-sidebar]
+[data-bluenoise-collapse-sidebar]
 	header[role="banner"]:has([data-testid="AppTabBar_Home_Link"])
 	nav[role="navigation"]
 	> :is(a, button)

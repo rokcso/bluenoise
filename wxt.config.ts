@@ -20,7 +20,13 @@ export default defineConfig({
 		version: "0.4.0",
 		minimum_chrome_version: "116",
 		default_locale: "en",
-		permissions: ["storage", "unlimitedStorage", "alarms", "contextMenus"],
+		permissions: [
+			"storage",
+			"unlimitedStorage",
+			"alarms",
+			"contextMenus",
+			"clipboardWrite",
+		],
 		// External keyword lists come from GitHub raw; the community account
 		// blacklist/whitelist (Make X Great Again) is served from x.zuoluo.tv.
 		host_permissions: [

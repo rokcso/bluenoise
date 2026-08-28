@@ -1741,8 +1741,9 @@ async function copyDebugText(text: string): Promise<void> {
 		textarea.style.opacity = "0";
 		document.body.append(textarea);
 		textarea.select();
-		document.execCommand("copy");
+		const copied = document.execCommand("copy");
 		textarea.remove();
+		if (!copied) throw new Error("Failed to copy debug logs");
 	}
 }
 
