@@ -7,6 +7,13 @@ import type {
 } from "@/src/contracts/config";
 import { RULE_DATA_KEY } from "@/src/contracts/config";
 import {
+	DEBUG_LOG_KEY,
+	DEBUG_LOG_MAX_ENTRIES,
+	type DebugLogEntry,
+	debugLogToJsonl,
+	isDebugLogEntry,
+} from "@/src/contracts/debug-log";
+import {
 	type AccountListSnapshot,
 	DEFAULT_ACCOUNT_LIST_SOURCES,
 	MXGA_DATA_URL,
@@ -26,7 +33,9 @@ type AppConfig = SettingsConfig & RuleView;
 
 import {
 	AppearanceIcon,
+	CopyIcon,
 	DatabaseIcon,
+	DeleteIcon,
 	DiagnosticsIcon,
 	DownloadIcon,
 	ExternalLinkIcon,
@@ -1555,15 +1564,180 @@ function Advanced({
 					/>
 				</>
 			) : (
-				<XToggle
-					label={t("debug_logging")}
-					hint={t("debug_logging_hint")}
-					checked={config.debugLogging}
-					onChange={(v) => update({ debugLogging: v })}
-				/>
+				<>
+					<XToggle
+						label={t("debug_logging")}
+						hint={t("debug_logging_hint")}
+						checked={config.debugLogging}
+						onChange={(v) => update({ debugLogging: v })}
+					/>
+					{config.debugLogging && (
+						<>
+							<SettingsDivider />
+							<DebugLogPanel />
+						</>
+					)}
+				</>
 			)}
 		</div>
 	);
+}
+
+function DebugLogPanel() {
+	const [entries, setEntries] = useState<DebugLogEntry[]>([]);
+	const [copied, setCopied] = useState(false);
+	const [clearing, setClearing] = useState(false);
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const followLatest = useRef(true);
+
+	useEffect(() => {
+		const load = () =>
+			chrome.storage.local.get(DEBUG_LOG_KEY).then((stored) => {
+				const next = Array.isArray(stored[DEBUG_LOG_KEY])
+					? stored[DEBUG_LOG_KEY].filter(isDebugLogEntry)
+					: [];
+				setEntries(next);
+			});
+		void load();
+		const onChange = (
+			changes: { [key: string]: chrome.storage.StorageChange },
+			area: string,
+		) => {
+			if (area !== "local" || !changes[DEBUG_LOG_KEY]) return;
+			const value = changes[DEBUG_LOG_KEY].newValue;
+			setEntries(Array.isArray(value) ? value.filter(isDebugLogEntry) : []);
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => chrome.storage.onChanged.removeListener(onChange);
+	}, []);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: New entries require a post-render scroll.
+	useEffect(() => {
+		if (!followLatest.current) return;
+		const viewport = scrollRef.current;
+		if (viewport) viewport.scrollTop = viewport.scrollHeight;
+	}, [entries]);
+
+	async function copyLogs() {
+		await copyDebugText(debugLogToJsonl(entries));
+		setCopied(true);
+		window.setTimeout(() => setCopied(false), 1500);
+	}
+
+	function downloadLogs() {
+		const blob = new Blob([debugLogToJsonl(entries)], {
+			type: "application/x-ndjson;charset=utf-8",
+		});
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `bluenoise-debug-${new Date().toISOString().replaceAll(":", "-")}.jsonl`;
+		link.click();
+		window.setTimeout(() => URL.revokeObjectURL(url), 0);
+	}
+
+	async function clearLogs() {
+		setClearing(true);
+		try {
+			await chrome.runtime.sendMessage({ type: "XSF_DEBUG_CLEAR" });
+			setEntries([]);
+		} finally {
+			setClearing(false);
+		}
+	}
+
+	return (
+		<section className="debug-log-panel" aria-label={t("debug_log_title")}>
+			<header className="debug-log-header">
+				<div>
+					<h3>{t("debug_log_title")}</h3>
+					<span className="debug-log-status">
+						<i aria-hidden="true" /> {t("debug_log_recording")}
+					</span>
+				</div>
+				<span className="debug-log-count">
+					{entries.length} / {DEBUG_LOG_MAX_ENTRIES}
+				</span>
+			</header>
+			<div
+				ref={scrollRef}
+				className="debug-log-viewport"
+				onScroll={(event) => {
+					const el = event.currentTarget;
+					followLatest.current =
+						el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+				}}
+			>
+				{entries.length ? (
+					entries.map((entry) => (
+						<div className={`debug-log-entry is-${entry.level}`} key={entry.id}>
+							<div className="debug-log-entry-line">
+								<time dateTime={new Date(entry.timestamp).toISOString()}>
+									{formatDebugTime(entry.timestamp)}
+								</time>
+								<strong>{entry.event}</strong>
+								<span>{entry.context.path}</span>
+							</div>
+							<pre>{JSON.stringify(entry.details, null, 2)}</pre>
+						</div>
+					))
+				) : (
+					<div className="debug-log-empty">{t("debug_log_empty")}</div>
+				)}
+			</div>
+			<footer className="debug-log-footer">
+				<p>{t("debug_log_privacy")}</p>
+				<div className="debug-log-actions">
+					<button
+						type="button"
+						onClick={clearLogs}
+						disabled={clearing || !entries.length}
+					>
+						<DeleteIcon aria-hidden="true" />
+						{t("debug_log_clear")}
+					</button>
+					<button type="button" onClick={copyLogs} disabled={!entries.length}>
+						<CopyIcon aria-hidden="true" />
+						{copied ? t("debug_log_copied") : t("debug_log_copy")}
+					</button>
+					<button
+						type="button"
+						onClick={downloadLogs}
+						disabled={!entries.length}
+					>
+						<DownloadIcon aria-hidden="true" />
+						{t("debug_log_download")}
+					</button>
+				</div>
+			</footer>
+		</section>
+	);
+}
+
+async function copyDebugText(text: string): Promise<void> {
+	try {
+		await navigator.clipboard.writeText(text);
+		return;
+	} catch {
+		const textarea = document.createElement("textarea");
+		textarea.value = text;
+		textarea.style.position = "fixed";
+		textarea.style.opacity = "0";
+		document.body.append(textarea);
+		textarea.select();
+		document.execCommand("copy");
+		textarea.remove();
+	}
+}
+
+function formatDebugTime(timestamp: number): string {
+	return new Date(timestamp).toLocaleTimeString([], {
+		hour12: false,
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		fractionalSecondDigits: 3,
+	});
 }
 
 function GeneralSettings({

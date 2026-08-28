@@ -25,6 +25,7 @@ import type {
 	RuleView,
 } from "@/src/contracts/config";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
+import type { DebugLogEntry, DebugLogLevel } from "@/src/contracts/debug-log";
 import {
 	type AccountListIndex,
 	type AccountListSnapshot,
@@ -70,6 +71,8 @@ const FLUSH_MAX_ARTICLES = 50;
 const ACCOUNT_SOURCE_NAMES = new Map(
 	DEFAULT_ACCOUNT_LIST_SOURCES.map((source) => [source.id, source.name]),
 );
+const DEBUG_SESSION_ID = crypto.randomUUID();
+let debugSequence = 0;
 
 export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
@@ -136,8 +139,23 @@ function reportInitError(error: unknown): void {
 	console.error("[BlueNoise] Content script initialization failed:", error);
 }
 
-function debugLog(message: string, details: Record<string, unknown>): void {
-	if (cfg.debugLogging) console.info(`[BlueNoise] ${message}`, details);
+function debugLog(
+	event: string,
+	details: Record<string, unknown>,
+	level: DebugLogLevel = "info",
+): void {
+	if (!cfg.debugLogging) return;
+	const entry: DebugLogEntry = {
+		id: `${DEBUG_SESSION_ID}:${++debugSequence}`,
+		timestamp: Date.now(),
+		sessionId: DEBUG_SESSION_ID,
+		level,
+		event,
+		context: { path: location.pathname },
+		details,
+	};
+	console[level](`[BlueNoise] ${event}`, details);
+	sendToBackground({ type: "XSF_DEBUG_LOG", entry });
 }
 
 function refreshMatchers(): void {
@@ -442,7 +460,11 @@ function evaluate(article: Element): {
 			{
 				body: text,
 				name,
-				identity: preset ? {} : readAuthorIdentity(article, accountListsActive),
+				identity: preset
+					? cfg.debugLogging
+						? readAuthorIdentity(article, false)
+						: {}
+					: readAuthorIdentity(article, accountListsActive),
 				preset,
 			},
 			{
@@ -463,40 +485,41 @@ function evaluate(article: Element): {
 	return { fresh: true, log: decision.log };
 }
 
-/** One readable log line per filtered reply, then a reason breakdown. */
+/** Emit structured entries for each match, followed by a compact batch summary. */
 function emitFilteredLogs(logs: FilteredLog[]): void {
 	const reasonCount = new Map<string, number>();
 	for (const log of logs) {
 		const key =
-			log.category === "account"
-				? "account:blacklist"
-				: `${log.source ?? "?"} :: ${log.rule}`;
+			log.category === "preset"
+				? `preset:${log.preset}`
+				: log.category === "account"
+					? "account:blacklist"
+					: `${log.source ?? "?"} :: ${log.rule}`;
 		reasonCount.set(key, (reasonCount.get(key) ?? 0) + 1);
 	}
 
-	console.group?.(`[BlueNoise] Filtered ${logs.length} item(s)`);
 	for (const log of logs) {
-		console.info(
-			`[BlueNoise] filtered @${log.handle ?? "?"}${
-				log.id ? ` (id ${log.id})` : ""
-			}`,
-			{
-				reason:
-					log.category === "account"
+		debugLog("item.filtered", {
+			handle: log.handle,
+			accountId: log.id,
+			reason:
+				log.category === "preset"
+					? `preset:${log.preset}`
+					: log.category === "account"
 						? "account blacklist"
 						: `keyword:${log.field}`,
-				rule: log.rule,
-				kind: log.kind,
-				source: log.source,
-				snippet: log.snippet,
-			},
-		);
+			rule: log.rule,
+			kind: log.kind,
+			source: log.source,
+			snippet: log.snippet,
+		});
 	}
-	console.info(
-		"[BlueNoise] reason breakdown",
-		Object.fromEntries([...reasonCount.entries()].sort((a, b) => b[1] - a[1])),
-	);
-	console.groupEnd?.();
+	debugLog("filter.batch", {
+		filteredCount: logs.length,
+		reasons: Object.fromEntries(
+			[...reasonCount.entries()].sort((a, b) => b[1] - a[1]),
+		),
+	});
 }
 
 function readAuthorIdentity(
@@ -569,7 +592,7 @@ function flush(): void {
 			break;
 		}
 	}
-	debugLog("Scan completed", {
+	debugLog("scan.completed", {
 		queuedArticleCount: queuedCount,
 		evaluatedCount,
 		processedArticleCount: processed,
@@ -629,7 +652,7 @@ function fullScan(options: { markTextDirty?: boolean } = {}): void {
 		if (options.markTextDirty) textDirty.add(a);
 		pending.add(a);
 	}
-	debugLog("Scan queued", { articleCount });
+	debugLog("scan.queued", { articleCount });
 	schedule();
 }
 
@@ -1158,23 +1181,20 @@ function watchConfig(): void {
 				applyStyleVars();
 			}
 			if (prev.showBadgeCount !== cfg.showBadgeCount) scheduleBadge();
+			if (!prev.debugLogging && cfg.debugLogging) {
+				debugLog("logging.enabled", {
+					filtering: active,
+					matcherCount: matchers.count,
+				});
+				// Re-evaluate rendered items so the new session includes current matches.
+				generation++;
+				fullScan();
+			}
 		});
 		if (prev.showActualReplyCount !== cfg.showActualReplyCount) {
 			if (!cfg.showActualReplyCount) replyCounts.clearRendered();
 			else if (isHomeTimeline()) replyCounts.updateTimeline(true);
 			else replyCounts.updateDetail(true);
-		}
-
-		if (!prev.debugLogging && cfg.debugLogging) {
-			debugLog("Debug logging enabled", {
-				url: location.href,
-				filtering: active,
-				matcherCount: matchers.count,
-			});
-			// Re-run a full scan so every already-rendered reply gets re-evaluated
-			// and logged, instead of being skipped by the sig cache.
-			generation++;
-			fullScan();
 		}
 	});
 	chrome.storage.onChanged.addListener((changes, area) => {
@@ -1202,8 +1222,7 @@ async function init(): Promise<void> {
 	pageMakeover.apply(cfg);
 
 	active = isFilterablePage();
-	debugLog("Initialized", {
-		url: location.href,
+	debugLog("content.initialized", {
 		filtering: active,
 		enabled: cfg.enabled,
 		matcherCount: matchers.count,

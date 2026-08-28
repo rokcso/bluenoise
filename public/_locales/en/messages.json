@@ -303,8 +303,18 @@
 	},
 	"debug_logging": { "message": "Debug logging" },
 	"debug_logging_hint": {
-		"message": "Write filtering diagnostics to the DevTools console of the page being filtered."
+		"message": "Record filtering diagnostics locally and show them below."
 	},
+	"debug_log_title": { "message": "Debug logs" },
+	"debug_log_recording": { "message": "Recording" },
+	"debug_log_empty": { "message": "Waiting for filtering activity on X…" },
+	"debug_log_privacy": {
+		"message": "Stored only on this device. Logs may include post snippets, account IDs, and matched rules; review them before sharing."
+	},
+	"debug_log_clear": { "message": "Clear" },
+	"debug_log_copy": { "message": "Copy" },
+	"debug_log_copied": { "message": "Copied" },
+	"debug_log_download": { "message": "Download" },
 	"contextMenu_addKeyword": {
 		"message": "Add selected text to the keyword blacklist"
 	},

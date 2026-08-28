@@ -1,6 +1,13 @@
 import { setLanguage, t } from "@/lib/i18n";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
+	DEBUG_LOG_FLUSH_DELAY_MS,
+	DEBUG_LOG_KEY,
+	type DebugLogEntry,
+	isDebugLogEntry,
+	trimDebugLog,
+} from "@/src/contracts/debug-log";
+import {
 	DEFAULT_ACCOUNT_LIST_SOURCES,
 	syncAccountListSource,
 } from "@/src/domain/account-list";
@@ -18,6 +25,47 @@ import {
 
 export default defineBackground(() => {
 	let syncInFlight = false;
+	let pendingDebugLogs: DebugLogEntry[] = [];
+	let debugFlushTimer: ReturnType<typeof setTimeout> | undefined;
+	let debugWrite = Promise.resolve();
+
+	function flushDebugLogs(): void {
+		debugFlushTimer = undefined;
+		const batch = pendingDebugLogs;
+		pendingDebugLogs = [];
+		if (!batch.length) return;
+		debugWrite = debugWrite
+			.then(async () => {
+				const stored = await chrome.storage.local.get(DEBUG_LOG_KEY);
+				const existing = Array.isArray(stored[DEBUG_LOG_KEY])
+					? stored[DEBUG_LOG_KEY].filter(isDebugLogEntry)
+					: [];
+				await chrome.storage.local.set({
+					[DEBUG_LOG_KEY]: trimDebugLog([...existing, ...batch]),
+				});
+			})
+			.catch((error) =>
+				console.error("[BlueNoise] Failed to persist debug logs:", error),
+			);
+	}
+
+	function queueDebugLog(entry: unknown): void {
+		if (!isDebugLogEntry(entry)) return;
+		// Drop undefined properties and detach the message payload before batching.
+		pendingDebugLogs.push(JSON.parse(JSON.stringify(entry)) as DebugLogEntry);
+		if (!debugFlushTimer)
+			debugFlushTimer = setTimeout(flushDebugLogs, DEBUG_LOG_FLUSH_DELAY_MS);
+	}
+
+	function clearDebugLogs(): Promise<void> {
+		if (debugFlushTimer) clearTimeout(debugFlushTimer);
+		debugFlushTimer = undefined;
+		pendingDebugLogs = [];
+		debugWrite = debugWrite.then(() =>
+			chrome.storage.local.remove(DEBUG_LOG_KEY),
+		);
+		return debugWrite;
+	}
 
 	async function readState() {
 		const [synced, local] = await Promise.all([
@@ -177,6 +225,18 @@ export default defineBackground(() => {
 				.setBadgeBackgroundColor({ tabId, color: "#3f6f72" })
 				.catch(() => {});
 			sendResponse({ ok: true });
+		} else if (message?.type === "XSF_DEBUG_LOG") {
+			queueDebugLog(message.entry);
+		} else if (message?.type === "XSF_DEBUG_CLEAR") {
+			clearDebugLogs()
+				.then(() => sendResponse({ ok: true }))
+				.catch((error) =>
+					sendResponse({
+						ok: false,
+						error: error instanceof Error ? error.message : String(error),
+					}),
+				);
+			return true;
 		} else if (message?.type === "XSF_ENSURE_SUBSCRIPTIONS") {
 			// Opening the popup retries a failed first-install download without
 			// replacing a successfully stored snapshot.
