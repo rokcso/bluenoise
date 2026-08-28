@@ -295,8 +295,18 @@
 	},
 	"debug_logging": { "message": "调试日志" },
 	"debug_logging_hint": {
-		"message": "将过滤诊断信息写入被过滤页面的开发者工具控制台。"
+		"message": "在本地记录过滤诊断信息，并在下方显示。"
 	},
+	"debug_log_title": { "message": "调试日志" },
+	"debug_log_recording": { "message": "正在记录" },
+	"debug_log_empty": { "message": "等待 X 上的过滤活动…" },
+	"debug_log_privacy": {
+		"message": "日志仅保存在此设备上，可能包含帖子片段、账号 ID 和命中规则；分享前请检查内容。"
+	},
+	"debug_log_clear": { "message": "清空" },
+	"debug_log_copy": { "message": "复制" },
+	"debug_log_copied": { "message": "已复制" },
+	"debug_log_download": { "message": "下载" },
 	"contextMenu_addKeyword": {
 		"message": "将选中文字加入关键词黑名单"
 	},

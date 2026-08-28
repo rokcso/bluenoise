@@ -10,7 +10,8 @@ import { matchDetail } from "@/src/domain/matcher";
 export interface FilteredLog {
 	handle?: string;
 	id?: string;
-	category: "keyword" | "account";
+	category: "keyword" | "account" | "preset";
+	preset?: NonNullable<ArticleFacts["preset"]>;
 	field?: "body" | "name";
 	rule?: string;
 	source?: string;
@@ -57,7 +58,14 @@ export function classifyArticle(
 		return {
 			hit: PRESET_HITS[facts.preset],
 			reason: { category: "preset", type: facts.preset },
-			log: null,
+			log: context.debugLogging
+				? {
+						handle: facts.identity.handle,
+						id: facts.identity.id,
+						category: "preset",
+						preset: facts.preset,
+					}
+				: null,
 		};
 	}
 
@@ -76,11 +84,13 @@ export function classifyArticle(
 		return {
 			hit: "account:blacklist",
 			reason: { category: "account", source },
-			log: {
-				handle: facts.identity.handle,
-				id: facts.identity.id,
-				category: "account",
-			},
+			log: context.debugLogging
+				? {
+						handle: facts.identity.handle,
+						id: facts.identity.id,
+						category: "account",
+					}
+				: null,
 		};
 	}
 	if (accountMatch?.decision === "whitelist")

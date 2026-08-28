@@ -38,6 +38,24 @@ describe("article classifier", () => {
 		});
 	});
 
+	it("emits preset diagnostics only while debug logging is enabled", () => {
+		const filterContext = context();
+		filterContext.debugLogging = true;
+		expect(
+			classifyArticle(
+				{
+					body: "",
+					name: "",
+					identity: { handle: "brand" },
+					preset: "ad",
+				},
+				filterContext,
+			),
+		).toMatchObject({
+			log: { category: "preset", preset: "ad", handle: "brand" },
+		});
+	});
+
 	it("returns a structured keyword reason", () => {
 		expect(
 			classifyArticle(

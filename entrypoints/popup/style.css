@@ -188,6 +188,168 @@ body::-webkit-scrollbar {
 	margin-inline: 8px;
 	border-top: 1px solid var(--x-border);
 }
+
+.debug-log-panel {
+	margin: 14px 8px 8px;
+	overflow: hidden;
+	border: 1px solid var(--x-border);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--x-bg) 94%, var(--x-fg));
+}
+.debug-log-header,
+.debug-log-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 12px 14px;
+}
+.debug-log-header {
+	border-bottom: 1px solid var(--x-border);
+}
+.debug-log-header > div {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+.debug-log-header h3 {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 650;
+}
+.debug-log-status,
+.debug-log-count {
+	color: var(--x-muted);
+	font-size: 11px;
+}
+.debug-log-status i {
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	margin-right: 3px;
+	border-radius: 50%;
+	background: #00ba7c;
+	box-shadow: 0 0 0 3px rgb(0 186 124 / 12%);
+}
+.debug-log-count {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.debug-log-viewport {
+	height: 340px;
+	overflow: auto;
+	background:
+		linear-gradient(rgb(15 20 25 / 2%) 1px, transparent 1px) 0 0 / 100% 24px,
+		var(--x-bg);
+	scrollbar-color: var(--x-border) transparent;
+}
+.debug-log-entry {
+	padding: 10px 14px;
+	border-bottom: 1px solid color-mix(in srgb, var(--x-border) 65%, transparent);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.debug-log-entry-line {
+	display: grid;
+	grid-template-columns: 94px minmax(140px, 1fr) auto;
+	align-items: baseline;
+	gap: 10px;
+	font-size: 11px;
+}
+.debug-log-entry-line time,
+.debug-log-entry-line span {
+	color: var(--x-muted);
+}
+.debug-log-entry-line strong {
+	overflow: hidden;
+	font-weight: 650;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.debug-log-entry.is-warn strong {
+	color: #f4a261;
+}
+.debug-log-entry.is-error strong {
+	color: var(--x-red);
+}
+.debug-log-entry pre {
+	margin: 6px 0 0 104px;
+	overflow-wrap: anywhere;
+	color: var(--x-muted);
+	font: inherit;
+	font-size: 10px;
+	line-height: 1.45;
+	white-space: pre-wrap;
+}
+.debug-log-empty {
+	display: grid;
+	height: 100%;
+	place-items: center;
+	color: var(--x-muted);
+	font-size: 12px;
+}
+.debug-log-footer {
+	align-items: flex-end;
+	border-top: 1px solid var(--x-border);
+	background: color-mix(in srgb, var(--x-bg) 96%, var(--x-fg));
+}
+.debug-log-footer p {
+	max-width: 430px;
+	margin: 0;
+	color: var(--x-muted);
+	font-size: 10px;
+	line-height: 1.45;
+}
+.debug-log-actions {
+	display: flex;
+	flex: none;
+	gap: 4px;
+}
+.debug-log-actions button {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 6px 8px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--x-muted);
+	font: inherit;
+	font-size: 11px;
+	cursor: pointer;
+}
+.debug-log-actions button:hover:not(:disabled) {
+	background: var(--x-hover);
+	color: var(--x-fg);
+}
+.debug-log-actions button:focus-visible {
+	outline: 2px solid var(--x-accent);
+	outline-offset: 1px;
+}
+.debug-log-actions button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+.debug-log-actions svg {
+	width: 14px;
+	height: 14px;
+}
+@media (max-width: 700px) {
+	.debug-log-footer {
+		align-items: stretch;
+		flex-direction: column;
+	}
+	.debug-log-actions {
+		flex-wrap: wrap;
+	}
+	.debug-log-entry-line {
+		grid-template-columns: 86px minmax(0, 1fr);
+	}
+	.debug-log-entry-line span {
+		display: none;
+	}
+	.debug-log-entry pre {
+		margin-left: 96px;
+	}
+}
 @media (prefers-reduced-motion: reduce) {
 	.binary-switch-track,
 	.binary-switch-thumb,
