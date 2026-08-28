@@ -545,7 +545,7 @@ export function SettingsApp({
 									checked={config.showActualReplyCount}
 									onChange={(v) => update({ showActualReplyCount: v })}
 								/>
-								{config.mode === "dim" && (
+								{config.mode !== "hide" && (
 									<>
 										<SettingsDivider />
 										<XToggle
@@ -554,13 +554,17 @@ export function SettingsApp({
 											checked={config.showFilterReason}
 											onChange={(v) => update({ showFilterReason: v })}
 										/>
-										<SettingsDivider />
-										<XToggle
-											label={t("reveal_on_hover")}
-											hint={t("reveal_on_hover_hint")}
-											checked={config.revealOnHover}
-											onChange={(v) => update({ revealOnHover: v })}
-										/>
+										{config.mode === "dim" && (
+											<>
+												<SettingsDivider />
+												<XToggle
+													label={t("reveal_on_hover")}
+													hint={t("reveal_on_hover_hint")}
+													checked={config.revealOnHover}
+													onChange={(v) => update({ revealOnHover: v })}
+												/>
+											</>
+										)}
 									</>
 								)}
 							</SettingsPanel>
@@ -1205,6 +1209,7 @@ function EffectSettings({
 }) {
 	const options = [
 		{ value: "dim", label: t("mode_dim") },
+		{ value: "collapse", label: t("mode_collapse") },
 		{ value: "hide", label: t("mode_hide") },
 	] as const;
 	const activeIndex = options.findIndex((o) => o.value === config.mode);
@@ -1216,9 +1221,9 @@ function EffectSettings({
 					label={t("filter_effect")}
 					description={description}
 					control={
-						<div className="relative grid h-9 w-fit shrink-0 grid-cols-2 rounded-full border border-x-border bg-x-bg p-1">
+						<div className="relative grid h-9 w-fit shrink-0 grid-cols-3 rounded-full border border-x-border bg-x-bg p-1">
 							<div
-								className="absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-full bg-x-accent transition-transform duration-200"
+								className="absolute bottom-1 left-1 top-1 w-[calc(33.333%-2.667px)] rounded-full bg-x-accent transition-transform duration-200"
 								style={{ transform: `translateX(${activeIndex * 100}%)` }}
 							/>
 							{options.map((opt) => (
@@ -1251,9 +1256,9 @@ function EffectSettings({
 							</span>
 						)}
 					</span>
-					<div className="relative grid h-10 w-full grid-cols-2 rounded-lg border border-x-border bg-x-bg p-1">
+					<div className="relative grid h-10 w-full grid-cols-3 rounded-lg border border-x-border bg-x-bg p-1">
 						<div
-							className="absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-md bg-x-accent transition-transform duration-200"
+							className="absolute bottom-1 left-1 top-1 w-[calc(33.333%-2.667px)] rounded-md bg-x-accent transition-transform duration-200"
 							style={{ transform: `translateX(${activeIndex * 100}%)` }}
 						/>
 						{options.map((opt) => (

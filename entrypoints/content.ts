@@ -59,6 +59,8 @@ const HIT_CLASS = "bluenoise-filtered";
 const SEP = "\u001f";
 const HIT_ATTR = "data-bluenoise-keyword";
 const REASON_CLASS = "bluenoise-filter-reason";
+const COLLAPSE_CLASS = "bluenoise-collapse-placeholder";
+const COLLAPSE_EXPANDED_CLASS = "bluenoise-collapse-expanded";
 const INERT_ATTR = "data-bluenoise-inert";
 const MODE_ATTR = "data-bluenoise-mode";
 const INVISIBLE_ATTR = "data-bluenoise-invisible";
@@ -234,8 +236,10 @@ function refreshMatchers(): void {
 function clearAllMarks(): void {
 	for (const el of document.querySelectorAll(`.${HIT_CLASS}`)) {
 		el.classList.remove(HIT_CLASS);
+		el.classList.remove(COLLAPSE_EXPANDED_CLASS);
 		el.removeAttribute(HIT_ATTR);
 		el.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
+		el.querySelector(`:scope > .${COLLAPSE_CLASS}`)?.remove();
 		setRowInert(el, false);
 	}
 }
@@ -338,6 +342,63 @@ const replyCounts = createReplyCountController({
 });
 const pageMakeover = createPageMakeoverController({ birdSvg, isStatusPage });
 
+function syncCollapsePlaceholder(
+	row: Element,
+	reason: FilterReason | null,
+): void {
+	let placeholder = row.querySelector<HTMLElement>(
+		`:scope > .${COLLAPSE_CLASS}`,
+	);
+	if (cfg.mode !== "collapse") {
+		placeholder?.remove();
+		row.classList.remove(COLLAPSE_EXPANDED_CLASS);
+		return;
+	}
+	if (!placeholder) {
+		placeholder = document.createElement("div");
+		placeholder.className = COLLAPSE_CLASS;
+		const button = document.createElement("button");
+		button.type = "button";
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const expanded = row.classList.toggle(COLLAPSE_EXPANDED_CLASS);
+			button.setAttribute("aria-expanded", String(expanded));
+			const action = button.querySelector<HTMLElement>(
+				"[data-bluenoise-collapse-action]",
+			);
+			if (action)
+				action.textContent = t(expanded ? "collapse_again" : "collapse_show");
+		});
+		placeholder.append(button);
+		row.append(placeholder);
+	}
+
+	const button = placeholder.querySelector("button");
+	if (!button) return;
+	button.setAttribute(
+		"aria-expanded",
+		String(row.classList.contains(COLLAPSE_EXPANDED_CLASS)),
+	);
+	const detail =
+		reason && cfg.showFilterReason ? formatFilterReason(reason, t) : "";
+	button.replaceChildren();
+	const summary = document.createElement("span");
+	summary.className = "bluenoise-collapse-summary";
+	summary.textContent = detail
+		? t("collapse_filtered_reason", detail)
+		: t("collapse_filtered");
+	const action = document.createElement("span");
+	action.className = "bluenoise-collapse-action";
+	action.setAttribute("data-bluenoise-collapse-action", "");
+	action.textContent = t(
+		row.classList.contains(COLLAPSE_EXPANDED_CLASS)
+			? "collapse_again"
+			: "collapse_show",
+	);
+	button.append(summary, action);
+}
+
 function applyMark(
 	article: Element,
 	hit: string | null,
@@ -348,6 +409,7 @@ function applyMark(
 		setRowInert(row, cfg.mode === "hide");
 		row.classList.add(HIT_CLASS);
 		row.setAttribute(HIT_ATTR, hit);
+		syncCollapsePlaceholder(row, reason);
 		let label = row.querySelector<HTMLElement>(`:scope > .${REASON_CLASS}`);
 		if (reason && cfg.mode === "dim" && cfg.showFilterReason) {
 			const detail = formatFilterReason(reason, t);
@@ -364,8 +426,10 @@ function applyMark(
 		}
 	} else if (row.classList.contains(HIT_CLASS)) {
 		row.classList.remove(HIT_CLASS);
+		row.classList.remove(COLLAPSE_EXPANDED_CLASS);
 		row.removeAttribute(HIT_ATTR);
 		row.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
+		row.querySelector(`:scope > .${COLLAPSE_CLASS}`)?.remove();
 		setRowInert(row, false);
 	}
 }
@@ -452,7 +516,7 @@ function applyStyleVars(): void {
 		revealController.hide();
 		return;
 	}
-	root.setAttribute(MODE_ATTR, cfg.mode === "hide" ? "hide" : "dim");
+	root.setAttribute(MODE_ATTR, cfg.mode);
 	root.style.setProperty(OPACITY_VAR, String(DIM_OPACITY));
 	root.removeAttribute(INVISIBLE_ATTR);
 	syncMarkedRowsInteractivity();

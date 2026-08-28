@@ -14,7 +14,7 @@
 	"filter_status_label": { "message": "过滤回复与时间线噪音" },
 	"filter_effect": { "message": "命中帖子" },
 	"filter_effect_hint": {
-		"message": "选择命中规则的回复或推文是模糊显示还是直接隐藏。"
+		"message": "选择命中规则的回复或推文是模糊显示、折叠还是直接隐藏。"
 	},
 	"enabled_on": { "message": "过滤已开启" },
 	"enabled_off": { "message": "过滤已关闭" },
@@ -23,7 +23,12 @@
 	"x_makeover_off": { "message": "X 界面改造已关闭" },
 	"makeover": { "message": "界面改造" },
 	"mode_dim": { "message": "模糊" },
+	"mode_collapse": { "message": "折叠" },
 	"mode_hide": { "message": "隐藏" },
+	"collapse_filtered": { "message": "已过滤帖子" },
+	"collapse_filtered_reason": { "message": "已过滤：$1" },
+	"collapse_show": { "message": "展开" },
+	"collapse_again": { "message": "收起" },
 	"filter_reason_label": { "message": "命中：$1" },
 	"filter_reason_user_keyword": { "message": "我的关键词「$1」" },
 	"filter_reason_external_keyword": { "message": "$1 ·「$2」" },

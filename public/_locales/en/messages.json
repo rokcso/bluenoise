@@ -14,7 +14,7 @@
 	"filter_status_label": { "message": "Filter reply & timeline noise" },
 	"filter_effect": { "message": "Matched posts" },
 	"filter_effect_hint": {
-		"message": "Choose whether matched replies or posts are blurred or hidden."
+		"message": "Choose whether matched replies or posts are blurred, collapsed, or hidden."
 	},
 	"enabled_on": { "message": "Filtering on" },
 	"enabled_off": { "message": "Filtering off" },
@@ -23,7 +23,12 @@
 	"x_makeover_off": { "message": "X Makeover off" },
 	"makeover": { "message": "Makeover" },
 	"mode_dim": { "message": "Blur" },
+	"mode_collapse": { "message": "Collapse" },
 	"mode_hide": { "message": "Hide" },
+	"collapse_filtered": { "message": "Filtered post" },
+	"collapse_filtered_reason": { "message": "Filtered: $1" },
+	"collapse_show": { "message": "Show" },
+	"collapse_again": { "message": "Collapse" },
 	"filter_reason_label": { "message": "Matched: $1" },
 	"filter_reason_user_keyword": { "message": "My keyword “$1”" },
 	"filter_reason_external_keyword": { "message": "$1 · “$2”" },

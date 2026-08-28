@@ -24,7 +24,7 @@ describe("collapsed navigation sidebar styles", () => {
 describe("hover reveal styles", () => {
 	it("uses an in-place backdrop overlay instead of a cloned tweet layer", () => {
 		expect(css).toContain(".bluenoise-filtered.bluenoise-revealing::after");
-		expect(css).toContain("backdrop-filter: blur(3px)");
+		expect(css).toContain("backdrop-filter: blur(6px)");
 		expect(css).toContain("mask-image: radial-gradient(");
 		expect(css).not.toContain(".bluenoise-reveal {");
 	});
@@ -32,6 +32,17 @@ describe("hover reveal styles", () => {
 	it("switches reveal and blur atomically without an opacity transition", () => {
 		expect(css).not.toContain("transition: opacity");
 		expect(css).not.toContain("filter 0.2s ease");
+	});
+});
+
+describe("collapsed filtering styles", () => {
+	it("keeps the source row mounted behind a reversible placeholder", () => {
+		expect(css).toContain('[data-bluenoise-mode="collapse"]');
+		expect(css).toContain(":not(.bluenoise-collapse-placeholder)");
+		expect(css).toContain(".bluenoise-collapse-expanded");
+		expect(css).not.toContain(
+			'[data-bluenoise-mode="collapse"] .bluenoise-filtered {\n\tdisplay: none',
+		);
 	});
 });
 
