@@ -42,3 +42,20 @@ describe("Premium feature prompt styles", () => {
 		expect(css).not.toContain("你已解锁");
 	});
 });
+
+describe("sidebar loading state cleanup", () => {
+	it("hides the trends loader before trend rows are rendered", () => {
+		expect(css).toContain('[data-testid="sidebarColumn"]');
+		expect(css).toContain(
+			'div[aria-label]:has([role="search"]):has([role="progressbar"])',
+		);
+	});
+
+	it("hides the follow-suggestions loader and its module wrapper", () => {
+		expect(css).toContain(
+			'div[aria-label]:has([role="search"])\n\t+ div:has(> div > div > [role="progressbar"])',
+		);
+		expect(css).not.toContain('[aria-label*="推荐关注"]');
+		expect(css).not.toContain('[aria-label*="Who to follow" i]');
+	});
+});

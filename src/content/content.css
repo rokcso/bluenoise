@@ -115,6 +115,20 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
 	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
 	display: none !important;
 }
+
+/* X renders recommendation spinners before their stable trend/UserCell
+ * markers. Hide the loading modules too so cleanup does not flash on reload. */
+[data-bluenoise-hide-trends]
+	[data-testid="sidebarColumn"]
+	div[aria-label]:has([role="search"]):has([role="progressbar"]),
+[data-bluenoise-hide-follow]
+	[data-testid="sidebarColumn"]
+	div[aria-label]:has([role="search"])
+	+ div:has(> div > div > [role="progressbar"]) {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
 /* Hide X's current-trends panel. The region heading is localized, so use the
  * stable data-testid="trend" marker on its descendants and the accessible
  * "What's happening" section structure. The direct child section is selected
