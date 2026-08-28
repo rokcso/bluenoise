@@ -33,7 +33,6 @@ type AppConfig = SettingsConfig & RuleView;
 
 import {
 	AppearanceIcon,
-	CopyIcon,
 	DatabaseIcon,
 	DeleteIcon,
 	DiagnosticsIcon,
@@ -1601,7 +1600,6 @@ function AnimatedDebugLogPanel({ visible }: { visible: boolean }) {
 
 function DebugLogPanel() {
 	const [entries, setEntries] = useState<DebugLogEntry[]>([]);
-	const [copied, setCopied] = useState(false);
 	const [clearing, setClearing] = useState(false);
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const followLatest = useRef(true);
@@ -1633,12 +1631,6 @@ function DebugLogPanel() {
 		const viewport = scrollRef.current;
 		if (viewport) viewport.scrollTop = viewport.scrollHeight;
 	}, [entries]);
-
-	async function copyLogs() {
-		await copyDebugText(debugLogToJsonl(entries));
-		setCopied(true);
-		window.setTimeout(() => setCopied(false), 1500);
-	}
 
 	function downloadLogs() {
 		const blob = new Blob([debugLogToJsonl(entries)], {
@@ -1712,10 +1704,6 @@ function DebugLogPanel() {
 						<DeleteIcon aria-hidden="true" />
 						{t("debug_log_clear")}
 					</button>
-					<button type="button" onClick={copyLogs} disabled={!entries.length}>
-						<CopyIcon aria-hidden="true" />
-						{copied ? t("debug_log_copied") : t("debug_log_copy")}
-					</button>
 					<button
 						type="button"
 						onClick={downloadLogs}
@@ -1728,32 +1716,6 @@ function DebugLogPanel() {
 			</footer>
 		</section>
 	);
-}
-
-async function copyDebugText(text: string): Promise<void> {
-	const textarea = document.createElement("textarea");
-	textarea.value = text;
-	textarea.style.position = "fixed";
-	textarea.style.opacity = "0";
-	document.body.append(textarea);
-	textarea.focus();
-	textarea.select();
-	textarea.setSelectionRange(0, text.length);
-	let copied = false;
-	try {
-		copied = document.execCommand("copy");
-	} catch {
-		// Continue to the asynchronous Clipboard API below.
-	} finally {
-		textarea.remove();
-	}
-	if (copied) return;
-
-	try {
-		await navigator.clipboard.writeText(text);
-	} catch {
-		throw new Error("Failed to copy debug logs");
-	}
 }
 
 function formatDebugTime(timestamp: number): string {

@@ -304,8 +304,6 @@
 		"message": "仅存储在此设备上。可能含帖子文本、账号 ID 和命中规则，分享前请检查。"
 	},
 	"debug_log_clear": { "message": "清空" },
-	"debug_log_copy": { "message": "复制" },
-	"debug_log_copied": { "message": "已复制" },
 	"debug_log_download": { "message": "下载" },
 	"contextMenu_addKeyword": {
 		"message": "将选中文字加入关键词黑名单"
