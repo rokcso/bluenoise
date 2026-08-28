@@ -44,6 +44,16 @@ describe("collapsed filtering styles", () => {
 			'[data-bluenoise-mode="collapse"] .bluenoise-filtered {\n\tdisplay: none',
 		);
 	});
+
+	it("uses the post divider only while the source content is collapsed", () => {
+		expect(css).toContain(
+			`.bluenoise-filtered:not(.bluenoise-collapse-expanded)
+	> .bluenoise-collapse-placeholder`,
+		);
+		expect(css).not.toContain(
+			".bluenoise-collapse-expanded > .bluenoise-collapse-placeholder",
+		);
+	});
 });
 
 describe("Premium feature prompt styles", () => {

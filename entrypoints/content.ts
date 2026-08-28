@@ -371,7 +371,7 @@ function syncCollapsePlaceholder(
 				action.textContent = t(expanded ? "collapse_again" : "collapse_show");
 		});
 		placeholder.append(button);
-		row.append(placeholder);
+		row.prepend(placeholder);
 	}
 
 	const button = placeholder.querySelector("button");
