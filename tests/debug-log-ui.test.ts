@@ -12,12 +12,18 @@ const styles = readFileSync(
 
 describe("debug log panel", () => {
 	it("only mounts the panel while debug logging is enabled", () => {
-		expect(app).toContain("config.debugLogging && (");
+		expect(app).toContain("config.debugLogging && <DebugLogPanel />");
 		expect(app).toContain("<DebugLogPanel />");
 	});
 
+	it("renders the panel outside the debug logging settings card", () => {
+		expect(app).toMatch(
+			/<\/SettingsPanel>\s*\{config\.debugLogging && <DebugLogPanel \/>\}/,
+		);
+	});
+
 	it("offers clear, copy, and JSONL download actions", () => {
-		expect(app).toContain('type: "XSF_DEBUG_CLEAR"');
+		expect(app).toContain('type: "BLUENOISE_DEBUG_CLEAR"');
 		expect(app).toContain("copyDebugText(debugLogToJsonl(entries))");
 		expect(app).toContain('type: "application/x-ndjson;charset=utf-8"');
 	});
