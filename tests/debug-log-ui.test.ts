@@ -45,6 +45,13 @@ describe("debug log panel", () => {
 		expect(wxtConfig).toContain('"clipboardWrite"');
 	});
 
+	it("tries the synchronous clipboard path before user activation expires", () => {
+		const helper = app.slice(app.indexOf("async function copyDebugText"));
+		expect(helper.indexOf('document.execCommand("copy")')).toBeLessThan(
+			helper.indexOf("await navigator.clipboard.writeText(text)"),
+		);
+	});
+
 	it("uses a bounded scrolling viewport", () => {
 		expect(styles).toContain(".debug-log-viewport");
 		expect(styles).toContain("height: 340px;");

@@ -309,7 +309,7 @@
 	"debug_log_recording": { "message": "Recording" },
 	"debug_log_empty": { "message": "Waiting for filtering activity on X…" },
 	"debug_log_privacy": {
-		"message": "Stored only on this device. Logs may include post snippets, account IDs, and matched rules; review them before sharing."
+		"message": "Stored on this device. May contain post text, account IDs, and matched rules—review before sharing."
 	},
 	"debug_log_clear": { "message": "Clear" },
 	"debug_log_copy": { "message": "Copy" },

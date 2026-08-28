@@ -1,21 +1,22 @@
 import type { AppConfig } from "@/src/contracts/config";
 
-const PREMIUM_ATTR = "data-xsf-hide-premium";
-const PREMIUM_FEATURE_PROMPT_ATTR = "data-xsf-hide-premium-feature-prompt";
-const FOOTER_ATTR = "data-xsf-hide-footer";
-const TRENDS_ATTR = "data-xsf-hide-trends";
-const FOLLOW_ATTR = "data-xsf-hide-follow";
-const TITLE_COUNT_ATTR = "data-xsf-hide-title-count";
-const BADGES_ATTR = "data-xsf-hide-notification-badges";
-const NEW_POSTS_ATTR = "data-xsf-hide-new-posts";
-const GROK_ATTR = "data-xsf-hide-grok";
-const MESSAGE_ATTR = "data-xsf-hide-message";
-const CUSTOM_HIDDEN_ATTR = "data-xsf-custom-hidden";
-const SIDEBAR_ATTR = "data-xsf-collapse-sidebar";
-const COMPOSE_ICON_MARK = "data-xsf-compose-icon";
+const PREMIUM_ATTR = "data-bluenoise-hide-premium";
+const PREMIUM_FEATURE_PROMPT_ATTR =
+	"data-bluenoise-hide-premium-feature-prompt";
+const FOOTER_ATTR = "data-bluenoise-hide-footer";
+const TRENDS_ATTR = "data-bluenoise-hide-trends";
+const FOLLOW_ATTR = "data-bluenoise-hide-follow";
+const TITLE_COUNT_ATTR = "data-bluenoise-hide-title-count";
+const BADGES_ATTR = "data-bluenoise-hide-notification-badges";
+const NEW_POSTS_ATTR = "data-bluenoise-hide-new-posts";
+const GROK_ATTR = "data-bluenoise-hide-grok";
+const MESSAGE_ATTR = "data-bluenoise-hide-message";
+const CUSTOM_HIDDEN_ATTR = "data-bluenoise-custom-hidden";
+const SIDEBAR_ATTR = "data-bluenoise-collapse-sidebar";
+const COMPOSE_ICON_MARK = "data-bluenoise-compose-icon";
 const LIVE_STREAMS_HEADING_RE = /^(?:X \u4e0a\u7684\u76f4\u64ad|live on x)$/i;
 const LOGO_SEL = 'a[aria-label="X"] svg';
-const BIRD_MARK = "data-xsf-bird";
+const BIRD_MARK = "data-bluenoise-bird";
 const TITLE_COUNT_RE = /^\(\d+\+?\)\s*/;
 const CLEAN_FAVICON = "https://x.com/favicon.ico";
 
@@ -237,7 +238,7 @@ export function createPageMakeoverController(options: {
 		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 		svg.setAttribute("viewBox", "0 0 24 24");
 		svg.setAttribute("aria-hidden", "true");
-		svg.setAttribute("class", "xsf-compose-icon");
+		svg.setAttribute("class", "bluenoise-compose-icon");
 		svg.setAttribute(COMPOSE_ICON_MARK, "");
 		const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
 		for (const [pathData, fillRule] of [
@@ -277,9 +278,9 @@ export function createPageMakeoverController(options: {
 		}
 		composeOriginalChildren.clear();
 		for (const button of document.querySelectorAll<HTMLElement>(
-			"[data-xsf-compact-compose]",
+			"[data-bluenoise-compact-compose]",
 		))
-			button.removeAttribute("data-xsf-compact-compose");
+			button.removeAttribute("data-bluenoise-compact-compose");
 	}
 
 	function setSidebarStyle(element: HTMLElement, cssText: string): void {
@@ -310,9 +311,9 @@ export function createPageMakeoverController(options: {
 			if (element.isConnected) element.className = className;
 		sidebarOriginalClasses.clear();
 		for (const button of document.querySelectorAll<HTMLElement>(
-			"[data-xsf-compact-account]",
+			"[data-bluenoise-compact-account]",
 		))
-			button.removeAttribute("data-xsf-compact-account");
+			button.removeAttribute("data-bluenoise-compact-account");
 	}
 
 	/** Remove width declarations written by earlier versions of this feature. */
@@ -333,7 +334,7 @@ export function createPageMakeoverController(options: {
 	}
 
 	function applyCompactComposeClasses(button: HTMLAnchorElement): void {
-		button.setAttribute("data-xsf-compact-compose", "");
+		button.setAttribute("data-bluenoise-compact-compose", "");
 		setSidebarStyle(
 			button,
 			"width:52px !important; min-width:52px !important; height:52px !important; min-height:52px !important; border-radius:9999px !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:0 !important",
@@ -395,7 +396,7 @@ export function createPageMakeoverController(options: {
 				'[data-testid="SideNav_AccountSwitcher_Button"]',
 			);
 			if (accountButton) {
-				accountButton.setAttribute("data-xsf-compact-account", "");
+				accountButton.setAttribute("data-bluenoise-compact-account", "");
 				const accountContainer = accountButton.parentElement;
 				if (accountContainer instanceof HTMLElement)
 					setSidebarClasses(accountContainer, ["r-1habvwh"], ["r-1awozwy"]);
@@ -433,7 +434,8 @@ export function createPageMakeoverController(options: {
 			if (nativeIcon) {
 				const spacer = injectedIcon?.nextElementSibling;
 				injectedIcon?.remove();
-				if (spacer?.hasAttribute("data-xsf-compose-spacer")) spacer.remove();
+				if (spacer?.hasAttribute("data-bluenoise-compose-spacer"))
+					spacer.remove();
 				composeOriginalChildren.delete(content);
 				continue;
 			}
@@ -449,7 +451,7 @@ export function createPageMakeoverController(options: {
 			applyCompactComposeClasses(button);
 			content.append(createComposeIcon());
 			const spacer = document.createElement("div");
-			spacer.setAttribute("data-xsf-compose-spacer", "");
+			spacer.setAttribute("data-bluenoise-compose-spacer", "");
 			const emptyLabel = document.createElement("span");
 			spacer.append(emptyLabel);
 			content.append(spacer);
@@ -467,9 +469,9 @@ export function createPageMakeoverController(options: {
 			if (replace) {
 				if (!svg.hasAttribute(BIRD_MARK)) {
 					svg.setAttribute(BIRD_MARK, "");
-					svg.dataset.xsfOrigViewBox = svg.getAttribute("viewBox") ?? "";
-					svg.dataset.xsfOrigPath = path.getAttribute("d") ?? "";
-					svg.dataset.xsfOrigFill = path.getAttribute("fill") ?? "";
+					svg.dataset.bluenoiseOrigViewBox = svg.getAttribute("viewBox") ?? "";
+					svg.dataset.bluenoiseOrigPath = path.getAttribute("d") ?? "";
+					svg.dataset.bluenoiseOrigFill = path.getAttribute("fill") ?? "";
 				}
 				// X can reconcile the same SVG in place and restore its own path.
 				// Re-apply the bird whenever the current path no longer matches it.
@@ -482,18 +484,21 @@ export function createPageMakeoverController(options: {
 				path.setAttribute("d", bird?.path ?? "");
 				path.setAttribute("fill", bird?.fill ?? "#1d9bf0");
 			} else if (svg.hasAttribute(BIRD_MARK)) {
-				svg.setAttribute("viewBox", svg.dataset.xsfOrigViewBox || "0 0 24 24");
-				if (svg.dataset.xsfOrigPath)
-					path.setAttribute("d", svg.dataset.xsfOrigPath);
-				if (svg.dataset.xsfOrigFill) {
-					path.setAttribute("fill", svg.dataset.xsfOrigFill);
+				svg.setAttribute(
+					"viewBox",
+					svg.dataset.bluenoiseOrigViewBox || "0 0 24 24",
+				);
+				if (svg.dataset.bluenoiseOrigPath)
+					path.setAttribute("d", svg.dataset.bluenoiseOrigPath);
+				if (svg.dataset.bluenoiseOrigFill) {
+					path.setAttribute("fill", svg.dataset.bluenoiseOrigFill);
 				} else {
 					path.removeAttribute("fill");
 				}
 				svg.removeAttribute(BIRD_MARK);
-				delete svg.dataset.xsfOrigViewBox;
-				delete svg.dataset.xsfOrigPath;
-				delete svg.dataset.xsfOrigFill;
+				delete svg.dataset.bluenoiseOrigViewBox;
+				delete svg.dataset.bluenoiseOrigPath;
+				delete svg.dataset.bluenoiseOrigFill;
 			}
 		}
 	}

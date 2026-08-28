@@ -1731,19 +1731,28 @@ function DebugLogPanel() {
 }
 
 async function copyDebugText(text: string): Promise<void> {
+	const textarea = document.createElement("textarea");
+	textarea.value = text;
+	textarea.style.position = "fixed";
+	textarea.style.opacity = "0";
+	document.body.append(textarea);
+	textarea.focus();
+	textarea.select();
+	textarea.setSelectionRange(0, text.length);
+	let copied = false;
+	try {
+		copied = document.execCommand("copy");
+	} catch {
+		// Continue to the asynchronous Clipboard API below.
+	} finally {
+		textarea.remove();
+	}
+	if (copied) return;
+
 	try {
 		await navigator.clipboard.writeText(text);
-		return;
 	} catch {
-		const textarea = document.createElement("textarea");
-		textarea.value = text;
-		textarea.style.position = "fixed";
-		textarea.style.opacity = "0";
-		document.body.append(textarea);
-		textarea.select();
-		const copied = document.execCommand("copy");
-		textarea.remove();
-		if (!copied) throw new Error("Failed to copy debug logs");
+		throw new Error("Failed to copy debug logs");
 	}
 }
 

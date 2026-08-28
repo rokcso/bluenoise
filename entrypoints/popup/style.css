@@ -314,12 +314,12 @@ body::-webkit-scrollbar {
 	font-size: 12px;
 }
 .debug-log-footer {
-	align-items: flex-end;
+	align-items: center;
 	border-top: 1px solid var(--x-border);
 	background: color-mix(in srgb, var(--x-bg) 96%, var(--x-fg));
 }
 .debug-log-footer p {
-	max-width: 430px;
+	flex: 1;
 	margin: 0;
 	color: var(--x-muted);
 	font-size: 10px;
