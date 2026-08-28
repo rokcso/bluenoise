@@ -85,12 +85,12 @@ describe("reveal controller", () => {
 			clientX: 80,
 			clientY: 90,
 		} as unknown as Event);
-		expect(firstRow.classList.contains("xsf-revealing")).toBe(true);
+		expect(firstRow.classList.contains("bluenoise-revealing")).toBe(true);
 
 		windowListeners.get("scroll")?.(new Event("scroll"));
 
 		expect(elementFromPoint).toHaveBeenCalledWith(80, 90);
-		expect(firstRow.classList.contains("xsf-revealing")).toBe(false);
-		expect(nextRow.classList.contains("xsf-revealing")).toBe(true);
+		expect(firstRow.classList.contains("bluenoise-revealing")).toBe(false);
+		expect(nextRow.classList.contains("bluenoise-revealing")).toBe(true);
 	});
 });
