@@ -4,7 +4,7 @@
 
 > 让 X 重新变得可读。
 
-BlueNoise 是一款开源、隐私优先的 X（原 Twitter）过滤与界面整理扩展：在本地用可逆的关键词和账号规则模糊或隐藏嘈杂回复、时间线帖子和广告，还能隐藏界面杂乱元素、恢复更清爽的经典风格。不调用 X API、不读取 cookie，也不会改变你的账号状态。
+BlueNoise 是一款开源、隐私优先的 X（原 Twitter）浏览器扩展，用于过滤嘈杂内容和精简界面。所有匹配均在本地完成，并使用可随时撤销的关键词和账号规则。
 
 作者：rokcso · 源码与反馈：<https://github.com/rokcso/bluenoise>
 
@@ -12,59 +12,36 @@ BlueNoise 是一款开源、隐私优先的 X（原 Twitter）过滤与界面整
 
 <a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="在 Chrome 应用商店中获取" width="220"></a>
 
-从 [Chrome 应用商店](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid)安装 BlueNoise。
-
-想手动安装？从[发布页面](https://github.com/rokcso/bluenoise/releases)下载 `bluenoise-<版本号>-chrome.zip`：
+可从 Chrome 应用商店安装，或从 [GitHub Releases](https://github.com/rokcso/bluenoise/releases) 下载 `bluenoise-<版本号>-chrome.zip` 手动安装：
 
 1. 解压到一个你不会删掉的文件夹里（浏览器需要这些源文件一直保留在原位）。
 2. 打开 `chrome://extensions`（或你所用 Chromium 浏览器的扩展管理页），开启**开发者模式**，点击**加载已解压的扩展程序**，选择刚才解压出来的文件夹。
 
 ## 功能特性
 
-- 模糊或隐藏帖子详情页中嘈杂的回复，以及首页时间线上的帖子（绝不会过滤你自己打开的那条帖子）。关闭扩展即可一键恢复。
-- 支持按关键词和账号过滤：纯关键词、安全的 `/regex/` 正则表达式，以及账号 ID 或 @用户名。
-- 内置社区关键词列表（X Spam Filter、X Comment Blocker）和社区账号名单（Make X Great Again），自动保持更新；同时支持你自己的个人关键词列表，以及本地账号黑名单/白名单。
-- 可将个人关键词和账号规则导出为可迁移的 JSON 备份，也支持合并、追加或覆盖导入。
-- 选中任意文字后右键，即可将其添加为关键词或账号屏蔽。
-- 工具栏角标会显示已过滤的帖子数量；悬停被模糊的回复时，可在光标周围临时显示。
-- 可选过滤推广帖子、含媒体或外链卡片的广告，以及被 X 标记为仿冒、粉丝、评论或自动化的账号。
-- 提供可独立开关的 X 界面改造：隐藏指定的推荐、推广内容、页脚、计数器和导航控件；折叠侧边栏；或换回经典的 Twitter 蓝鸟图标。
-- 能识别常见的绕行手段（空格和零宽字符），支持浅色/深色主题及中英文界面，并内置白名单用于纠正误杀。
-- 新加载的回复和帖子会自动过滤，无需刷新页面。
+- 按关键词或账号过滤回复和首页时间线帖子，同时保留当前打开的原帖。
+- 将匹配内容模糊、折叠或隐藏；关闭过滤即可恢复页面。
+- 支持纯关键词、安全的 `/regex/` 正则、账号 ID、@用户名、个人白名单和可选社区列表。
+- 可选过滤推广帖、媒体或外链卡片广告，以及被 X 标记为仿冒、粉丝、评论或自动化的账号。
+- 支持导入导出个人规则，也可通过右键菜单添加允许或屏蔽规则。
+- 可独立精简 X 界面，隐藏指定的推荐、推广、计数器和导航元素。
 
 ## 隐私与权限
 
-BlueNoise 不收集任何遥测或分析数据。它不读取 cookie、不访问账号凭据、不调用 X API，也不会执行拉黑、静音、关注、发帖等账号操作。
-
-扩展申请了以下权限：
-
-- `storage` 和 `unlimitedStorage`：通过 Chrome 同步保存行为设置；在本地保存个人规则和社区列表缓存。BlueNoise 不会将这些存储用于遥测。
-- `alarms`：在后台定期刷新已订阅的关键词和账号列表。
-- `contextMenus`：为选中的文字在右键菜单中提供「添加关键词」/「添加账号」选项。
-- `https://raw.githubusercontent.com/*`：下载公开的关键词列表。
-- `https://x.zuoluo.tv/*`：下载公开的社区账号黑名单/白名单。
+BlueNoise 不收集任何遥测或分析数据。它不读取 cookie、不访问账号凭据、不调用 X API，也不会执行拉黑、静音、关注、发帖等账号操作。设置与规则通过浏览器存储保存；网络访问仅用于更新已启用的公开规则列表。
 
 完整内容请阅读[隐私政策](./docs/privacy-policy.md)。
 
 ## 开发
 
-架构与设计说明请参阅 [DESIGN.md](./docs/DESIGN.md)。
-
-### 环境要求
-
-- Node.js 22 或更高版本
-- pnpm 10
-
-### 本地运行
+需要 Node.js 22 或更高版本，以及 pnpm 10。
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-开发构建完成后，打开 Chrome/Chromium 的扩展管理页，开启开发者模式，选择**加载已解压的扩展程序**，然后选中 WXT 生成的开发输出目录即可。
-
-### 常用命令
+然后在 Chrome/Chromium 中将 WXT 生成的开发目录加载为未打包扩展。其他命令：
 
 ```bash
 pnpm typecheck  # 运行 TypeScript 类型检查
@@ -89,10 +66,6 @@ BlueNoise 的灵感来源于以下项目，并向它们致敬：
 - [x-spam-filter](https://github.com/ZPVIP/x-spam-filter)
 - [x-comment-blocker](https://github.com/amahteru/x-comment-blocker)
 - [make-x-great-again](https://github.com/foru17/make-x-great-again)
-
-## 发布
-
-最新版本已上架 [Chrome 应用商店](https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid)；源码构建产物挂载在 [GitHub Releases](https://github.com/rokcso/bluenoise/releases) 上。
 
 ## 许可证
 
