@@ -113,7 +113,8 @@
 	color: rgb(29 155 240);
 }
 
-.bluenoise-collapse-expanded > .bluenoise-collapse-placeholder {
+.bluenoise-filtered:not(.bluenoise-collapse-expanded)
+	> .bluenoise-collapse-placeholder {
 	border-bottom: 1px solid rgb(239 243 244);
 }
 
@@ -122,7 +123,8 @@
 		color: rgb(139 152 165);
 	}
 
-	.bluenoise-collapse-expanded > .bluenoise-collapse-placeholder {
+	.bluenoise-filtered:not(.bluenoise-collapse-expanded)
+		> .bluenoise-collapse-placeholder {
 		border-bottom-color: rgb(47 51 54);
 	}
 }
