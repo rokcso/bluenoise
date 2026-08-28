@@ -312,8 +312,6 @@
 		"message": "Stored on this device. May contain post text, account IDs, and matched rules—review before sharing."
 	},
 	"debug_log_clear": { "message": "Clear" },
-	"debug_log_copy": { "message": "Copy" },
-	"debug_log_copied": { "message": "Copied" },
 	"debug_log_download": { "message": "Download" },
 	"contextMenu_addKeyword": {
 		"message": "Add selected text to the keyword blacklist"

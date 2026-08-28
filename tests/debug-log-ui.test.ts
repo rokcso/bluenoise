@@ -9,10 +9,6 @@ const styles = readFileSync(
 	new URL("../entrypoints/popup/style.css", import.meta.url),
 	"utf8",
 );
-const wxtConfig = readFileSync(
-	new URL("../wxt.config.ts", import.meta.url),
-	"utf8",
-);
 
 describe("debug log panel", () => {
 	it("only mounts the panel while debug logging is enabled", () => {
@@ -35,21 +31,9 @@ describe("debug log panel", () => {
 		expect(styles).toContain("@keyframes debug-log-exit");
 	});
 
-	it("offers clear, copy, and JSONL download actions", () => {
+	it("offers clear and JSONL download actions", () => {
 		expect(app).toContain('type: "BLUENOISE_DEBUG_CLEAR"');
-		expect(app).toContain("copyDebugText(debugLogToJsonl(entries))");
 		expect(app).toContain('type: "application/x-ndjson;charset=utf-8"');
-	});
-
-	it("declares permission to write debug logs to the clipboard", () => {
-		expect(wxtConfig).toContain('"clipboardWrite"');
-	});
-
-	it("tries the synchronous clipboard path before user activation expires", () => {
-		const helper = app.slice(app.indexOf("async function copyDebugText"));
-		expect(helper.indexOf('document.execCommand("copy")')).toBeLessThan(
-			helper.indexOf("await navigator.clipboard.writeText(text)"),
-		);
 	});
 
 	it("uses a bounded scrolling viewport", () => {

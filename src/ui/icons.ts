@@ -12,7 +12,6 @@ export {
 	RiDownloadLine as DownloadIcon,
 	RiEqualizerLine as SlidersIcon,
 	RiEyeOffLine as EyeOffIcon,
-	RiFileCopyLine as CopyIcon,
 	RiFilter3Fill as FilterFillIcon,
 	RiFilter3Line as FilterIcon,
 	RiInformationFill as InformationFillIcon,
