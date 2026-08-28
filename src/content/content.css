@@ -187,7 +187,8 @@ aside[role="complementary"]:has(> div > h2[role="heading"]):has(
  * markers. Hide the loading modules too so cleanup does not flash on reload. */
 [data-bluenoise-hide-trends]
 	[data-testid="sidebarColumn"]
-	div[aria-label]:has([role="search"]):has([role="progressbar"]),
+	div[aria-label]:has([role="search"])
+	> div:has(> div > div > [role="progressbar"]),
 [data-bluenoise-hide-follow]
 	[data-testid="sidebarColumn"]
 	div[aria-label]:has([role="search"])
