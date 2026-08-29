@@ -385,6 +385,11 @@ body,
 	}
 	.options-page {
 		grid-template-columns: 1fr;
+		/* Pin the sidebar row and let the shell take the rest, so the shell's
+		   own overflow scrolling keeps long settings reachable on phones. */
+		grid-template-rows: auto minmax(0, 1fr);
+		height: 100vh;
+		height: 100dvh;
 	}
 	.options-sidebar {
 		flex-direction: row;
@@ -426,5 +431,62 @@ body,
 	}
 	.about-studio {
 		align-items: flex-start;
+	}
+}
+@media (max-width: 600px) {
+	/* Phone layout: brand plus an icon-only author link on the first row,
+	   then the sections as a horizontally scrollable pill bar — the one-row
+	   tablet layout wraps each label vertically at this width. */
+	.options-sidebar {
+		flex-wrap: wrap;
+		gap: 2px;
+		padding: 8px 10px 6px;
+	}
+	.options-brand {
+		order: 0;
+		min-height: 36px;
+		padding: 0 6px;
+		font-size: 14px;
+	}
+	.options-brand img {
+		width: 26px;
+		height: 26px;
+	}
+	.options-author-link {
+		order: 1;
+		gap: 0;
+		min-height: 34px;
+		margin: 0 2px 0 auto;
+		padding: 0 10px;
+	}
+	.options-author-link span {
+		display: none;
+	}
+	.options-nav {
+		order: 2;
+		display: flex;
+		width: 100%;
+		gap: 4px;
+		margin-left: 0;
+		padding-bottom: 2px;
+		overflow-x: auto;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+	}
+	.options-nav::-webkit-scrollbar {
+		display: none;
+	}
+	.options-nav a {
+		flex: 0 0 auto;
+		min-height: 34px;
+		padding: 0 12px;
+		font-size: 12px;
+		white-space: nowrap;
+	}
+	.options-workspace {
+		padding: 24px 16px 48px;
+	}
+	.options-page-title {
+		font-size: 22px;
 	}
 }
