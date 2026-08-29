@@ -168,6 +168,21 @@ export function createPageMakeoverController(options: {
 					next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
 				}
 			}
+			// Mobile layout: live broadcasts render as a docked overlay in #layers —
+			// a swipeable pill rail whose buttons are labelled "Broadcast, ..." or
+			// "Space, ..." — instead of the desktop "Live on X" heading module.
+			for (const rail of document.querySelectorAll<HTMLElement>(
+				'#layers [data-testid="ScrollSnap-SwipeableList"]',
+			)) {
+				if (
+					!rail.querySelector(
+						'button[aria-label^="Broadcast"], button[aria-label^="Space"]',
+					)
+				)
+					continue;
+				const dock = rail.closest<HTMLElement>("#layers > div") ?? rail;
+				dock.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+			}
 		}
 		if (cfg.hideTrends) {
 			for (const section of document.querySelectorAll<HTMLElement>(
