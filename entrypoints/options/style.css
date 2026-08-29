@@ -184,6 +184,9 @@ body,
 
 .options-panel-stack {
 	display: grid;
+	/* Clamp the implicit column: truncating contents (nowrap subscription URLs)
+	   otherwise contribute a huge min-content width and widen every section. */
+	grid-template-columns: minmax(0, 1fr);
 	margin: 0;
 }
 .about-hero {
