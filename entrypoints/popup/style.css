@@ -179,6 +179,17 @@ body::-webkit-scrollbar {
 	flex-direction: column;
 	gap: 4px;
 }
+/* Narrow viewports (phone options page, small popups): let wide controls drop
+   below their label instead of squeezing the copy into a one-character column. */
+@media (max-width: 600px) {
+	.settings-row {
+		flex-wrap: wrap;
+		row-gap: 12px;
+	}
+	.settings-row-copy {
+		flex: 1 1 auto;
+	}
+}
 .settings-row-description {
 	color: var(--x-muted);
 	font-size: 12px;
