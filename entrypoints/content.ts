@@ -63,6 +63,7 @@ const HIT_ATTR = "data-bluenoise-keyword";
 const REASON_CLASS = "bluenoise-filter-reason";
 const COLLAPSE_CLASS = "bluenoise-collapse-placeholder";
 const COLLAPSE_EXPANDED_CLASS = "bluenoise-collapse-expanded";
+const collapseAnimations = new WeakMap<Element, Animation>();
 const DOM_OWNER_ATTR = "data-bluenoise-owner";
 const INERT_ATTR = "data-bluenoise-inert";
 const MODE_ATTR = "data-bluenoise-mode";
@@ -350,6 +351,26 @@ const replyCounts = createReplyCountController({
 });
 const pageMakeover = createPageMakeoverController({ birdSvg, isStatusPage });
 
+function animateCollapseResize(row: Element, beforeHeight: number): void {
+	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+	const afterHeight = row.getBoundingClientRect().height;
+	if (Math.abs(afterHeight - beforeHeight) < 1) return;
+	const animation = row.animate(
+		[
+			{ height: `${beforeHeight}px`, overflow: "clip" },
+			{ height: `${afterHeight}px`, overflow: "clip" },
+		],
+		{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+	);
+	collapseAnimations.set(row, animation);
+	const forget = () => {
+		if (collapseAnimations.get(row) === animation)
+			collapseAnimations.delete(row);
+	};
+	animation.addEventListener("finish", forget, { once: true });
+	animation.addEventListener("cancel", forget, { once: true });
+}
+
 function syncCollapsePlaceholder(
 	row: Element,
 	reason: FilterReason | null,
@@ -370,6 +391,8 @@ function syncCollapsePlaceholder(
 		button.addEventListener("click", (event) => {
 			event.preventDefault();
 			event.stopPropagation();
+			const beforeHeight = row.getBoundingClientRect().height;
+			collapseAnimations.get(row)?.cancel();
 			const expanded = row.classList.toggle(COLLAPSE_EXPANDED_CLASS);
 			button.setAttribute("aria-expanded", String(expanded));
 			const action = button.querySelector<HTMLElement>(
@@ -377,6 +400,7 @@ function syncCollapsePlaceholder(
 			);
 			if (action)
 				action.textContent = t(expanded ? "collapse_again" : "collapse_show");
+			animateCollapseResize(row, beforeHeight);
 		});
 		placeholder.append(button);
 		row.prepend(placeholder);

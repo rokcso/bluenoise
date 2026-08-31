@@ -21,6 +21,14 @@ describe("collapsed post placeholder", () => {
 		expect(watcher).toContain("const reclassify =");
 	});
 
+	it("animates only the local row without notifying X globally", () => {
+		expect(content).toContain("function animateCollapseResize(");
+		expect(content).toContain("collapseAnimations.get(row)?.cancel()");
+		expect(content).toContain("prefers-reduced-motion: reduce");
+		expect(content).not.toContain('window.dispatchEvent(new Event("resize"))');
+		expect(content).not.toContain('scrollIntoView({ block: "nearest" })');
+	});
+
 	it("cleans filtering state when the extension is reloaded", () => {
 		const teardown = content.slice(
 			content.indexOf("function teardown()"),
