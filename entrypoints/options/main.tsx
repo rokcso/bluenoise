@@ -137,16 +137,6 @@ function OptionsPage() {
 					>
 						<MenuIcon aria-hidden="true" />
 					</button>
-					<a
-						className="options-author-link"
-						href="https://x.com/intent/follow?screen_name=rokcso"
-						target="_blank"
-						rel="noreferrer"
-						aria-label={t("follow_maker_aria")}
-					>
-						<XIcon aria-hidden="true" />
-						<span>{t("follow_maker")}</span>
-					</a>
 					{menuOpen ? (
 						<button
 							type="button"
@@ -187,6 +177,16 @@ function OptionsPage() {
 							</a>
 						))}
 					</nav>
+					<a
+						className="options-author-link"
+						href="https://x.com/intent/follow?screen_name=rokcso"
+						target="_blank"
+						rel="noreferrer"
+						aria-label={t("follow_maker_aria")}
+					>
+						<XIcon aria-hidden="true" />
+						<span>{t("follow_maker")}</span>
+					</a>
 				</aside>
 				<main className="options-shell">
 					<SettingsApp activeSection={section} />
