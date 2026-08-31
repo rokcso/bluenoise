@@ -22,6 +22,7 @@ export {
 	RiListSettingsFill as ListFilterFillIcon,
 	RiListSettingsLine as ListFilterIcon,
 	RiLoader4Line as LoaderIcon,
+	RiMenuLine as MenuIcon,
 	RiMessageLine as MessageIcon,
 	RiMoonLine as MoonIcon,
 	RiPaletteLine as AppearanceIcon,
