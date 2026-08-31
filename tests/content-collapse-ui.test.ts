@@ -12,11 +12,6 @@ describe("collapsed post placeholder", () => {
 		expect(content).not.toContain("row.append(placeholder)");
 	});
 
-	it("notifies X to remeasure an expanded virtualized row", () => {
-		expect(content).toContain('window.dispatchEvent(new Event("resize"))');
-		expect(content).toContain('scrollIntoView({ block: "nearest" })');
-	});
-
 	it("switches presentation without clearing matched rows", () => {
 		const watcher = content.slice(
 			content.indexOf("function watchConfig()"),

@@ -18,10 +18,7 @@ import { handleContentProcessingError } from "@/src/content/lifecycle";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import { createPageMakeoverController } from "@/src/content/page-makeover";
 import { mutationMayChangePreset } from "@/src/content/preset-mutation";
-import {
-	isPromotedPost,
-	shouldFilterPromotedPost,
-} from "@/src/content/promoted";
+import { isPromotedPost } from "@/src/content/promoted";
 import { createReplyCountController } from "@/src/content/reply-count";
 import { createRevealController } from "@/src/content/reveal";
 import type {
@@ -380,13 +377,6 @@ function syncCollapsePlaceholder(
 			);
 			if (action)
 				action.textContent = t(expanded ? "collapse_again" : "collapse_show");
-			// X virtualizes timeline rows and caches their measured height. Notify it
-			// after the source content changes size so an expanded row is not recycled.
-			requestAnimationFrame(() => {
-				if (!row.isConnected) return;
-				window.dispatchEvent(new Event("resize"));
-				if (expanded) (row as HTMLElement).scrollIntoView({ block: "nearest" });
-			});
 		});
 		placeholder.append(button);
 		row.prepend(placeholder);
@@ -452,15 +442,31 @@ function applyMark(
 	}
 }
 
+function isMediaAd(article: Element): boolean {
+	return (
+		isPromotedPost(article) &&
+		Boolean(
+			article.querySelector(
+				'[data-testid="videoPlayer"], [data-testid="tweetPhoto"]',
+			),
+		)
+	);
+}
+
+function isCardAd(article: Element): boolean {
+	return (
+		isPromotedPost(article) &&
+		Boolean(article.querySelector('[data-testid="card.wrapper"]'))
+	);
+}
+
 function readPresetFilter(
 	article: Element,
 ): "ad" | "parody" | "fan" | "commentary" | "automated" | undefined {
 	let preset: ReturnType<typeof readPresetFilter>;
 	if (
-		shouldFilterPromotedPost(article, {
-			media: cfg.filterMediaAds,
-			card: cfg.filterCardAds,
-		})
+		(cfg.filterMediaAds && isMediaAd(article)) ||
+		(cfg.filterCardAds && isCardAd(article))
 	)
 		preset = "ad";
 	if (cfg.filterParodyAccounts && isParodyAccount(article)) preset = "parody";
