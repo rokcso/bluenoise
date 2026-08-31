@@ -59,6 +59,7 @@ describe("reveal controller", () => {
 					documentListeners.set(type, listener),
 				removeEventListener: vi.fn(),
 				elementFromPoint,
+				querySelectorAll: () => [],
 			},
 			window: {
 				addEventListener: (type: string, listener: EventListener) =>
@@ -92,5 +93,31 @@ describe("reveal controller", () => {
 		expect(elementFromPoint).toHaveBeenCalledWith(80, 90);
 		expect(firstRow.classList.contains("bluenoise-revealing")).toBe(false);
 		expect(nextRow.classList.contains("bluenoise-revealing")).toBe(true);
+	});
+
+	it("hide clears orphaned reveal classes and CSS variables", () => {
+		const orphan = new FakeElement();
+		orphan.classList.add("bluenoise-revealing");
+		orphan.style.setProperty("--bluenoise-reveal-x", "20px");
+		Object.assign(globalThis, {
+			Element: FakeElement,
+			document: {
+				querySelectorAll: (selector: string) =>
+					selector === ".bluenoise-revealing" ? [orphan] : [],
+			},
+			window: { cancelAnimationFrame: vi.fn() },
+		});
+		const controller = createRevealController({
+			filteredClass: "filtered",
+			hitAttribute: "data-hit",
+			reasonClass: "reason",
+			radius: 40,
+			isEnabled: () => false,
+		});
+
+		controller.hide();
+
+		expect(orphan.classList.contains("bluenoise-revealing")).toBe(false);
+		expect(orphan.style.values.has("--bluenoise-reveal-x")).toBe(false);
 	});
 });

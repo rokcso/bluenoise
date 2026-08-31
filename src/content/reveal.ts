@@ -26,26 +26,46 @@ export function createRevealController(
 	let syncFrame = 0;
 	let started = false;
 
-	function hide(): void {
-		if (reveal?.reason) {
-			reveal.reason.classList.remove("bluenoise-filter-reason-revealing");
-			reveal.reason.style.removeProperty("--bluenoise-reason-reveal-x");
-			reveal.reason.style.removeProperty("--bluenoise-reason-reveal-y");
-			reveal.reason.style.removeProperty("--bluenoise-reason-reveal-radius");
-		}
-		if (reveal) {
-			const row = reveal.row as HTMLElement;
-			row.classList.remove("bluenoise-revealing");
-			row.style.removeProperty("--bluenoise-reveal-x");
-			row.style.removeProperty("--bluenoise-reveal-y");
-			row.style.removeProperty("--bluenoise-reveal-radius");
-		}
+	function clearReason(reason: HTMLElement): void {
+		reason.classList.remove("bluenoise-filter-reason-revealing");
+		reason.style.removeProperty("--bluenoise-reason-reveal-x");
+		reason.style.removeProperty("--bluenoise-reason-reveal-y");
+		reason.style.removeProperty("--bluenoise-reason-reveal-radius");
+	}
+
+	function clearRow(row: HTMLElement): void {
+		row.classList.remove("bluenoise-revealing");
+		row.style.removeProperty("--bluenoise-reveal-x");
+		row.style.removeProperty("--bluenoise-reveal-y");
+		row.style.removeProperty("--bluenoise-reveal-radius");
+	}
+
+	function clearReveal(): void {
+		if (reveal?.reason) clearReason(reveal.reason);
+		if (reveal) clearRow(reveal.row as HTMLElement);
+		// X can replace a virtualized row between pointer events. Clean orphaned
+		// state as well as the controller's current reference.
+		for (const row of document.querySelectorAll<HTMLElement>(
+			".bluenoise-revealing",
+		))
+			clearRow(row);
+		for (const reason of document.querySelectorAll<HTMLElement>(
+			".bluenoise-filter-reason-revealing",
+		))
+			clearReason(reason);
 		reveal = null;
+	}
+
+	function hide(): void {
+		if (syncFrame) window.cancelAnimationFrame(syncFrame);
+		syncFrame = 0;
+		pointer = null;
+		clearReveal();
 	}
 
 	function show(row: Element, x: number, y: number): void {
 		if (!options.isEnabled()) {
-			hide();
+			clearReveal();
 			return;
 		}
 		if (!reveal || reveal.row !== row) {
@@ -54,7 +74,7 @@ export function createRevealController(
 				hide();
 				return;
 			}
-			hide();
+			clearReveal();
 			reveal = {
 				row,
 				reason: row.querySelector<HTMLElement>(

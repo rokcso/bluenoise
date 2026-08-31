@@ -9,6 +9,7 @@ describe("article evaluation cache", () => {
 				cachedPreset: undefined,
 				currentPreset: "ad",
 				textDirty: false,
+				structureDirty: true,
 				generation: 1,
 				accountListVersion: 42,
 				separator: "\u001f",
@@ -23,10 +24,26 @@ describe("article evaluation cache", () => {
 				cachedPreset: "ad",
 				currentPreset: "ad",
 				textDirty: false,
+				structureDirty: false,
 				generation: 3,
 				accountListVersion: 42,
 				separator: "\u001f",
 			}),
 		).toBe(true);
+	});
+
+	it("invalidates an unchanged preset when its ad structure changed", () => {
+		expect(
+			canReuseFastEvaluation({
+				cachedSignature: "3\u001f42\u001f\u001fStarlink",
+				cachedPreset: undefined,
+				currentPreset: undefined,
+				textDirty: false,
+				structureDirty: true,
+				generation: 3,
+				accountListVersion: 42,
+				separator: "\u001f",
+			}),
+		).toBe(false);
 	});
 });
