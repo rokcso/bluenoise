@@ -12,7 +12,9 @@ Created by rokcso · Source and feedback: <https://github.com/rokcso/bluenoise>
 
 <a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="Available in the Chrome Web Store" width="220"></a>
 
-Install BlueNoise from the store, or download `bluenoise-<version>-chrome.zip` from [GitHub Releases](https://github.com/rokcso/bluenoise/releases) for manual installation:
+<a href="https://microsoftedge.microsoft.com/addons/detail/aceiebenjmedobigcfafhckcjhhbjkko"><img src="./docs/assets/microsoft-edge-addons-badge.png" alt="Available in Microsoft Edge Add-ons" width="220"></a>
+
+Install BlueNoise from the Chrome Web Store or Microsoft Edge Add-ons, or download `bluenoise-<version>-chrome.zip` from [GitHub Releases](https://github.com/rokcso/bluenoise/releases) for manual installation:
 
 1. Unzip it to a folder you won't delete (the browser needs the source files to stay put).
 2. Open `chrome://extensions` (or your Chromium browser's extension page), enable **Developer mode**, click **Load unpacked**, and select the unzipped folder.
