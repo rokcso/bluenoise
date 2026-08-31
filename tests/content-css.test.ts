@@ -54,6 +54,12 @@ describe("collapsed filtering styles", () => {
 			".bluenoise-collapse-expanded > .bluenoise-collapse-placeholder",
 		);
 	});
+
+	it("softens collapse transitions and respects reduced motion", () => {
+		expect(css).toContain("@keyframes bluenoise-collapse-enter");
+		expect(css).toContain("prefers-reduced-motion: reduce");
+		expect(css).toContain("animation: none");
+	});
 });
 
 describe("Premium feature prompt styles", () => {
