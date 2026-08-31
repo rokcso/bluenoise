@@ -12,7 +12,9 @@ BlueNoise 是一款开源、隐私优先的 X（原 Twitter）浏览器扩展，
 
 <a href="https://chromewebstore.google.com/detail/ponbeiihcconklnlphjcnbfkghnimpid"><img src="./docs/assets/chrome-web-store-badge.png" alt="在 Chrome 应用商店中获取" width="220"></a>
 
-可从 Chrome 应用商店安装，或从 [GitHub Releases](https://github.com/rokcso/bluenoise/releases) 下载 `bluenoise-<版本号>-chrome.zip` 手动安装：
+<a href="https://microsoftedge.microsoft.com/addons/detail/aceiebenjmedobigcfafhckcjhhbjkko"><img src="./docs/assets/microsoft-edge-addons-badge.png" alt="在 Microsoft Edge 加载项中获取" width="220"></a>
+
+可从 Chrome 应用商店或 Microsoft Edge 加载项安装，也可以从 [GitHub Releases](https://github.com/rokcso/bluenoise/releases) 下载 `bluenoise-<版本号>-chrome.zip` 手动安装：
 
 1. 解压到一个你不会删掉的文件夹里（浏览器需要这些源文件一直保留在原位）。
 2. 打开 `chrome://extensions`（或你所用 Chromium 浏览器的扩展管理页），开启**开发者模式**，点击**加载已解压的扩展程序**，选择刚才解压出来的文件夹。
