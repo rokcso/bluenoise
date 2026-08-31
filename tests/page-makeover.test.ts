@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	findNewPostsPromptButton,
 	isMobileLiveDockRail,
+	reconcileHiddenElements,
 } from "@/src/content/page-makeover";
 
 interface FakeElement {
@@ -74,5 +75,22 @@ describe("mobile live dock detection", () => {
 
 	it("does not treat an unrelated swipeable list as a live dock", () => {
 		expect(isMobileLiveDockRail(railWithLabel("Open profile"))).toBe(false);
+	});
+});
+
+describe("incremental makeover visibility", () => {
+	it("does not reveal an element that remains hidden across applies", () => {
+		const calls: string[] = [];
+		const target = {
+			isConnected: true,
+			setAttribute: () => calls.push("hide"),
+			removeAttribute: () => calls.push("show"),
+		} as unknown as HTMLElement;
+
+		let hidden = reconcileHiddenElements(new Set(), new Set([target]));
+		hidden = reconcileHiddenElements(hidden, new Set([target]));
+
+		expect(calls).toEqual(["hide"]);
+		expect(hidden.has(target)).toBe(true);
 	});
 });

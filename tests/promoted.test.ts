@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { isPromotedPost } from "@/src/content/promoted";
+import {
+	isPromotedPost,
+	shouldFilterPromotedPost,
+} from "@/src/content/promoted";
 
 interface FakeElement {
 	parentElement: FakeElement | null;
 	testId?: string;
 	closest(selector: string): FakeElement | null;
 	matches(selector: string): boolean;
+	querySelector(selector: string): FakeElement | null;
 }
 
 function element(
@@ -30,6 +34,9 @@ function element(
 				return this.testId === "placementTracking";
 			return false;
 		},
+		querySelector() {
+			return null;
+		},
 	};
 }
 
@@ -53,5 +60,18 @@ describe("promoted post detection", () => {
 		element("placementTracking", media);
 
 		expect(isPromotedPost(asElement(article))).toBe(false);
+	});
+
+	it("keeps promoted posts filtered while staged creative markup is absent", () => {
+		const cell = element("cellInnerDiv");
+		const placement = element("placementTracking", cell);
+		const article = element("tweet", placement);
+
+		expect(
+			shouldFilterPromotedPost(asElement(article), {
+				media: true,
+				card: true,
+			}),
+		).toBe(true);
 	});
 });
