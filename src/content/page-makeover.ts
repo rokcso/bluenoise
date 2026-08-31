@@ -43,6 +43,17 @@ export function isMobileLiveDockRail(rail: Element): boolean {
 	);
 }
 
+export function reconcileHiddenElements(
+	previous: ReadonlySet<HTMLElement>,
+	next: ReadonlySet<HTMLElement>,
+): Set<HTMLElement> {
+	for (const element of previous)
+		if (!next.has(element)) element.removeAttribute(CUSTOM_HIDDEN_ATTR);
+	for (const element of next)
+		if (!previous.has(element)) element.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+	return new Set(next);
+}
+
 export function createPageMakeoverController(options: {
 	birdSvg: string;
 	isStatusPage(): boolean;
@@ -54,6 +65,7 @@ export function createPageMakeoverController(options: {
 	const composeOriginalChildren = new Map<HTMLElement, ComposeIconState>();
 	const sidebarOriginalStyles = new Map<HTMLElement, string>();
 	const sidebarOriginalClasses = new Map<HTMLElement, string>();
+	let hiddenElements = new Set<HTMLElement>();
 
 	function getBirdData(): { viewBox: string; fill: string; path: string } {
 		if (birdData) return birdData;
@@ -76,17 +88,24 @@ export function createPageMakeoverController(options: {
 	function applyPageCustomizations(): void {
 		if (!cfg) return;
 		const enabled = cfg.pageCleanupEnabled;
-		for (const el of document.querySelectorAll(`[${CUSTOM_HIDDEN_ATTR}]`))
-			el.removeAttribute(CUSTOM_HIDDEN_ATTR);
+		const nextHidden = new Set<HTMLElement>();
+		const hide = (element: Element | null): void => {
+			if (element instanceof HTMLElement) nextHidden.add(element);
+		};
+		const commitHidden = (): void => {
+			hiddenElements = reconcileHiddenElements(hiddenElements, nextHidden);
+		};
 		// Title/favicon state must also be restored when the master switch is off.
 		applyTitleAndFavicon();
-		if (!enabled) return;
+		if (!enabled) {
+			commitHidden();
+			return;
+		}
 
 		const hideAncestors = (element: Element, levels: number): void => {
 			let current: Element | null = element;
 			for (let i = 0; i <= levels && current; i++) {
-				if (current instanceof HTMLElement)
-					current.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+				hide(current);
 				current = current.parentElement;
 			}
 		};
@@ -108,14 +127,12 @@ export function createPageMakeoverController(options: {
 				// UserCell rows. Hide that heading cell as well to avoid a leftover
 				// "Who to follow"/"推荐关注" label.
 				for (const heading of followHeadings) {
-					heading
-						.closest<HTMLElement>('[data-testid="cellInnerDiv"]')
-						?.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+					hide(heading.closest<HTMLElement>('[data-testid="cellInnerDiv"]'));
 				}
 				for (const cell of primary?.querySelectorAll<HTMLElement>(
 					`[data-testid="${"cellInnerDiv"}"]:has([data-testid="UserCell"]), [data-testid="cellInnerDiv"]:has(a[href^="/i/connect_people"])`,
 				) ?? [])
-					cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+					hide(cell);
 			}
 		}
 		if (cfg.hideDiscoverMore && options.isStatusPage()) {
@@ -128,7 +145,7 @@ export function createPageMakeoverController(options: {
 					'[data-testid="cellInnerDiv"]',
 				);
 				if (!cell) continue;
-				cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+				hide(cell);
 				// Discover more is the final recommendation block on a status page;
 				// its virtualized content is rendered as following sibling cells.
 				for (
@@ -136,7 +153,7 @@ export function createPageMakeoverController(options: {
 					next?.matches('[data-testid="cellInnerDiv"]');
 					next = next.nextElementSibling
 				)
-					next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+					hide(next);
 			}
 		}
 		if (cfg.hideLiveStreams) {
@@ -154,7 +171,7 @@ export function createPageMakeoverController(options: {
 					root = root.parentElement;
 				}
 				if (root?.querySelector('[data-testid="placementTracking"]'))
-					root.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+					hide(root);
 				const cell = heading.closest<HTMLElement>(
 					'[data-testid="cellInnerDiv"]',
 				);
@@ -163,7 +180,7 @@ export function createPageMakeoverController(options: {
 					hideAncestors(heading, 2);
 					continue;
 				}
-				cell.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+				hide(cell);
 				// Live-stream rows render as following sibling cells carrying the same
 				// marker; stop at the first cell without it so ordinary tweets after
 				// the module are never hidden.
@@ -173,7 +190,7 @@ export function createPageMakeoverController(options: {
 					next = next.nextElementSibling
 				) {
 					if (!next.querySelector('[data-testid="placementTracking"]')) break;
-					next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+					hide(next);
 				}
 			}
 			// Mobile layout: live broadcasts render as a docked overlay in #layers —
@@ -184,7 +201,7 @@ export function createPageMakeoverController(options: {
 			)) {
 				if (!isMobileLiveDockRail(rail)) continue;
 				const dock = rail.closest<HTMLElement>("#layers > div") ?? rail;
-				dock.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+				hide(dock);
 			}
 		}
 		if (cfg.hideTrends) {
@@ -203,7 +220,7 @@ export function createPageMakeoverController(options: {
 			for (const badge of document.querySelectorAll<HTMLElement>(
 				'[data-testid="AppTabBar_Home_Link"] svg + div[aria-label], [data-testid="AppTabBar_Notifications_Link"] svg + div[aria-label]',
 			))
-				badge.setAttribute(CUSTOM_HIDDEN_ATTR, "");
+				hide(badge);
 		}
 		if (cfg.hideNewPostsPrompt) {
 			for (const label of document.querySelectorAll<HTMLElement>(
@@ -225,6 +242,7 @@ export function createPageMakeoverController(options: {
 			))
 				hideAncestors(drawer, 2);
 		}
+		commitHidden();
 	}
 
 	function applyTitleAndFavicon(): void {

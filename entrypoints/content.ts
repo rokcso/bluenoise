@@ -18,7 +18,10 @@ import { handleContentProcessingError } from "@/src/content/lifecycle";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import { createPageMakeoverController } from "@/src/content/page-makeover";
 import { mutationMayChangePreset } from "@/src/content/preset-mutation";
-import { isPromotedPost } from "@/src/content/promoted";
+import {
+	isPromotedPost,
+	shouldFilterPromotedPost,
+} from "@/src/content/promoted";
 import { createReplyCountController } from "@/src/content/reply-count";
 import { createRevealController } from "@/src/content/reveal";
 import type {
@@ -63,6 +66,7 @@ const HIT_ATTR = "data-bluenoise-keyword";
 const REASON_CLASS = "bluenoise-filter-reason";
 const COLLAPSE_CLASS = "bluenoise-collapse-placeholder";
 const COLLAPSE_EXPANDED_CLASS = "bluenoise-collapse-expanded";
+const DOM_OWNER_ATTR = "data-bluenoise-owner";
 const INERT_ATTR = "data-bluenoise-inert";
 const MODE_ATTR = "data-bluenoise-mode";
 const INVISIBLE_ATTR = "data-bluenoise-invisible";
@@ -102,6 +106,7 @@ export default defineContentScript({
 	runAt: "document_start",
 	allFrames: false,
 	async main(ctx) {
+		document.documentElement.setAttribute(DOM_OWNER_ATTR, DEBUG_SESSION_ID);
 		ctx.onInvalidated(teardown);
 		hookMessages();
 		await init().catch(reportInitError);
@@ -149,6 +154,7 @@ let scheduledScanId = 0;
 const scheduledScanTriggers = new Set<ScanTrigger>();
 let observer: MutationObserver | null = null;
 let cleanupObserver: MutationObserver | null = null;
+let cleanupFrame = 0;
 let lastUrl = typeof location !== "undefined" ? location.href : "";
 const configRevision = createLatestRevision();
 const rescanTimers: number[] = [];
@@ -374,6 +380,13 @@ function syncCollapsePlaceholder(
 			);
 			if (action)
 				action.textContent = t(expanded ? "collapse_again" : "collapse_show");
+			// X virtualizes timeline rows and caches their measured height. Notify it
+			// after the source content changes size so an expanded row is not recycled.
+			requestAnimationFrame(() => {
+				if (!row.isConnected) return;
+				window.dispatchEvent(new Event("resize"));
+				if (expanded) (row as HTMLElement).scrollIntoView({ block: "nearest" });
+			});
 		});
 		placeholder.append(button);
 		row.prepend(placeholder);
@@ -439,31 +452,15 @@ function applyMark(
 	}
 }
 
-function isMediaAd(article: Element): boolean {
-	return (
-		isPromotedPost(article) &&
-		Boolean(
-			article.querySelector(
-				'[data-testid="videoPlayer"], [data-testid="tweetPhoto"]',
-			),
-		)
-	);
-}
-
-function isCardAd(article: Element): boolean {
-	return (
-		isPromotedPost(article) &&
-		Boolean(article.querySelector('[data-testid="card.wrapper"]'))
-	);
-}
-
 function readPresetFilter(
 	article: Element,
 ): "ad" | "parody" | "fan" | "commentary" | "automated" | undefined {
 	let preset: ReturnType<typeof readPresetFilter>;
 	if (
-		(cfg.filterMediaAds && isMediaAd(article)) ||
-		(cfg.filterCardAds && isCardAd(article))
+		shouldFilterPromotedPost(article, {
+			media: cfg.filterMediaAds,
+			card: cfg.filterCardAds,
+		})
 	)
 		preset = "ad";
 	if (cfg.filterParodyAccounts && isParodyAccount(article)) preset = "parody";
@@ -515,7 +512,6 @@ function syncMarkedRowsInteractivity(): void {
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
 function applyStyleVars(): void {
 	const root = document.documentElement;
-	pageMakeover.apply(cfg);
 	if (!cfg.enabled || !active) {
 		root.removeAttribute(MODE_ATTR);
 		root.removeAttribute(INVISIBLE_ATTR);
@@ -528,6 +524,17 @@ function applyStyleVars(): void {
 	root.removeAttribute(INVISIBLE_ATTR);
 	syncMarkedRowsInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) revealController.hide();
+}
+
+/** Change presentation without temporarily restoring every matched post. */
+function syncPresentation(): void {
+	revealController.hide();
+	applyStyleVars();
+	for (const article of document.querySelectorAll(ARTICLE_SEL)) {
+		const cached = state.get(article);
+		if (cached) applyMark(article, cached.hit, cached.reason);
+	}
+	scheduleBadge();
 }
 
 // ==================== Evaluation ====================
@@ -950,9 +957,13 @@ function onMutations(records: MutationRecord[]): void {
  * header/sidebar queries on the content-filtering hot path. */
 function onCleanupMutations(): void {
 	if (!cfg.pageCleanupEnabled) return;
-	pageMakeover.apply(cfg);
-	// Also catch route changes made by X without relying solely on history hooks.
-	refreshForUrlChange();
+	if (cleanupFrame) return;
+	cleanupFrame = requestAnimationFrame(() => {
+		cleanupFrame = 0;
+		pageMakeover.apply(cfg);
+		// Also catch route changes made by X without relying solely on history hooks.
+		refreshForUrlChange();
+	});
 }
 
 function startObserving(): void {
@@ -982,6 +993,8 @@ function startCleanupObserving(): void {
 function stopCleanupObserving(): void {
 	cleanupObserver?.disconnect();
 	cleanupObserver = null;
+	if (cleanupFrame) cancelAnimationFrame(cleanupFrame);
+	cleanupFrame = 0;
 }
 
 // ==================== Badge count ====================
@@ -1222,7 +1235,6 @@ function scheduleRescans(trigger: ScanTrigger): void {
 	for (const delay of RESCAN_DELAYS) {
 		rescanTimers.push(
 			window.setTimeout(() => {
-				pageMakeover.apply(cfg);
 				fullScan(trigger);
 			}, delay),
 		);
@@ -1276,17 +1288,24 @@ function teardown(): void {
 	unhookTweetMenu();
 	cleanupObserver?.disconnect();
 	cleanupObserver = null;
+	if (cleanupFrame) cancelAnimationFrame(cleanupFrame);
+	cleanupFrame = 0;
 	revealController.stop();
 	window.removeEventListener("popstate", onUrlChange);
 	window.removeEventListener("pageshow", onPageShow);
 	document.removeEventListener("visibilitychange", onVisibility);
-	pageMakeover.reset();
-	revealController.hide();
-	clearAllMarks();
 	const root = document.documentElement;
-	root.removeAttribute(MODE_ATTR);
-	root.removeAttribute(INVISIBLE_ATTR);
-	root.style.removeProperty(OPACITY_VAR);
+	// A newly injected content script claims the document synchronously. An old
+	// invalidated instance must never erase the new instance's presentation.
+	if (root.getAttribute(DOM_OWNER_ATTR) === DEBUG_SESSION_ID) {
+		pageMakeover.reset();
+		revealController.hide();
+		clearAllMarks();
+		root.removeAttribute(MODE_ATTR);
+		root.removeAttribute(INVISIBLE_ATTR);
+		root.removeAttribute(DOM_OWNER_ATTR);
+		root.style.removeProperty(OPACITY_VAR);
+	}
 	pending.clear();
 }
 
@@ -1429,17 +1448,18 @@ function watchConfig(): void {
 			pageMakeover.apply(cfg);
 			if (cfg.pageCleanupEnabled) startCleanupObserving();
 			else stopCleanupObserving();
-			if (
-				rulesChanged ||
-				matchingChanged(prev, cfg) ||
-				prev.mode !== cfg.mode ||
-				prev.showFilterReason !== cfg.showFilterReason ||
-				prev.language !== cfg.language
-			) {
+			const reclassify = rulesChanged || matchingChanged(prev, cfg);
+			if (reclassify) {
 				refresh({
 					rebuild: true,
 					trigger: rulesChanged ? "rules-change" : "config-change",
 				});
+			} else if (
+				prev.mode !== cfg.mode ||
+				prev.showFilterReason !== cfg.showFilterReason ||
+				prev.language !== cfg.language
+			) {
+				syncPresentation();
 			} else {
 				applyStyleVars();
 			}
@@ -1481,6 +1501,9 @@ function watchConfig(): void {
 
 async function init(): Promise<void> {
 	await loadStoredConfig();
+	// Root-attribute CSS can suppress X's native modules before the account list
+	// and body-dependent filtering pipeline is ready.
+	pageMakeover.apply(cfg);
 	await Promise.all([loadAccountList(), waitForBody()]);
 	refreshMatchers();
 	watchConfig();
