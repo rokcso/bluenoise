@@ -13,6 +13,7 @@ import {
 	InformationIcon,
 	ListFilterFillIcon,
 	ListFilterIcon,
+	MenuIcon,
 	SettingsFillIcon,
 	SettingsIcon,
 	SlidersIcon,
@@ -87,6 +88,7 @@ function sectionFromUrl(): SettingsSection {
 
 function OptionsPage() {
 	const [section, setSection] = useState<SettingsSection>(sectionFromUrl);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const { config } = useConfig();
 
 	useEffect(() => {
@@ -102,9 +104,19 @@ function OptionsPage() {
 		return () => window.removeEventListener("popstate", onPopState);
 	}, []);
 
+	useEffect(() => {
+		if (!menuOpen) return;
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") setMenuOpen(false);
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [menuOpen]);
+
 	function navigate(section: SettingsSection) {
 		window.history.pushState(null, "", `?section=${section}`);
 		setSection(section);
+		setMenuOpen(false);
 	}
 
 	return (
@@ -115,7 +127,30 @@ function OptionsPage() {
 						<img src="/icons/icon-48.png" alt="" />
 						<span>{t("settings_label")}</span>
 					</div>
-					<nav className="options-nav" aria-label={t("settings_navigation")}>
+					<button
+						type="button"
+						className="options-menu-toggle"
+						aria-expanded={menuOpen}
+						aria-controls="options-nav"
+						aria-label={t("settings_navigation")}
+						onClick={() => setMenuOpen((open) => !open)}
+					>
+						<MenuIcon aria-hidden="true" />
+					</button>
+					{menuOpen ? (
+						<button
+							type="button"
+							className="options-backdrop"
+							tabIndex={-1}
+							aria-label={t("settings_navigation")}
+							onClick={() => setMenuOpen(false)}
+						/>
+					) : null}
+					<nav
+						id="options-nav"
+						className={`options-nav${menuOpen ? " is-open" : ""}`}
+						aria-label={t("settings_navigation")}
+					>
 						{navigation.map((item) => (
 							<a
 								className={section === item.id ? "is-active" : undefined}
