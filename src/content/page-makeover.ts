@@ -15,6 +15,8 @@ const CUSTOM_HIDDEN_ATTR = "data-bluenoise-custom-hidden";
 const SIDEBAR_ATTR = "data-bluenoise-collapse-sidebar";
 const COMPOSE_ICON_MARK = "data-bluenoise-compose-icon";
 const LIVE_STREAMS_HEADING_RE = /^(?:X \u4e0a\u7684\u76f4\u64ad|live on x)$/i;
+const MOBILE_LIVE_BUTTON_RE =
+	/^(?:Broadcast|Space|\u76f4\u64ad|\u5e7f\u64ad|\u7a7a\u95f4)(?:\s*[,\uff0c:]|\b)/i;
 const LOGO_SEL = 'a[aria-label="X"] svg';
 const BIRD_MARK = "data-bluenoise-bird";
 const TITLE_COUNT_RE = /^\(\d+\+?\)\s*/;
@@ -33,6 +35,12 @@ export function findNewPostsPromptButton(label: Element): Element | null {
 	const pill = label.parentElement;
 	if (!pill?.querySelector('[data-testid="userAvatars"]')) return null;
 	return label.closest("button");
+}
+
+export function isMobileLiveDockRail(rail: Element): boolean {
+	return [...rail.querySelectorAll("button[aria-label]")].some((button) =>
+		MOBILE_LIVE_BUTTON_RE.test(button.getAttribute("aria-label") ?? ""),
+	);
 }
 
 export function createPageMakeoverController(options: {
@@ -167,6 +175,16 @@ export function createPageMakeoverController(options: {
 					if (!next.querySelector('[data-testid="placementTracking"]')) break;
 					next.setAttribute(CUSTOM_HIDDEN_ATTR, "");
 				}
+			}
+			// Mobile layout: live broadcasts render as a docked overlay in #layers —
+			// a swipeable pill rail whose buttons are labelled "Broadcast, ..." or
+			// "Space, ..." — instead of the desktop "Live on X" heading module.
+			for (const rail of document.querySelectorAll<HTMLElement>(
+				'#layers [data-testid="ScrollSnap-SwipeableList"]',
+			)) {
+				if (!isMobileLiveDockRail(rail)) continue;
+				const dock = rail.closest<HTMLElement>("#layers > div") ?? rail;
+				dock.setAttribute(CUSTOM_HIDDEN_ATTR, "");
 			}
 		}
 		if (cfg.hideTrends) {
