@@ -237,6 +237,7 @@ function clearAllMarks(): void {
 	for (const el of document.querySelectorAll(`.${HIT_CLASS}`)) {
 		el.classList.remove(HIT_CLASS);
 		el.classList.remove(COLLAPSE_EXPANDED_CLASS);
+		el.classList.remove("bluenoise-revealing");
 		el.removeAttribute(HIT_ATTR);
 		el.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
 		el.querySelector(`:scope > .${COLLAPSE_CLASS}`)?.remove();

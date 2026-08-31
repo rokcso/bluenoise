@@ -233,12 +233,14 @@ aside[role="complementary"][aria-label*="Premium"],
 }
 
 /* Keep the source DOM intact: an overlay blurs everything except the cursor hole. */
-.bluenoise-filtered.bluenoise-revealing > :not(.bluenoise-filter-reason) {
+[data-bluenoise-mode="dim"]
+	.bluenoise-filtered.bluenoise-revealing
+	> :not(.bluenoise-filter-reason) {
 	opacity: 1;
 	filter: none;
 }
 
-.bluenoise-filtered.bluenoise-revealing::after {
+[data-bluenoise-mode="dim"] .bluenoise-filtered.bluenoise-revealing::after {
 	position: absolute;
 	z-index: 1;
 	inset: 0;
@@ -255,7 +257,7 @@ aside[role="complementary"][aria-label*="Premium"],
 }
 
 @media (prefers-color-scheme: dark) {
-	.bluenoise-filtered.bluenoise-revealing::after {
+	[data-bluenoise-mode="dim"] .bluenoise-filtered.bluenoise-revealing::after {
 		background: rgb(0 0 0 / 85%);
 	}
 }
