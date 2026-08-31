@@ -13,9 +13,11 @@ import {
 	type FilterReason,
 	formatFilterReason,
 } from "@/src/content/filter-reason";
+import { createLatestRevision } from "@/src/content/latest-revision";
 import { handleContentProcessingError } from "@/src/content/lifecycle";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
 import { createPageMakeoverController } from "@/src/content/page-makeover";
+import { mutationMayChangePreset } from "@/src/content/preset-mutation";
 import { isPromotedPost } from "@/src/content/promoted";
 import { createReplyCountController } from "@/src/content/reply-count";
 import { createRevealController } from "@/src/content/reveal";
@@ -138,6 +140,7 @@ const state = new WeakMap<
 const pending = new Set<Element>();
 /** Articles whose text/name subtree changed since the last evaluation. */
 const textDirty = new WeakSet<Element>();
+const structureDirty = new WeakSet<Element>();
 
 let flushScheduled = false;
 let rafId = 0;
@@ -147,6 +150,7 @@ const scheduledScanTriggers = new Set<ScanTrigger>();
 let observer: MutationObserver | null = null;
 let cleanupObserver: MutationObserver | null = null;
 let lastUrl = typeof location !== "undefined" ? location.href : "";
+const configRevision = createLatestRevision();
 const rescanTimers: number[] = [];
 let badgeTimer = 0;
 let lastBadge = -1;
@@ -513,7 +517,9 @@ function applyStyleVars(): void {
 	const root = document.documentElement;
 	pageMakeover.apply(cfg);
 	if (!cfg.enabled || !active) {
+		root.removeAttribute(MODE_ATTR);
 		root.removeAttribute(INVISIBLE_ATTR);
+		root.style.removeProperty(OPACITY_VAR);
 		revealController.hide();
 		return;
 	}
@@ -551,6 +557,7 @@ function evaluate(article: Element): {
 			cachedPreset: cached.preset,
 			currentPreset: preset,
 			textDirty: textDirty.has(article),
+			structureDirty: structureDirty.has(article),
 			generation,
 			accountListVersion,
 			separator: SEP,
@@ -560,6 +567,7 @@ function evaluate(article: Element): {
 		return { fresh: false, log: null, outcome: "cache-hit" };
 	}
 	textDirty.delete(article);
+	structureDirty.delete(article);
 	const text = readText(article.querySelector(TEXT_SEL));
 	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
 	const sig = [generation, accountListVersion, preset ?? "", text, name].join(
@@ -854,6 +862,14 @@ function queueArticle(node: Node): void {
 	for (const a of node.querySelectorAll(ARTICLE_SEL)) pending.add(a);
 }
 
+function markArticleStructureDirty(node: Node): void {
+	if (!(node instanceof Element)) return;
+	const owner = node.closest(ARTICLE_SEL);
+	if (owner) structureDirty.add(owner);
+	for (const article of node.querySelectorAll(ARTICLE_SEL))
+		structureDirty.add(article);
+}
+
 function fullScan(
 	trigger: ScanTrigger,
 	options: { markTextDirty?: boolean } = {},
@@ -898,6 +914,10 @@ function onMutations(records: MutationRecord[]): void {
 				? (target as Element)
 				: target.parentElement;
 		const article = targetElement?.closest(ARTICLE_SEL);
+		if (mutationMayChangePreset(rec)) {
+			markArticleStructureDirty(targetElement ?? rec.target);
+			for (const node of rec.addedNodes) markArticleStructureDirty(node);
+		}
 		if (article) {
 			pending.add(article);
 			// A childList target can be the article itself when X replaces the
@@ -1262,6 +1282,11 @@ function teardown(): void {
 	document.removeEventListener("visibilitychange", onVisibility);
 	pageMakeover.reset();
 	revealController.hide();
+	clearAllMarks();
+	const root = document.documentElement;
+	root.removeAttribute(MODE_ATTR);
+	root.removeAttribute(INVISIBLE_ATTR);
+	root.style.removeProperty(OPACITY_VAR);
 	pending.clear();
 }
 
@@ -1341,19 +1366,22 @@ function hookHistory(): void {
 // ==================== Config ====================
 
 function loadStoredConfig(): Promise<void> {
-	return readStoredState().then(() => {
+	return readStoredState().then((stored) => {
+		({ cfg, rules } = stored);
 		refreshMatchers();
 		setLanguage(cfg.language);
 	});
 }
 
-async function readStoredState(): Promise<void> {
+async function readStoredState(): Promise<{ cfg: AppConfig; rules: RuleData }> {
 	const [synced, local] = await Promise.all([
 		chrome.storage.sync.get(SETTINGS_KEY),
 		chrome.storage.local.get(RULE_DATA_KEY),
 	]);
-	cfg = loadConfig(synced[SETTINGS_KEY] ?? defaultConfig());
-	rules = loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData());
+	return {
+		cfg: loadConfig(synced[SETTINGS_KEY] ?? defaultConfig()),
+		rules: loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData()),
+	};
 }
 
 const MATCH_KEYS = [
@@ -1390,7 +1418,12 @@ function watchConfig(): void {
 			return;
 		const prev = cfg;
 		const rulesChanged = Boolean(changes[RULE_DATA_KEY]);
-		void readStoredState().then(() => {
+		const revision = configRevision.issue();
+		void readStoredState().then((stored) => {
+			// Rapid UI toggles can resolve storage reads out of order. Only the
+			// latest read may mutate the page or schedule scans.
+			if (!configRevision.isCurrent(revision)) return;
+			({ cfg, rules } = stored);
 			updateAccountSources(rules);
 			setLanguage(cfg.language);
 			pageMakeover.apply(cfg);

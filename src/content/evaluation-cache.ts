@@ -10,6 +10,7 @@ interface FastCacheInput {
 	cachedPreset?: ArticlePreset;
 	currentPreset?: ArticlePreset;
 	textDirty: boolean;
+	structureDirty: boolean;
 	generation: number;
 	accountListVersion: number;
 	separator: string;
@@ -20,6 +21,7 @@ export function canReuseFastEvaluation(input: FastCacheInput): boolean {
 	return (
 		input.cachedPreset === input.currentPreset &&
 		!input.textDirty &&
+		!input.structureDirty &&
 		input.cachedSignature.startsWith(
 			`${input.generation}${input.separator}${input.accountListVersion}${input.separator}`,
 		)

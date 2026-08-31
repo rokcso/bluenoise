@@ -11,4 +11,17 @@ describe("collapsed post placeholder", () => {
 		expect(content).toContain("row.prepend(placeholder)");
 		expect(content).not.toContain("row.append(placeholder)");
 	});
+
+	it("cleans filtering state when the extension is reloaded", () => {
+		const teardown = content.slice(
+			content.indexOf("function teardown()"),
+			content.indexOf(
+				"function refresh(",
+				content.indexOf("function teardown()"),
+			),
+		);
+		expect(teardown).toContain("clearAllMarks()");
+		expect(teardown).toContain("root.removeAttribute(MODE_ATTR)");
+		expect(teardown).toContain("revealController.hide()");
+	});
 });
