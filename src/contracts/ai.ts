@@ -20,7 +20,7 @@ export const AI_PROVIDER = {
 	model: "jev-latest",
 	homepageUrl: "https://typesafe.ai/",
 	docsUrl: "https://docs.typesafe.ai/introduction",
-	keysUrl: "https://console.typesafe.ai/settings/keys",
+	keysUrl: "https://console.typesafe.ai/keys",
 	/** Any origin the user must grant before the background worker may call it. */
 	origin: "https://api.typesafe.ai/*",
 } as const;

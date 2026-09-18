@@ -44,6 +44,7 @@ import {
 	DownloadIcon,
 	ExperimentalIcon,
 	ExternalLinkIcon,
+	KeyIcon,
 	LayoutIcon,
 	LayoutRightIcon,
 	ListFilterIcon,
@@ -607,12 +608,18 @@ export function SettingsApp({
 						<PageHeading title={t("experimental")} />
 						<SettingsGroup
 							label={t("ai_filter_group")}
+							description={t("ai_filter_privacy", AI_PROVIDER.name)}
 							icon={ExperimentalIcon}
 							labelClassName="font-normal"
 						>
-							<SettingsPanel>
-								<AiSecondPass config={config} update={update} />
-							</SettingsPanel>
+							<AiSecondPass config={config} update={update} />
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("ai_filter_key")}
+							icon={KeyIcon}
+							labelClassName="font-normal"
+						>
+							<AiApiKey />
 						</SettingsGroup>
 					</>
 				)}
@@ -1567,9 +1574,50 @@ function AiSecondPass({
 	config: AppConfig;
 	update: (p: Partial<AppConfig>) => void;
 }) {
+	const [error, setError] = useState("");
+
+	async function toggle(enabled: boolean) {
+		setError("");
+		if (enabled) {
+			// The worker can only reach the API once the user grants the origin;
+			// asking here keeps the install-time permission list unchanged.
+			const granted = await chrome.permissions
+				.request({ origins: [AI_PROVIDER.origin] })
+				.catch(() => false);
+			if (!granted) {
+				setError(t("ai_filter_permission_denied"));
+				return;
+			}
+			// The key is owned by the field in its own group; read it at toggle
+			// time rather than duplicating that state here.
+			const stored = await chrome.storage.local.get(AI_SECRETS_KEY);
+			if (!parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey) {
+				setError(t("ai_filter_key_required"));
+				return;
+			}
+		}
+		update({ aiFilterEnabled: enabled });
+	}
+
+	return (
+		<>
+			<SettingsPanel>
+				<XToggle
+					label={t("ai_filter_enable")}
+					hint={t("ai_filter_enable_hint", AI_PROVIDER.name)}
+					checked={config.aiFilterEnabled}
+					onChange={(v) => void toggle(v)}
+				/>
+			</SettingsPanel>
+			{error && <p className="mt-3 text-xs text-x-muted">{error}</p>}
+		</>
+	);
+}
+
+/** The API key field. Sits outside a SettingsPanel, like every other text input in the app. */
+function AiApiKey() {
 	const [apiKey, setApiKey] = useState("");
 	const [loaded, setLoaded] = useState(false);
-	const [error, setError] = useState("");
 
 	useEffect(() => {
 		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
@@ -1585,60 +1633,25 @@ function AiSecondPass({
 		});
 	}
 
-	async function toggle(enabled: boolean) {
-		setError("");
-		if (enabled) {
-			// The worker can only reach the API once the user grants the origin;
-			// asking here keeps the install-time permission list unchanged.
-			const granted = await chrome.permissions
-				.request({ origins: [AI_PROVIDER.origin] })
-				.catch(() => false);
-			if (!granted) {
-				setError(t("ai_filter_permission_denied"));
-				return;
-			}
-			if (!apiKey.trim()) {
-				setError(t("ai_filter_key_required"));
-				return;
-			}
-		}
-		update({ aiFilterEnabled: enabled });
-	}
-
 	return (
-		<div className="flex flex-col">
-			<XToggle
-				label={t("ai_filter_enable")}
-				hint={t("ai_filter_enable_hint", AI_PROVIDER.name)}
-				checked={config.aiFilterEnabled}
-				onChange={(v) => void toggle(v)}
+		<div className="rules-keywords-control flex flex-col gap-1.5">
+			<label className="text-xs text-x-muted" htmlFor="ai-filter-key">
+				{t("ai_filter_key_hint")}
+			</label>
+			<input
+				id="ai-filter-key"
+				type="password"
+				value={loaded ? apiKey : ""}
+				onChange={(e) => saveKey(e.target.value)}
+				name={AI_SECRETS_KEY}
+				autoComplete="off"
+				autoCapitalize="none"
+				autoCorrect="off"
+				spellCheck={false}
+				placeholder={t("ai_filter_key_placeholder")}
+				className="w-full rounded-lg border border-x-border bg-x-bg p-3 font-mono text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
 			/>
-			<SettingsDivider />
-			<div className="flex flex-col gap-1.5">
-				<label className="text-sm" htmlFor="ai-filter-key">
-					{t("ai_filter_key")}
-				</label>
-				<span className="text-xs text-x-muted">{t("ai_filter_key_hint")}</span>
-				{loaded && (
-					<input
-						id="ai-filter-key"
-						type="password"
-						value={apiKey}
-						onChange={(e) => saveKey(e.target.value)}
-						name={AI_SECRETS_KEY}
-						autoComplete="off"
-						autoCapitalize="none"
-						autoCorrect="off"
-						spellCheck={false}
-						placeholder={t("ai_filter_key_placeholder")}
-						className="w-full rounded-lg border border-x-border bg-x-bg p-3 font-mono text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
-					/>
-				)}
-			</div>
-			{error && <p className="mt-3 text-xs text-x-muted">{error}</p>}
-			<SettingsDivider />
-			<div className="flex flex-col gap-2 py-3 text-xs text-x-muted">
-				<p>{t("ai_filter_privacy", AI_PROVIDER.name)}</p>
+			<div className="mt-1 flex flex-col gap-2 text-xs text-x-muted">
 				<p>{t("ai_filter_provider", AI_PROVIDER.name, AI_PROVIDER.model)}</p>
 				<div className="flex flex-wrap gap-3">
 					<a
