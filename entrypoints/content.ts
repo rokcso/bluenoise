@@ -1071,6 +1071,12 @@ const AI_HIT = "ai:noise";
 const AI_DEBOUNCE_MS = 500;
 /** Session cap on remembered verdicts; the durable cache lives in the worker. */
 const AI_RESOLVED_LIMIT = 4000;
+/**
+ * Hard ceiling on the requests one page may spend before it stops queueing.
+ * The worker caps the rate; this caps the total for a single stretch of
+ * browsing, so an endlessly scrolling timeline cannot run up a bill.
+ */
+const AI_SESSION_MAX_REQUESTS = 200;
 
 /** Replies waiting for a verdict, keyed by element so re-renders replace rows. */
 const aiQueue = new Map<
@@ -1082,6 +1088,7 @@ const aiResolved = new Map<string, number>();
 let aiTimer = 0;
 let aiInFlight = false;
 let aiRequestSequence = 0;
+let aiRequestsSpent = 0;
 
 /** Message the worker and wait for its reply, tolerating a dead context. */
 async function sendToBackgroundAsync<T>(message: unknown): Promise<T | null> {
@@ -1152,6 +1159,16 @@ async function flushAi(): Promise<void> {
 		return;
 	}
 
+	if (aiRequestsSpent >= AI_SESSION_MAX_REQUESTS) {
+		aiQueue.clear();
+		debugLog(
+			"ai.budget",
+			{ spent: aiRequestsSpent, limit: AI_SESSION_MAX_REQUESTS },
+			"warn",
+		);
+		return;
+	}
+
 	const batch: { el: Element; key: string; item: AiCandidate }[] = [];
 	for (const [el, entry] of aiQueue) {
 		aiQueue.delete(el);
@@ -1171,6 +1188,7 @@ async function flushAi(): Promise<void> {
 		});
 	}
 	if (!batch.length) return;
+	aiRequestsSpent++;
 
 	const generationAtRequest = generation;
 	aiInFlight = true;
@@ -1214,6 +1232,7 @@ function clearAiState(): void {
 	aiTimer = 0;
 	aiQueue.clear();
 	aiResolved.clear();
+	aiRequestsSpent = 0;
 }
 
 function scheduleBadge(): void {
