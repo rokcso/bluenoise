@@ -55,6 +55,12 @@ export interface AppConfig {
 	caseSensitive: boolean;
 	/** Emit local diagnostic messages in the page DevTools console. */
 	debugLogging: boolean;
+	/**
+	 * Experimental: send replies no rule matched to Jev for a second opinion.
+	 * Off by default; the user supplies their own TypeSafe API key, which is
+	 * stored separately in `storage.local` and never synced or exported.
+	 */
+	aiFilterEnabled: boolean;
 	/** Filter promoted posts whose creative contains video or media. */
 	filterMediaAds: boolean;
 	/** Filter promoted posts containing an external website card. */

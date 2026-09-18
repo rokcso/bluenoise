@@ -21,6 +21,7 @@ import { mutationMayChangePreset } from "@/src/content/preset-mutation";
 import { isPromotedPost } from "@/src/content/promoted";
 import { createReplyCountController } from "@/src/content/reply-count";
 import { createRevealController } from "@/src/content/reveal";
+import type { AiCandidate, AiEvaluateResponse } from "@/src/contracts/ai";
 import type {
 	AppConfig,
 	Matchers,
@@ -40,6 +41,12 @@ import {
 	DEFAULT_ACCOUNT_LIST_SOURCES,
 	mergeAccountListSnapshots,
 } from "@/src/domain/account-list";
+import {
+	AI_MAX_BATCH,
+	AI_NOISE_THRESHOLD,
+	aiFingerprint,
+	shouldFilter,
+} from "@/src/domain/ai-filter";
 import {
 	defaultConfig,
 	defaultRuleData,
@@ -206,6 +213,7 @@ function debugConfigSnapshot(
 		enabled: cfg.enabled,
 		mode: cfg.mode,
 		filters: {
+			aiSecondPass: cfg.aiFilterEnabled,
 			mediaAds: cfg.filterMediaAds,
 			cardAds: cfg.filterCardAds,
 			parodyAccounts: cfg.filterParodyAccounts,
@@ -666,6 +674,17 @@ function evaluate(article: Element): {
 
 	state.set(article, { sig, preset, ...decision });
 	applyMark(article, decision.hit, decision.reason);
+	// Jev only ever sees replies that no local rule matched, and never one the
+	// user explicitly whitelisted. It is a second opinion, not a replacement
+	// for the keyword and account lists.
+	if (
+		cfg.aiFilterEnabled &&
+		!mainTweet &&
+		!decision.hit &&
+		!decision.whitelisted
+	) {
+		queueForAi(article, text, name);
+	}
 	return {
 		fresh: true,
 		log: decision.log,
@@ -1044,6 +1063,159 @@ function sendToBackground(message: unknown): void {
 	}
 }
 
+// ==================== Experimental: Jev second pass ====================
+
+/** Marker for a hit that came from Jev rather than from a local rule. */
+const AI_HIT = "ai:noise";
+/** Let the local pass settle before spending the user's money on a request. */
+const AI_DEBOUNCE_MS = 500;
+/** Session cap on remembered verdicts; the durable cache lives in the worker. */
+const AI_RESOLVED_LIMIT = 4000;
+
+/** Replies waiting for a verdict, keyed by element so re-renders replace rows. */
+const aiQueue = new Map<
+	Element,
+	{ key: string; author: string; text: string }
+>();
+/** Verdicts seen this session, so a rescan never re-asks for the same text. */
+const aiResolved = new Map<string, number>();
+let aiTimer = 0;
+let aiInFlight = false;
+let aiRequestSequence = 0;
+
+/** Message the worker and wait for its reply, tolerating a dead context. */
+async function sendToBackgroundAsync<T>(message: unknown): Promise<T | null> {
+	if (dead) return null;
+	try {
+		return (await chrome.runtime.sendMessage(message)) as T;
+	} catch {
+		return null;
+	}
+}
+
+/** On a status page the post under discussion is context a keyword rule cannot see. */
+function aiParentText(): string {
+	if (!isStatusPage()) return "";
+	const first = document.querySelector(ARTICLE_SEL);
+	return first ? readText(first.querySelector(TEXT_SEL)) : "";
+}
+
+function rememberAiVerdict(key: string, probability: number): void {
+	aiResolved.set(key, probability);
+	if (aiResolved.size <= AI_RESOLVED_LIMIT) return;
+	const oldest = aiResolved.keys().next().value;
+	if (oldest !== undefined) aiResolved.delete(oldest);
+}
+
+/**
+ * Turn a Jev verdict into an ordinary filter hit, so presentation modes,
+ * filter reasons, collapsing, and the toolbar count all work unchanged.
+ *
+ * The cached signature is preserved deliberately: rewriting it would make the
+ * next scan treat the article as stale, re-evaluate it, and queue it again —
+ * an endless loop of paid requests.
+ */
+function applyAiVerdict(article: Element, probability: number): void {
+	const cached = state.get(article);
+	if (!cached || cached.hit) return;
+	const reason: FilterReason = { category: "ai", probability };
+	state.set(article, { ...cached, hit: AI_HIT, reason, log: null });
+	applyMark(article, AI_HIT, reason);
+	scheduleBadge();
+}
+
+function queueForAi(article: Element, text: string, author: string): void {
+	if (dead || !text.trim()) return;
+	const key = aiFingerprint(text);
+	const known = aiResolved.get(key);
+	// A re-rendered reply still gets the verdict we already paid for.
+	if (known !== undefined) {
+		if (shouldFilter(known)) applyAiVerdict(article, known);
+		return;
+	}
+	aiQueue.set(article, { key, author, text });
+	scheduleAiFlush();
+}
+
+function scheduleAiFlush(): void {
+	if (aiTimer) return;
+	aiTimer = window.setTimeout(() => {
+		aiTimer = 0;
+		void flushAi();
+	}, AI_DEBOUNCE_MS);
+}
+
+async function flushAi(): Promise<void> {
+	if (dead || aiInFlight) return;
+	if (!cfg.aiFilterEnabled || !cfg.enabled || !active) {
+		aiQueue.clear();
+		return;
+	}
+
+	const batch: { el: Element; key: string; item: AiCandidate }[] = [];
+	for (const [el, entry] of aiQueue) {
+		aiQueue.delete(el);
+		if (!el.isConnected) continue;
+		if (batch.length >= AI_MAX_BATCH) {
+			aiQueue.set(el, entry);
+			continue;
+		}
+		batch.push({
+			el,
+			key: entry.key,
+			item: {
+				id: `r${++aiRequestSequence}`,
+				author: entry.author,
+				text: entry.text,
+			},
+		});
+	}
+	if (!batch.length) return;
+
+	const generationAtRequest = generation;
+	aiInFlight = true;
+	try {
+		const response = await sendToBackgroundAsync<AiEvaluateResponse>({
+			type: "BLUENOISE_AI_EVALUATE",
+			parent: aiParentText(),
+			items: batch.map((entry) => entry.item),
+		});
+		if (!response) return;
+		if (!response.ok) {
+			debugLog("ai.failed", { error: response.error ?? "unknown" }, "warn");
+			return;
+		}
+		let filtered = 0;
+		for (const entry of batch) {
+			const probability = response.probabilities?.[entry.item.id];
+			if (typeof probability !== "number") continue;
+			rememberAiVerdict(entry.key, probability);
+			if (!shouldFilter(probability)) continue;
+			// A config or rule change mid-flight invalidates the whole verdict.
+			if (generation !== generationAtRequest) continue;
+			if (!entry.el.isConnected) continue;
+			applyAiVerdict(entry.el, probability);
+			filtered++;
+		}
+		debugLog("ai.batch", {
+			requested: batch.length,
+			filtered,
+			threshold: AI_NOISE_THRESHOLD,
+		});
+	} finally {
+		aiInFlight = false;
+		if (dead) aiQueue.clear();
+		else if (aiQueue.size) scheduleAiFlush();
+	}
+}
+
+function clearAiState(): void {
+	if (aiTimer) clearTimeout(aiTimer);
+	aiTimer = 0;
+	aiQueue.clear();
+	aiResolved.clear();
+}
+
 function scheduleBadge(): void {
 	if (badgeTimer) return;
 	badgeTimer = window.setTimeout(() => {
@@ -1287,6 +1459,7 @@ function stop(): void {
 	pending.clear();
 	scheduledScanTriggers.clear();
 	scheduledScanId = 0;
+	clearAiState();
 	clearAllMarks();
 	replyCounts.clearRendered();
 	applyStyleVars();
@@ -1313,6 +1486,7 @@ function teardown(): void {
 	scheduledScanId = 0;
 	if (badgeTimer) clearTimeout(badgeTimer);
 	badgeTimer = 0;
+	clearAiState();
 	observer?.disconnect();
 	observer = null;
 	unhookTweetMenu();
@@ -1435,6 +1609,7 @@ async function readStoredState(): Promise<{ cfg: AppConfig; rules: RuleData }> {
 
 const MATCH_KEYS = [
 	"enabled",
+	"aiFilterEnabled",
 	"filterMediaAds",
 	"filterCardAds",
 	"filterParodyAccounts",

@@ -44,4 +44,10 @@ describe("filter reason", () => {
 			),
 		).toBe("filter_reason_external_account:BlueNoise");
 	});
+
+	it("reports a Jev verdict as a rounded percentage", () => {
+		expect(
+			formatFilterReason({ category: "ai", probability: 0.937 }, translate),
+		).toBe("filter_reason_ai:94%");
+	});
 });

@@ -27,6 +27,10 @@ export default defineConfig({
 			"https://raw.githubusercontent.com/*",
 			"https://x.zuoluo.tv/*",
 		],
+		// The experimental Jev second pass is opt-in: the origin is requested at
+		// runtime from the options page, so a default install keeps only the two
+		// public-list hosts above. Mirrors AI_PROVIDER.origin.
+		optional_host_permissions: ["https://api.typesafe.ai/*"],
 		icons: {
 			16: "icons/icon-16.png",
 			32: "icons/icon-32.png",

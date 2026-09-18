@@ -6,6 +6,7 @@ export type FilterReason =
 			source: string;
 	  }
 	| { category: "account"; source: string }
+	| { category: "ai"; probability: number }
 	| {
 			category: "preset";
 			type: "ad" | "parody" | "fan" | "commentary" | "automated";
@@ -34,6 +35,12 @@ export function formatFilterReason(
 		return reason.source === "user"
 			? translate("filter_reason_user_account")
 			: translate("filter_reason_external_account", reason.source);
+	}
+	if (reason.category === "ai") {
+		return translate(
+			"filter_reason_ai",
+			`${Math.round(reason.probability * 100)}%`,
+		);
 	}
 	return translate(`filter_reason_${reason.type}`);
 }

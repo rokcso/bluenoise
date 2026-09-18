@@ -39,6 +39,11 @@ export interface FilterDecision {
 	hit: string | null;
 	reason: FilterReason | null;
 	log: FilteredLog | null;
+	/**
+	 * True when an account whitelist is what cleared the item. The experimental
+	 * Jev pass must not override an explicit "leave this author alone".
+	 */
+	whitelisted?: boolean;
 }
 
 const PRESET_HITS: Record<NonNullable<ArticleFacts["preset"]>, string> = {
@@ -94,7 +99,7 @@ export function classifyArticle(
 		};
 	}
 	if (accountMatch?.decision === "whitelist")
-		return { hit: null, reason: null, log: null };
+		return { hit: null, reason: null, log: null, whitelisted: true };
 
 	const bodyMatch = matchDetail(context.matchers, facts.body);
 	const nameMatch = facts.name

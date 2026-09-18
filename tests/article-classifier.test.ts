@@ -85,6 +85,6 @@ describe("article classifier", () => {
 				},
 				filterContext,
 			),
-		).toEqual({ hit: null, reason: null, log: null });
+		).toEqual({ hit: null, reason: null, log: null, whitelisted: true });
 	});
 });

@@ -335,5 +335,29 @@
 	},
 	"contextMenu_addToBlacklist": {
 		"message": "Add author to the account blacklist"
-	}
+	},
+	"experimental": { "message": "Experimental" },
+	"ai_filter_group": { "message": "Jev second pass" },
+	"ai_filter_enable": { "message": "Filter with Jev" },
+	"ai_filter_enable_hint": {
+		"message": "Send replies no rule matched to $1 and filter the ones it flags. Experimental: it may disagree with you."
+	},
+	"ai_filter_key": { "message": "TypeSafe API key" },
+	"ai_filter_key_hint": {
+		"message": "Your own key, stored only on this device. It is never synced and never included in a rules export."
+	},
+	"ai_filter_key_placeholder": { "message": "ts_…" },
+	"ai_filter_privacy": {
+		"message": "When this is on, the text of unmatched replies on X pages is sent to $1 to be judged. Nothing is sent while it is off."
+	},
+	"ai_filter_provider": { "message": "Provider: $1 · model $2" },
+	"ai_filter_get_key": { "message": "Get an API key" },
+	"ai_filter_docs": { "message": "How Jev works" },
+	"ai_filter_permission_denied": {
+		"message": "BlueNoise needs permission to reach the Jev API before this can be turned on."
+	},
+	"ai_filter_key_required": {
+		"message": "Add your TypeSafe API key before turning this on."
+	},
+	"filter_reason_ai": { "message": "Jev: likely noise ($1)" }
 }
