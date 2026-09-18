@@ -18,6 +18,7 @@ export {
 	RiFlaskLine as ExperimentalIcon,
 	RiInformationFill as InformationFillIcon,
 	RiInformationLine as InformationIcon,
+	RiKey2Line as KeyIcon,
 	RiLayoutFill as LayoutFillIcon,
 	RiLayoutLine as LayoutIcon,
 	RiLayoutRightLine as LayoutRightIcon,
