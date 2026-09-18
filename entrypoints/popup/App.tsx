@@ -1575,10 +1575,38 @@ function AiSecondPass({
 	update: (p: Partial<AppConfig>) => void;
 }) {
 	const [error, setError] = useState("");
+	const [apiKey, setApiKey] = useState("");
+
+	// Mirror the field in the group below so the toggle can gate on the key
+	// synchronously: the origin request has to sit inside the click's user
+	// gesture, and an await before it would drop that gesture.
+	useEffect(() => {
+		const read = () =>
+			chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+				setApiKey(parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey);
+			});
+		void read();
+		const onChange = (
+			changes: { [key: string]: chrome.storage.StorageChange },
+			area: string,
+		) => {
+			if (area === "local" && changes[AI_SECRETS_KEY]) void read();
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => chrome.storage.onChanged.removeListener(onChange);
+	}, []);
 
 	async function toggle(enabled: boolean) {
 		setError("");
 		if (enabled) {
+			// Check the key first. Without one there is nothing to send, and the
+			// permission dialog would pop for a switch that cannot turn on; that
+			// dialog also tears this page down, which is what made the switch
+			// look broken (and reload) on every click.
+			if (!apiKey) {
+				setError(t("ai_filter_key_required"));
+				return;
+			}
 			// The worker can only reach the API once the user grants the origin;
 			// asking here keeps the install-time permission list unchanged.
 			const granted = await chrome.permissions
@@ -1586,13 +1614,6 @@ function AiSecondPass({
 				.catch(() => false);
 			if (!granted) {
 				setError(t("ai_filter_permission_denied"));
-				return;
-			}
-			// The key is owned by the field in its own group; read it at toggle
-			// time rather than duplicating that state here.
-			const stored = await chrome.storage.local.get(AI_SECRETS_KEY);
-			if (!parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey) {
-				setError(t("ai_filter_key_required"));
 				return;
 			}
 		}

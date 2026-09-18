@@ -38,9 +38,27 @@ describe("experimental Jev settings", () => {
 		);
 	});
 
+	it("checks the key before asking for the origin", () => {
+		const toggle = app.slice(app.indexOf("async function toggle"));
+		const keyGate = toggle.indexOf("if (!apiKey)");
+		const originAsk = toggle.indexOf("const granted");
+		expect(keyGate).toBeGreaterThan(-1);
+		expect(originAsk).toBeGreaterThan(keyGate);
+		// No await between the key gate and the origin request: the request must
+		// stay inside the click's user gesture, and a keyless click must not open
+		// the permission dialog at all.
+		expect(toggle.slice(keyGate, originAsk)).not.toContain("await");
+	});
+
 	it("reads the key in the worker, never in the page-facing script", () => {
 		expect(background).toMatch(/chrome\.storage\.local\.get\(AI_SECRETS_KEY\)/);
 		expect(content).not.toContain("AI_SECRETS_KEY");
+	});
+
+	it("caps how much one page may spend and backs off in the worker", () => {
+		expect(content).toMatch(/aiRequestsSpent >= AI_SESSION_MAX_REQUESTS/);
+		expect(background).toMatch(/gateBlock\(storedGate, now\)/);
+		expect(background).toMatch(/recordFailure\(\s*gate,/);
 	});
 
 	it("routes a Jev verdict through the same marking pipeline as a rule hit", () => {

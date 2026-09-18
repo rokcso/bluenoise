@@ -1,12 +1,15 @@
 import { setLanguage, t } from "@/lib/i18n";
 import {
 	AI_CACHE_KEY,
+	AI_GATE_KEY,
 	AI_PROVIDER,
 	AI_SECRETS_KEY,
 	type AiCandidate,
 	type AiEvaluateRequest,
 	type AiEvaluateResponse,
+	type AiGate,
 	parseAiCache,
+	parseAiGate,
 	parseAiSecrets,
 } from "@/src/contracts/ai";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
@@ -29,6 +32,15 @@ import {
 	readCachedProbability,
 	withCachedVerdict,
 } from "@/src/domain/ai-filter";
+import {
+	classifyFailure,
+	emptyGate,
+	gateBlock,
+	parseRetryAfter,
+	recordFailure,
+	recordRequest,
+	recordSuccess,
+} from "@/src/domain/ai-gate";
 import {
 	defaultConfig,
 	defaultRuleData,
@@ -121,7 +133,10 @@ export default defineBackground(() => {
 		if (!items.length) return { ok: true, probabilities: {} };
 
 		const now = Date.now();
-		const cache = await readAiCache();
+		const [cache, storedGate] = await Promise.all([
+			readAiCache(),
+			readAiGate(),
+		]);
 		const probabilities: Record<string, number> = {};
 		const pending: AiCandidate[] = [];
 		for (const item of items) {
@@ -135,6 +150,13 @@ export default defineBackground(() => {
 		}
 		if (!pending.length) return { ok: true, probabilities };
 
+		// Cached verdicts are free; only a request about to leave the browser has
+		// to pass the quota guard.
+		const blocked = gateBlock(storedGate, now);
+		if (blocked) return { ok: false, error: blocked, probabilities };
+		let gate = recordRequest(storedGate, now);
+		await writeAiGate(gate);
+
 		let next = cache;
 		try {
 			const response = await fetch(AI_PROVIDER.endpoint, {
@@ -146,10 +168,19 @@ export default defineBackground(() => {
 				body: JSON.stringify(buildAiRequest(request.parent, pending)),
 			});
 			if (!response.ok) {
+				gate = recordFailure(
+					gate,
+					classifyFailure(response.status),
+					parseRetryAfter(response.headers.get("retry-after"), now),
+					Date.now(),
+				);
+				await writeAiGate(gate);
 				return { ok: false, error: `http-${response.status}`, probabilities };
 			}
 			const parsed = parseAiResponse(await response.json(), pending);
 			if (!parsed || !Object.keys(parsed).length) {
+				gate = recordFailure(gate, "server", null, Date.now());
+				await writeAiGate(gate);
 				return { ok: false, error: "unexpected-response", probabilities };
 			}
 			for (const item of pending) {
@@ -163,7 +194,9 @@ export default defineBackground(() => {
 					now,
 				);
 			}
+			await writeAiGate(recordSuccess(gate, Date.now()));
 		} catch (error) {
+			await writeAiGate(recordFailure(gate, "network", null, Date.now()));
 			return {
 				ok: false,
 				error: error instanceof Error ? error.message : String(error),
@@ -177,6 +210,20 @@ export default defineBackground(() => {
 	async function readAiCache() {
 		const stored = await chrome.storage.local.get(AI_CACHE_KEY);
 		return parseAiCache(stored[AI_CACHE_KEY]);
+	}
+
+	/**
+	 * The guard is persisted rather than held in a module variable: MV3 stops
+	 * the worker between batches, and a cooldown that evaporates on suspension
+	 * would let every new scan retry a key the provider just rejected.
+	 */
+	async function readAiGate(): Promise<AiGate> {
+		const stored = await chrome.storage.local.get(AI_GATE_KEY);
+		return parseAiGate(stored[AI_GATE_KEY] ?? emptyGate());
+	}
+
+	async function writeAiGate(gate: AiGate): Promise<void> {
+		await chrome.storage.local.set({ [AI_GATE_KEY]: gate });
 	}
 
 	// Public keyword sources change slowly; refresh them twice per day.

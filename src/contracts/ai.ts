@@ -11,6 +11,8 @@
 export const AI_SECRETS_KEY = "ai-secrets";
 /** Storage key for verdicts already paid for, keyed by reply fingerprint. */
 export const AI_CACHE_KEY = "ai-filter-cache";
+/** Storage key for the quota guard: rolling request window plus cooldown. */
+export const AI_GATE_KEY = "ai-gate";
 
 /** The provider this feature is built around. Metadata only; no key material. */
 export const AI_PROVIDER = {
@@ -36,6 +38,20 @@ export interface AiVerdict {
 }
 
 export type AiCache = Record<string, AiVerdict>;
+
+/**
+ * Quota guard state. It survives a suspended service worker on purpose: a
+ * rejected key or a provider-mandated slowdown must not be forgotten between
+ * batches, or every new request would pay for the same mistake.
+ */
+export interface AiGate {
+	/** Timestamps of the requests already spent inside the rolling window. */
+	window: number[];
+	/** No request may start before this timestamp. */
+	cooldownUntil: number;
+	/** Consecutive 5xx / network failures; drives the exponential step. */
+	failures: number;
+}
 
 /** A reply submitted for judgment. `id` is request-scoped and never persisted. */
 export interface AiCandidate {
@@ -80,4 +96,24 @@ export function parseAiCache(value: unknown): AiCache {
 		}
 	}
 	return cache;
+}
+
+export function parseAiGate(value: unknown): AiGate {
+	const stored = value as Partial<AiGate> | undefined;
+	const window = Array.isArray(stored?.window)
+		? stored.window.filter(
+				(entry): entry is number => typeof entry === "number" && entry > 0,
+			)
+		: [];
+	return {
+		window,
+		cooldownUntil:
+			typeof stored?.cooldownUntil === "number" && stored.cooldownUntil > 0
+				? stored.cooldownUntil
+				: 0,
+		failures:
+			typeof stored?.failures === "number" && stored.failures > 0
+				? Math.floor(stored.failures)
+				: 0,
+	};
 }
