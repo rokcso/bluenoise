@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/i18n";
+import {
+	AI_PROVIDER,
+	AI_SECRETS_KEY,
+	parseAiSecrets,
+} from "@/src/contracts/ai";
 import type {
 	KeywordSubscription,
 	RuleView,
@@ -37,6 +42,7 @@ import {
 	DeleteIcon,
 	DiagnosticsIcon,
 	DownloadIcon,
+	ExperimentalIcon,
 	ExternalLinkIcon,
 	LayoutIcon,
 	LayoutRightIcon,
@@ -127,6 +133,7 @@ export type SettingsSection =
 	| "backup"
 	| "filtering"
 	| "advanced"
+	| "experimental"
 	| "makeover"
 	| "about";
 
@@ -594,6 +601,21 @@ export function SettingsApp({
 				)}
 
 				{activeSection === "about" && <AboutPage />}
+
+				{activeSection === "experimental" && (
+					<>
+						<PageHeading title={t("experimental")} />
+						<SettingsGroup
+							label={t("ai_filter_group")}
+							icon={ExperimentalIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
+								<AiSecondPass config={config} update={update} />
+							</SettingsPanel>
+						</SettingsGroup>
+					</>
+				)}
 			</div>
 		</main>
 	);
@@ -1527,6 +1549,121 @@ function TextListEditor({
 }
 
 /* ---------- Advanced ---------- */
+
+/* ---------- Experimental: Jev second pass ---------- */
+
+/**
+ * Opt-in second pass: replies no rule matched are sent to Jev, and a verdict
+ * above the confidence threshold becomes an ordinary filter hit.
+ *
+ * The API key never touches `AppConfig` (which syncs) or `RuleData` (which is
+ * exported). It is written straight to `storage.local`, and the origin is
+ * requested at runtime so a default install keeps its existing permissions.
+ */
+function AiSecondPass({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	const [apiKey, setApiKey] = useState("");
+	const [loaded, setLoaded] = useState(false);
+	const [error, setError] = useState("");
+
+	useEffect(() => {
+		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+			setApiKey(parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey);
+			setLoaded(true);
+		});
+	}, []);
+
+	function saveKey(next: string) {
+		setApiKey(next);
+		void chrome.storage.local.set({
+			[AI_SECRETS_KEY]: { apiKey: next.trim() },
+		});
+	}
+
+	async function toggle(enabled: boolean) {
+		setError("");
+		if (enabled) {
+			// The worker can only reach the API once the user grants the origin;
+			// asking here keeps the install-time permission list unchanged.
+			const granted = await chrome.permissions
+				.request({ origins: [AI_PROVIDER.origin] })
+				.catch(() => false);
+			if (!granted) {
+				setError(t("ai_filter_permission_denied"));
+				return;
+			}
+			if (!apiKey.trim()) {
+				setError(t("ai_filter_key_required"));
+				return;
+			}
+		}
+		update({ aiFilterEnabled: enabled });
+	}
+
+	return (
+		<div className="flex flex-col">
+			<XToggle
+				label={t("ai_filter_enable")}
+				hint={t("ai_filter_enable_hint", AI_PROVIDER.name)}
+				checked={config.aiFilterEnabled}
+				onChange={(v) => void toggle(v)}
+			/>
+			<SettingsDivider />
+			<div className="flex flex-col gap-1.5">
+				<label className="text-sm" htmlFor="ai-filter-key">
+					{t("ai_filter_key")}
+				</label>
+				<span className="text-xs text-x-muted">{t("ai_filter_key_hint")}</span>
+				{loaded && (
+					<input
+						id="ai-filter-key"
+						type="password"
+						value={apiKey}
+						onChange={(e) => saveKey(e.target.value)}
+						name={AI_SECRETS_KEY}
+						autoComplete="off"
+						autoCapitalize="none"
+						autoCorrect="off"
+						spellCheck={false}
+						placeholder={t("ai_filter_key_placeholder")}
+						className="w-full rounded-lg border border-x-border bg-x-bg p-3 font-mono text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
+					/>
+				)}
+			</div>
+			{error && <p className="mt-3 text-xs text-x-muted">{error}</p>}
+			<SettingsDivider />
+			<div className="flex flex-col gap-2 py-3 text-xs text-x-muted">
+				<p>{t("ai_filter_privacy", AI_PROVIDER.name)}</p>
+				<p>{t("ai_filter_provider", AI_PROVIDER.name, AI_PROVIDER.model)}</p>
+				<div className="flex flex-wrap gap-3">
+					<a
+						href={AI_PROVIDER.keysUrl}
+						target="_blank"
+						rel="noreferrer"
+						className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+					>
+						{t("ai_filter_get_key")}
+						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+					</a>
+					<a
+						href={AI_PROVIDER.docsUrl}
+						target="_blank"
+						rel="noreferrer"
+						className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+					>
+						{t("ai_filter_docs")}
+						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+					</a>
+				</div>
+			</div>
+		</div>
+	);
+}
 
 function Advanced({
 	section,

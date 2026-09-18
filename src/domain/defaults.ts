@@ -34,6 +34,7 @@ export const DEFAULTS: AppConfig = {
 	ignoreSpaces: true,
 	caseSensitive: false,
 	debugLogging: false,
+	aiFilterEnabled: false,
 	filterMediaAds: false,
 	filterCardAds: false,
 	filterParodyAccounts: false,

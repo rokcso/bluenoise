@@ -27,10 +27,13 @@ Install BlueNoise from the Chrome Web Store or Microsoft Edge Add-ons, or downlo
 - Optionally filter promoted posts, media or card ads, and accounts labeled by X as parody, fan, commentary, or automated.
 - Import and export personal rules, or add allow/block rules from the right-click menu.
 - Independently clean up X's interface by hiding selected recommendations, promotions, counters, and navigation elements.
+- **Experimental:** optionally ask Jev (TypeSafe AI) about replies that no rule matched, using your own API key. Off by default, fully local until you turn it on.
 
 ## Privacy and permissions
 
-BlueNoise collects no telemetry or analytics. It does not read cookies, access account credentials, call X APIs, or take account actions such as blocking, muting, following, or posting. Settings and rules are stored through the browser; network access is used only to update enabled public rule lists.
+BlueNoise collects no telemetry or analytics. It does not read cookies, access account credentials, call X APIs, or take account actions such as blocking, muting, following, or posting. Settings and rules are stored through the browser; network access is used only to update enabled public rule lists, plus the optional experimental Jev second pass described below.
+
+If you turn on the experimental Jev second pass and supply your own TypeSafe API key, the text of replies that no rule matched is sent to `api.typesafe.ai` for classification. It is off by default, and no page content leaves your browser until you enable it. Your API key is stored in local extension storage only: never synced, never included in a rules export.
 
 Read the full [Privacy Policy](./docs/privacy-policy.md).
 

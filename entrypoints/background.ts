@@ -1,4 +1,14 @@
 import { setLanguage, t } from "@/lib/i18n";
+import {
+	AI_CACHE_KEY,
+	AI_PROVIDER,
+	AI_SECRETS_KEY,
+	type AiCandidate,
+	type AiEvaluateRequest,
+	type AiEvaluateResponse,
+	parseAiCache,
+	parseAiSecrets,
+} from "@/src/contracts/ai";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
 	DEBUG_LOG_FLUSH_DELAY_MS,
@@ -11,6 +21,14 @@ import {
 	DEFAULT_ACCOUNT_LIST_SOURCES,
 	syncAccountListSource,
 } from "@/src/domain/account-list";
+import {
+	AI_MAX_BATCH,
+	aiFingerprint,
+	buildAiRequest,
+	parseAiResponse,
+	readCachedProbability,
+	withCachedVerdict,
+} from "@/src/domain/ai-filter";
 import {
 	defaultConfig,
 	defaultRuleData,
@@ -76,6 +94,89 @@ export default defineBackground(() => {
 			settings: loadConfig(synced[SETTINGS_KEY] ?? defaultConfig()),
 			rules: loadRuleData(local[RULE_DATA_KEY] ?? defaultRuleData()),
 		};
+	}
+
+	// ==================== Experimental: Jev second pass ====================
+
+	/**
+	 * The API key is read here, never in the content script: the page-world
+	 * script has no business holding a credential, and this keeps the network
+	 * call inside the worker where host permissions apply.
+	 */
+	async function readAiKey(): Promise<string> {
+		const stored = await chrome.storage.local.get(AI_SECRETS_KEY);
+		return parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey;
+	}
+
+	/** Judge replies with Jev, reusing stored verdicts so identical text is paid for once. */
+	async function evaluateWithJev(
+		request: AiEvaluateRequest,
+	): Promise<AiEvaluateResponse> {
+		const apiKey = await readAiKey();
+		if (!apiKey) return { ok: false, error: "missing-key" };
+
+		const items: AiCandidate[] = request.items
+			.slice(0, AI_MAX_BATCH)
+			.filter((item) => typeof item?.text === "string" && item.text.trim());
+		if (!items.length) return { ok: true, probabilities: {} };
+
+		const now = Date.now();
+		const cache = await readAiCache();
+		const probabilities: Record<string, number> = {};
+		const pending: AiCandidate[] = [];
+		for (const item of items) {
+			const cached = readCachedProbability(
+				cache,
+				aiFingerprint(item.text),
+				now,
+			);
+			if (cached === null) pending.push(item);
+			else probabilities[item.id] = cached;
+		}
+		if (!pending.length) return { ok: true, probabilities };
+
+		let next = cache;
+		try {
+			const response = await fetch(AI_PROVIDER.endpoint, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(buildAiRequest(request.parent, pending)),
+			});
+			if (!response.ok) {
+				return { ok: false, error: `http-${response.status}`, probabilities };
+			}
+			const parsed = parseAiResponse(await response.json(), pending);
+			if (!parsed || !Object.keys(parsed).length) {
+				return { ok: false, error: "unexpected-response", probabilities };
+			}
+			for (const item of pending) {
+				const probability = parsed[item.id];
+				if (probability === undefined) continue;
+				probabilities[item.id] = probability;
+				next = withCachedVerdict(
+					next,
+					aiFingerprint(item.text),
+					probability,
+					now,
+				);
+			}
+		} catch (error) {
+			return {
+				ok: false,
+				error: error instanceof Error ? error.message : String(error),
+				probabilities,
+			};
+		}
+		await chrome.storage.local.set({ [AI_CACHE_KEY]: next });
+		return { ok: true, probabilities };
+	}
+
+	async function readAiCache() {
+		const stored = await chrome.storage.local.get(AI_CACHE_KEY);
+		return parseAiCache(stored[AI_CACHE_KEY]);
 	}
 
 	// Public keyword sources change slowly; refresh them twice per day.
@@ -246,6 +347,16 @@ export default defineBackground(() => {
 				typeof message.sourceId === "string" ? message.sourceId : undefined;
 			syncAccounts(sourceId ? [sourceId] : undefined)
 				.then(() => sendResponse({ ok: true }))
+				.catch((error) =>
+					sendResponse({
+						ok: false,
+						error: error instanceof Error ? error.message : String(error),
+					}),
+				);
+			return true;
+		} else if (message?.type === "BLUENOISE_AI_EVALUATE") {
+			evaluateWithJev(message as AiEvaluateRequest)
+				.then(sendResponse)
 				.catch((error) =>
 					sendResponse({
 						ok: false,

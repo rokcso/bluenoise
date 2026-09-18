@@ -327,5 +327,27 @@
 	},
 	"contextMenu_addToBlacklist": {
 		"message": "将作者加入账号黑名单"
-	}
+	},
+	"experimental": { "message": "实验性功能" },
+	"ai_filter_group": { "message": "Jev 二次判断" },
+	"ai_filter_enable": { "message": "使用 Jev 过滤" },
+	"ai_filter_enable_hint": {
+		"message": "把未被任何规则命中的回复交给 $1 判断，命中即按你设定的模式过滤。实验性功能：它可能和你意见不一致。"
+	},
+	"ai_filter_key": { "message": "TypeSafe API Key" },
+	"ai_filter_key_hint": {
+		"message": "使用你自己的 Key，仅保存在本机。不会同步，也不会写入规则导出文件。"
+	},
+	"ai_filter_key_placeholder": { "message": "ts_…" },
+	"ai_filter_privacy": {
+		"message": "开启后，X 页面上未被规则命中的回复文本会发送给 $1 进行判断；关闭时不会发送任何内容。"
+	},
+	"ai_filter_provider": { "message": "服务提供方：$1 · 模型 $2" },
+	"ai_filter_get_key": { "message": "获取 API Key" },
+	"ai_filter_docs": { "message": "了解 Jev" },
+	"ai_filter_permission_denied": {
+		"message": "需要先授权 BlueNoise 访问 Jev API 才能开启此功能。"
+	},
+	"ai_filter_key_required": { "message": "请先填入你的 TypeSafe API Key。" },
+	"filter_reason_ai": { "message": "Jev 判定为噪音（$1）" }
 }

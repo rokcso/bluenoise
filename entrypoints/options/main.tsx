@@ -7,6 +7,8 @@ import "./style.css";
 import { setLanguage, t } from "@/lib/i18n";
 import {
 	DatabaseIcon,
+	ExperimentalFillIcon,
+	ExperimentalIcon,
 	FilterFillIcon,
 	FilterIcon,
 	InformationFillIcon,
@@ -64,6 +66,12 @@ const navigation: {
 		label: "advanced",
 		lineIcon: SlidersIcon,
 		fillIcon: SlidersIcon,
+	},
+	{
+		id: "experimental",
+		label: "experimental",
+		lineIcon: ExperimentalIcon,
+		fillIcon: ExperimentalFillIcon,
 	},
 	{
 		id: "makeover",
