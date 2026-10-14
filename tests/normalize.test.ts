@@ -7,6 +7,7 @@ import {
 	isSafeCustomRegex,
 	looseRegex,
 	normalizeKeyword,
+	normalizeStrict,
 	parseKeywordText,
 	sameKeyword,
 } from "@/src/domain/normalize";
@@ -88,6 +89,15 @@ describe("parseKeywordText", () => {
 	});
 	it("去空行、去重、去首尾空白", () => {
 		expect(parseKeywordText(" a \n a \n\n b \n")).toEqual(["a", "b"]);
+	});
+});
+
+describe("normalizeStrict", () => {
+	it("保留空白，仅去掉零宽字符", () => {
+		expect(normalizeStrict("同 城 约", cfg)).toBe("同 城 约");
+		expect(normalizeStrict("a\u200bb", cfg)).toBe("ab");
+		expect(normalizeStrict("Add Me", cfg)).toBe("add me");
+		expect(normalizeStrict("Add Me", { caseSensitive: true })).toBe("Add Me");
 	});
 });
 

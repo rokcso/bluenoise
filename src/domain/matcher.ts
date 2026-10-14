@@ -6,9 +6,11 @@ import type {
 import {
 	asRegex,
 	buildWhitelistIndex,
+	INVISIBLE_CHARS_RE,
 	isSafeCustomRegex,
 	MAX_CUSTOM_REGEX_COUNT,
 	normalizeKeyword,
+	normalizeStrict,
 } from "@/src/domain/normalize";
 
 /** Max keywords per merged big-regex chunk. Too big = slow compile, too small = too many chunks. */
@@ -48,8 +50,11 @@ export function buildMatchers(
 	const whitelist = buildWhitelistIndex(cfg.whitelist, cfg);
 
 	const plain: string[] = [];
+	const loose: string[] = [];
 	const plainSources = new Map<string, string>();
 	const plainRules = new Map<string, string>();
+	const looseSources = new Map<string, string>();
+	const looseRules = new Map<string, string>();
 	const seenPlain = new Set<string>();
 	const seenRegex = new Set<string>();
 	const custom: { source: string; re: RegExp }[] = [];
@@ -77,29 +82,37 @@ export function buildMatchers(
 			continue;
 		}
 
-		const normalized = normalizeKeyword(kw, cfg);
-		if (!normalized || seenPlain.has(normalized)) continue;
-		seenPlain.add(normalized);
-		plain.push(normalized);
-		plainSources.set(normalized, item.source);
-		plainRules.set(normalized, kw);
+		// The canonical form (whitespace removed) is the dedup key, so the same
+		// rule from two lists still counts once.
+		const canonical = normalizeKeyword(kw, cfg);
+		if (!canonical || seenPlain.has(canonical)) continue;
+		seenPlain.add(canonical);
+
+		// Strict form keeps the keyword's own whitespace and gets a Latin word
+		// boundary, so "check my bio" no longer hits "check my biography".
+		const strict = normalizeStrict(kw, cfg);
+		plain.push(strict);
+		plainSources.set(strict, item.source);
+		plainRules.set(strict, kw);
+
+		// Loose form compacts whitespace / zero-width characters, so an
+		// obfuscated "同 城 约" is still caught. Only non-Latin rules take part:
+		// once the text is compacted a Latin rule loses every boundary, which
+		// would undo the word-boundary guard above.
+		if (cfg.ignoreSpaces !== false && /[^\p{ASCII}]/u.test(canonical)) {
+			loose.push(canonical);
+			looseSources.set(canonical, item.source);
+			looseRules.set(canonical, kw);
+		}
 	}
 
 	// Longest first, so a match reports the most specific word.
 	plain.sort((a, b) => b.length - a.length);
-
-	// Merge plain keywords into a few chunked big regexes.
-	const chunks: RegExp[] = [];
-	for (let i = 0; i < plain.length; i += CHUNK_SIZE) {
-		const pattern = plain
-			.slice(i, i + CHUNK_SIZE)
-			.map((p) => escapeRegExp(p))
-			.join("|");
-		chunks.push(new RegExp(pattern));
-	}
+	loose.sort((a, b) => b.length - a.length);
 
 	return {
-		plain: chunks,
+		plain: chunkPatterns(plain, true),
+		loose: chunkPatterns(loose, false),
 		normalization: {
 			caseSensitive: cfg.caseSensitive,
 			ignoreSpaces: cfg.ignoreSpaces,
@@ -108,8 +121,37 @@ export function buildMatchers(
 		count: plain.length + custom.length,
 		plainSources,
 		plainRules,
+		looseSources,
+		looseRules,
 		customSources,
 	};
+}
+
+/** Merge plain keywords into a few chunked big regexes. */
+function chunkPatterns(forms: string[], withWordBoundaries: boolean): RegExp[] {
+	const chunks: RegExp[] = [];
+	for (let i = 0; i < forms.length; i += CHUNK_SIZE) {
+		const pattern = forms
+			.slice(i, i + CHUNK_SIZE)
+			.map((form) => escapeAlternative(form, withWordBoundaries))
+			.join("|");
+		chunks.push(new RegExp(pattern));
+	}
+	return chunks;
+}
+
+/**
+ * Escape one plain keyword for the big alternation. Latin edges get a \b so the
+ * keyword cannot be found inside a longer word; CJK edges do not, because
+ * Chinese has no regex word boundary (a guard would never fire or would
+ * truncate adjacent CJK).
+ */
+function escapeAlternative(form: string, withWordBoundaries: boolean): string {
+	const escaped = escapeRegExp(form);
+	if (!withWordBoundaries) return escaped;
+	const lead = /^[A-Za-z0-9_]/.test(form) ? "\\b" : "";
+	const tail = /[A-Za-z0-9_]$/.test(form) ? "\\b" : "";
+	return `${lead}${escaped}${tail}`;
 }
 
 /** The matched rule plus enough context to explain the decision in a debug log. */
@@ -126,9 +168,6 @@ export interface MatchResult {
 	snippet: string;
 }
 
-const INVISIBLE_CHARS_RE =
-	/[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]+/g;
-
 /** Slice a diagnostic excerpt centered on a match within a normalized string. */
 function makeSnippet(
 	text: string,
@@ -143,26 +182,63 @@ function makeSnippet(
 	return (start > 0 ? "…" : "") + body + (end < text.length ? "…" : "");
 }
 
+/** First plain match across the chunked regexes, with rule/source provenance. */
+function firstPlainMatch(
+	regexes: RegExp[],
+	text: string,
+	rules: Map<string, string> | undefined,
+	sources: Map<string, string> | undefined,
+): MatchResult | null {
+	if (!text) return null;
+	for (const re of regexes) {
+		const match = re.exec(text);
+		if (match) {
+			const hit = match[0];
+			return {
+				hit,
+				rule: rules?.get(hit) ?? hit,
+				source: sources?.get(hit) ?? null,
+				kind: "plain",
+				snippet: makeSnippet(text, match.index, hit.length),
+			};
+		}
+	}
+	return null;
+}
+
 /** Core matcher: returns full match detail, or null if nothing matched. */
 function matchCore(matchers: Matchers, text: string): MatchResult | null {
 	if (!text || matchers.count === 0) return null;
 
-	// Plain keywords: match against normalized text.
-	const plainText = normalizeKeyword(text, matchers.normalization);
-	if (plainText) {
-		for (const re of matchers.plain) {
-			const match = re.exec(plainText);
-			if (match) {
-				const hit = match[0];
-				return {
-					hit,
-					rule: matchers.plainRules?.get(hit) ?? hit,
-					source: matchers.plainSources?.get(hit) ?? null,
-					kind: "plain",
-					snippet: makeSnippet(plainText, match.index, hit.length),
-				};
-			}
-		}
+	// Pass 1: match the text as written. Whitespace and newlines are preserved
+	// and Latin keywords carry a word boundary, so ordinary prose is never
+	// compacted into an accidental hit.
+	const strictText = normalizeStrict(text, matchers.normalization);
+	const strictMatch = firstPlainMatch(
+		matchers.plain,
+		strictText,
+		matchers.plainRules,
+		matchers.plainSources,
+	);
+	if (strictMatch) return strictMatch;
+
+	// Pass 2: retry against a compacted form that removes whitespace and
+	// zero-width characters, catching obfuscated spellings like "同 城 约".
+	// Only runs when pass 1 found nothing and the text has a non-ASCII byte:
+	// every loose rule is non-Latin, so a purely ASCII post cannot hit one.
+	if (
+		matchers.normalization.ignoreSpaces !== false &&
+		matchers.loose?.length &&
+		/[^\p{ASCII}]/u.test(strictText)
+	) {
+		const looseText = normalizeKeyword(text, matchers.normalization);
+		const looseMatch = firstPlainMatch(
+			matchers.loose,
+			looseText,
+			matchers.looseRules,
+			matchers.looseSources,
+		);
+		if (looseMatch) return looseMatch;
 	}
 
 	// Custom regexes: keep the raw text's spaces/newlines/case, only strip

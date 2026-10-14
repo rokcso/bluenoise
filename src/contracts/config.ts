@@ -136,6 +136,11 @@ export interface Rule {
 export interface Matchers {
 	/** Plain keywords merged into chunked big regexes. */
 	plain: RegExp[];
+	/**
+	 * Loose fallback: whitespace-removed forms of non-Latin rules. Only consulted
+	 * when the strict pass finds nothing, so ordinary posts are never compacted.
+	 */
+	loose?: RegExp[];
 	/** Normalization used to compile plain keywords; matching must use it too. */
 	normalization: Pick<AppConfig, "caseSensitive" | "ignoreSpaces">;
 	/** User-written /regex/ matchers. */
@@ -146,6 +151,10 @@ export interface Matchers {
 	plainSources?: Map<string, string>;
 	/** Original plain rule text, keyed by normalized form. */
 	plainRules?: Map<string, string>;
+	/** Source label of each loose form, keyed by the compacted keyword. */
+	looseSources?: Map<string, string>;
+	/** Original rule text for each loose form, keyed by the compacted keyword. */
+	looseRules?: Map<string, string>;
 	/** Source label (subscription name or "user") of each custom regex, keyed by raw rule. */
 	customSources?: Map<string, string>;
 }

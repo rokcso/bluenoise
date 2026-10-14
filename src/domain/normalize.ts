@@ -60,6 +60,25 @@ export function normalizeKeyword(
 	return normalized;
 }
 
+/** Zero-width / direction-control characters, used by strict normalization. */
+export const INVISIBLE_CHARS_RE =
+	/[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]+/g;
+
+/**
+ * Normalize while preserving whitespace: case-fold and strip only the invisible
+ * characters. This powers the strict matching pass, where a keyword must appear
+ * in the text as written. Latin word boundaries are applied at compile time;
+ * the loose pass still uses normalizeKeyword() to compact obfuscation.
+ */
+export function normalizeStrict(
+	text: string,
+	config: { caseSensitive?: boolean },
+): string {
+	let normalized = String(text || "");
+	if (!config?.caseSensitive) normalized = normalized.toLowerCase();
+	return normalized.replace(INVISIBLE_CHARS_RE, "");
+}
+
 /** Are two rules the same? (regex compare by raw text, plain words by normalized form.) */
 export function sameKeyword(
 	a: string,

@@ -103,3 +103,40 @@ describe("matchAny", () => {
 		expect(matchAny(compactOnly, "同 城 约")).toBeNull();
 	});
 });
+
+describe("词边界与两段式匹配", () => {
+	it("拉丁关键词不命中更长的词", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["check my bio"] }));
+		expect(matchAny(m, "Check my biography on the site")).toBeNull();
+		expect(matchAny(m, "please check my bio for the link")).toBe(
+			"check my bio",
+		);
+	});
+
+	it("拉丁关键词不命中被去空白拼接的形态", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["buy now"] }));
+		expect(matchAny(m, "buynow")).toBeNull();
+		expect(matchAny(m, "buy now")).toBe("buy now");
+	});
+
+	it("先按原文匹配，未命中才回退到去空白的宽松匹配", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["同城"] }));
+		expect(matchAny(m, "今天去同城玩")).toBe("同城");
+		expect(matchAny(m, "今天去同 城 玩")).toBe("同城");
+		expect(matchAny(m, "同城")).toBe("同城");
+	});
+
+	it("中英混合关键词仍能命中拆字形态", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["sao货"] }));
+		expect(matchAny(m, "s a o 货")).toBe("sao货");
+	});
+
+	it("宽松回退保留原始规则文本", () => {
+		const m = buildMatchers(cfg({ userKeywords: ["免 费 领 取资源"] }));
+		expect(matchDetail(m, "免费领取资源")).toMatchObject({
+			hit: "免费领取资源",
+			rule: "免 费 领 取资源",
+			kind: "plain",
+		});
+	});
+});
