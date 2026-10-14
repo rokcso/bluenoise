@@ -13,4 +13,11 @@ describe("filtering settings visibility", () => {
 		expect(app).not.toContain('{config.mode !== "hide" && (');
 		expect(app).not.toContain('{config.mode === "dim" && (');
 	});
+
+	it("exposes the dim opacity control in the treatment group", () => {
+		expect(app).toContain('label={t("dim_opacity")}');
+		expect(app).toContain("MIN_DIM_OPACITY");
+		expect(app).toContain("MAX_DIM_OPACITY");
+		expect(app).toContain("update({ dimOpacity:");
+	});
 });

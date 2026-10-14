@@ -1,7 +1,7 @@
 {
 	"extName": { "message": "BlueNoise - Make X readable again" },
 	"extDescription": {
-		"message": "Make X readable: locally blur or hide noisy replies, timeline posts, and ads; optional page cleanups; no cookies or account changes."
+		"message": "Make X readable: locally dim or hide noisy replies, timeline posts, and ads; optional page cleanups; no cookies or account changes."
 	},
 	"loading": { "message": "Loading…" },
 	"tagline": { "message": "Less noise. More signal." },
@@ -14,7 +14,7 @@
 	"filter_status_label": { "message": "Filter reply & timeline noise" },
 	"filter_effect": { "message": "Matched posts" },
 	"filter_effect_hint": {
-		"message": "Choose whether matched replies or posts are blurred, collapsed, or hidden."
+		"message": "Choose whether matched replies or posts are dimmed, collapsed, or hidden."
 	},
 	"enabled_on": { "message": "Filtering on" },
 	"enabled_off": { "message": "Filtering off" },
@@ -22,9 +22,13 @@
 	"x_makeover_on": { "message": "X Makeover on" },
 	"x_makeover_off": { "message": "X Makeover off" },
 	"makeover": { "message": "Makeover" },
-	"mode_dim": { "message": "Blur" },
+	"mode_dim": { "message": "Dim" },
 	"mode_collapse": { "message": "Collapse" },
 	"mode_hide": { "message": "Hide" },
+	"dim_opacity": { "message": "Dim opacity" },
+	"dim_opacity_hint": {
+		"message": "Opacity of filtered content in Dim mode; lower hides more. Only applies in Dim mode."
+	},
 	"collapse_filtered": { "message": "Filtered post" },
 	"collapse_filtered_reason": { "message": "Filtered: $1" },
 	"collapse_show": { "message": "Show" },
@@ -186,27 +190,27 @@
 	"ads": { "message": "Ads" },
 	"filter_media_ads": { "message": "Filter media ads" },
 	"filter_media_ads_hint": {
-		"message": "Blur or hide promoted posts with video or image media."
+		"message": "Dim or hide promoted posts with video or image media."
 	},
 	"filter_card_ads": { "message": "Filter website card ads" },
 	"filter_card_ads_hint": {
-		"message": "Blur or hide promoted posts containing a website card."
+		"message": "Dim or hide promoted posts containing a website card."
 	},
 	"filter_parody_accounts": { "message": "Filter parody accounts" },
 	"filter_parody_accounts_hint": {
-		"message": "Blur or hide posts from accounts marked as parody by X."
+		"message": "Dim or hide posts from accounts marked as parody by X."
 	},
 	"filter_fan_accounts": { "message": "Filter fan accounts" },
 	"filter_fan_accounts_hint": {
-		"message": "Blur or hide posts from accounts marked as fan accounts by X."
+		"message": "Dim or hide posts from accounts marked as fan accounts by X."
 	},
 	"filter_commentary_accounts": { "message": "Filter commentary accounts" },
 	"filter_commentary_accounts_hint": {
-		"message": "Blur or hide posts from accounts marked as commentary by X."
+		"message": "Dim or hide posts from accounts marked as commentary by X."
 	},
 	"filter_automated_accounts": { "message": "Filter automated accounts" },
 	"filter_automated_accounts_hint": {
-		"message": "Blur or hide posts from accounts marked as automated by X."
+		"message": "Dim or hide posts from accounts marked as automated by X."
 	},
 	"hide_premium_promo": { "message": "Hide Premium ads" },
 	"hide_premium_promo_before_platform": { "message": "Hide " },
@@ -292,11 +296,11 @@
 	},
 	"reveal_on_hover": { "message": "Reveal around cursor" },
 	"reveal_on_hover_hint": {
-		"message": "Show a clear area around the cursor. Only applies in Blur mode."
+		"message": "Show a clear area around the cursor. Only applies in Dim mode."
 	},
 	"show_filter_reason": { "message": "Show filter reason" },
 	"show_filter_reason_hint": {
-		"message": "Show the matched rule on filtered posts and replies. Only applies in Blur and Collapse modes."
+		"message": "Show the matched rule on filtered posts and replies. Only applies in Dim and Collapse modes."
 	},
 	"match_names": { "message": "Match names and @handles" },
 	"match_names_hint": {

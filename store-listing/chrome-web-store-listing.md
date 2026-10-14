@@ -15,7 +15,7 @@ BlueNoise makes X reply threads and your home timeline easier to read. It filter
 What it does
 
 - Filters replies and home-timeline posts by keyword or account, while leaving the post you opened untouched.
-- Displays matches blurred, collapsed, or hidden; turning filtering off restores the page.
+- Displays matches dimmed, collapsed, or hidden; turning filtering off restores the page.
 - Supports plain keywords, safe `/regex/flags` rules, account IDs, @handles, personal allowlists, and optional community lists.
 - Optionally filters promoted posts, media or card ads, and accounts labeled by X as parody, fan, commentary, or automated.
 - Imports and exports personal rules and adds allow or block rules from the right-click menu.
@@ -24,7 +24,7 @@ What it does
 What it does not do
 
 - It does not read cookies or call X APIs.
-- It does not block, mute, follow, unfollow, post, or otherwise alter your X account - banned accounts are only blurred or hidden locally, never actioned on X.
+- It does not block, mute, follow, unfollow, post, or otherwise alter your X account - banned accounts are only dimmed or hidden locally, never actioned on X.
 - It does not collect analytics or send your rules to a server.
 
 ### Permissions
@@ -52,7 +52,7 @@ Copy-paste answers for the Chrome Web Store permission-review questions.
 
 ### Single purpose description
 
-BlueNoise's single purpose is to make X (formerly Twitter) easier to read by locally filtering replies and home-timeline posts using keyword and account rules the user controls. Matches can be blurred, collapsed, or hidden. Every filter action is visual and reversible: turning filtering off restores the content, and BlueNoise never reads cookies, calls X APIs, or changes the user's X account.
+BlueNoise's single purpose is to make X (formerly Twitter) easier to read by locally filtering replies and home-timeline posts using keyword and account rules the user controls. Matches can be dimmed, collapsed, or hidden. Every filter action is visual and reversible: turning filtering off restores the content, and BlueNoise never reads cookies, calls X APIs, or changes the user's X account.
 
 ### storage justification
 
