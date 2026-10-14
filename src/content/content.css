@@ -7,12 +7,13 @@
 	--bluenoise-opacity: 0.15;
 }
 
-/* Blur the row's content while leaving the reason overlay crisp. */
+/* Dim the row's content while leaving the reason overlay crisp. Opacity only:
+ * a per-row `filter: blur()` promoted every filtered row to its own composited
+ * layer, which re-rasterized continuously for rows containing video. */
 [data-bluenoise-mode="dim"]
 	.bluenoise-filtered
 	> :not(.bluenoise-filter-reason) {
 	opacity: var(--bluenoise-opacity);
-	filter: blur(6px);
 }
 
 .bluenoise-filtered {
@@ -263,12 +264,11 @@ aside[role="complementary"][aria-label*="Premium"],
 	display: none !important;
 }
 
-/* Keep the source DOM intact: an overlay blurs everything except the cursor hole. */
+/* Keep the source DOM intact: an overlay covers everything except the cursor hole. */
 [data-bluenoise-mode="dim"]
 	.bluenoise-filtered.bluenoise-revealing
 	> :not(.bluenoise-filter-reason) {
 	opacity: 1;
-	filter: none;
 }
 
 [data-bluenoise-mode="dim"] .bluenoise-filtered.bluenoise-revealing::after {
@@ -278,7 +278,6 @@ aside[role="complementary"][aria-label*="Premium"],
 	pointer-events: none;
 	content: "";
 	background: rgb(255 255 255 / 85%);
-	backdrop-filter: blur(6px);
 	mask-image: radial-gradient(
 		circle var(--bluenoise-reveal-radius) at var(--bluenoise-reveal-x)
 			var(--bluenoise-reveal-y),
