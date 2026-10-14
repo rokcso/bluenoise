@@ -62,6 +62,14 @@ describe("collapsed filtering styles", () => {
 	});
 });
 
+describe("sidebar sports score cleanup", () => {
+	it("hides the score card wrapper, not just the sticky header", () => {
+		expect(css).toContain("[data-bluenoise-hide-sports]");
+		expect(css).toContain('div:has(> [data-testid$="_scores_sidebar"])');
+		expect(css).not.toContain('[data-testid="nfl_scores_sidebar"]');
+	});
+});
+
 describe("Premium feature prompt styles", () => {
 	it("hide the entire timeline cell using stable prompt markers", () => {
 		expect(css).toContain("[data-bluenoise-hide-premium-feature-prompt]");

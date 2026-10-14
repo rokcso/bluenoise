@@ -12,6 +12,11 @@ describe("configuration defaults", () => {
 		expect(loadConfig({ enabled: true }).hidePremiumFeaturePrompt).toBe(false);
 	});
 
+	it("leaves sports score cards visible until explicitly hidden", () => {
+		expect(loadConfig(undefined).hideSportsScores).toBe(false);
+		expect(loadConfig({ enabled: true }).hideSportsScores).toBe(false);
+	});
+
 	it("accepts collapse as a persisted filtering mode", () => {
 		expect(loadConfig({ mode: "collapse" }).mode).toBe("collapse");
 	});

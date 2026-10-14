@@ -237,6 +237,10 @@
 	"hide_live_streams_hint": {
 		"message": "Remove the \"Live on X\" live-stream cards from the timeline."
 	},
+	"hide_sports_scores": { "message": "Hide sports scores" },
+	"hide_sports_scores_hint": {
+		"message": "Remove live league score cards (e.g. NFL) from the sidebar."
+	},
 	"hide_trends": { "message": "Hide current trends" },
 	"hide_trends_hint": {
 		"message": "Remove the \"What's happening\" trends panel from the sidebar."
