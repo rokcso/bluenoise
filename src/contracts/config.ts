@@ -12,9 +12,11 @@ export interface AppConfig {
 	pageCleanupEnabled: boolean;
 	/** How matched posts are presented. Mutually exclusive. */
 	mode: "dim" | "collapse" | "hide";
-	/** In Blur mode, reveal a circular area around the cursor while hovering a filtered reply. */
+	/** Opacity of filtered content in "dim" mode. Clamped to 0.05–1. */
+	dimOpacity: number;
+	/** In Dim mode, reveal a circular area around the cursor while hovering a filtered reply. */
 	revealOnHover: boolean;
-	/** In Blur and Collapse modes, show why a post or reply was filtered. */
+	/** In Dim and Collapse modes, show why a post or reply was filtered. */
 	showFilterReason: boolean;
 	/** Show the number of filtered replies on the browser toolbar icon. */
 	showBadgeCount: boolean;

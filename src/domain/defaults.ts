@@ -1,11 +1,24 @@
 import type { AppConfig, RuleData } from "@/src/contracts/config";
 
+/** Default opacity of filtered content in "dim" mode. */
+export const DEFAULT_DIM_OPACITY = 0.15;
+/** Lower bound keeps filtered content perceivable (0 would read as "hide"). */
+export const MIN_DIM_OPACITY = 0.05;
+export const MAX_DIM_OPACITY = 1;
+
+function clampDimOpacity(value: unknown): number {
+	const numeric = typeof value === "number" ? value : Number(value);
+	if (!Number.isFinite(numeric)) return DEFAULT_DIM_OPACITY;
+	return Math.min(MAX_DIM_OPACITY, Math.max(MIN_DIM_OPACITY, numeric));
+}
+
 export const DEFAULTS: AppConfig = {
 	theme: "auto",
 	language: "auto",
 	enabled: true,
 	pageCleanupEnabled: false,
 	mode: "dim",
+	dimOpacity: DEFAULT_DIM_OPACITY,
 	revealOnHover: true,
 	showFilterReason: true,
 	showBadgeCount: true,
@@ -64,6 +77,7 @@ export function loadConfig(partial: unknown): AppConfig {
 	return {
 		...DEFAULTS,
 		...stored,
+		dimOpacity: clampDimOpacity(stored.dimOpacity),
 		keywordSourceEnabled: {
 			...DEFAULTS.keywordSourceEnabled,
 			...stored.keywordSourceEnabled,

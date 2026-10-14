@@ -24,7 +24,11 @@ import {
 	MXGA_DATA_URL,
 	MXGA_REPO_URL,
 } from "@/src/domain/account-list";
-import { defaultRuleData } from "@/src/domain/defaults";
+import {
+	defaultRuleData,
+	MAX_DIM_OPACITY,
+	MIN_DIM_OPACITY,
+} from "@/src/domain/defaults";
 import { fetchKeywordSource } from "@/src/domain/keywords";
 import { loadRuleData } from "@/src/domain/rules";
 import {
@@ -555,6 +559,37 @@ export function SettingsApp({
 							labelClassName="font-normal"
 						>
 							<SettingsPanel>
+								<EffectSettings
+									config={config}
+									update={update}
+									description={t("filter_effect_hint")}
+								/>
+								<SettingsDivider />
+								<SettingsRow
+									label={t("dim_opacity")}
+									description={t("dim_opacity_hint")}
+									control={
+										<div className="flex shrink-0 items-center gap-2">
+											<input
+												type="range"
+												min={MIN_DIM_OPACITY}
+												max={MAX_DIM_OPACITY}
+												step={0.05}
+												value={config.dimOpacity}
+												onChange={(event) =>
+													update({ dimOpacity: Number(event.target.value) })
+												}
+												aria-label={t("dim_opacity")}
+												aria-valuetext={`${Math.round(config.dimOpacity * 100)}%`}
+												className="h-1.5 w-36 cursor-pointer accent-x-accent"
+											/>
+											<span className="w-9 text-right text-xs tabular-nums text-x-muted">
+												{Math.round(config.dimOpacity * 100)}%
+											</span>
+										</div>
+									}
+								/>
+								<SettingsDivider />
 								<XToggle
 									label={t("show_actual_reply_count")}
 									hint={t("show_actual_reply_count_hint")}

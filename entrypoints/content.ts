@@ -76,7 +76,6 @@ const INERT_ATTR = "data-bluenoise-inert";
 const MODE_ATTR = "data-bluenoise-mode";
 const INVISIBLE_ATTR = "data-bluenoise-invisible";
 const OPACITY_VAR = "--bluenoise-opacity";
-const DIM_OPACITY = 0.15;
 const REVEAL_RADIUS = 40;
 
 /** X renders async after SPA navigation; rescan at these delays to catch stragglers. */
@@ -558,7 +557,7 @@ function applyStyleVars(): void {
 		return;
 	}
 	root.setAttribute(MODE_ATTR, cfg.mode);
-	root.style.setProperty(OPACITY_VAR, String(DIM_OPACITY));
+	root.style.setProperty(OPACITY_VAR, String(cfg.dimOpacity));
 	root.removeAttribute(INVISIBLE_ATTR);
 	syncMarkedRowsInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) revealController.hide();

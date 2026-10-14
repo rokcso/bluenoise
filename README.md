@@ -22,7 +22,7 @@ Install BlueNoise from the Chrome Web Store or Microsoft Edge Add-ons, or downlo
 ## Features
 
 - Filter replies and home-timeline posts by keyword or account, while leaving the post you opened untouched.
-- Display matches blurred, collapsed, or hidden; disable filtering at any time to restore the page.
+- Display matches dimmed, collapsed, or hidden; disable filtering at any time to restore the page.
 - Use plain keywords, safe `/regex/` patterns, account IDs, @handles, personal allowlists, and optional community lists.
 - Optionally filter promoted posts, media or card ads, and accounts labeled by X as parody, fan, commentary, or automated.
 - Import and export personal rules, or add allow/block rules from the right-click menu.

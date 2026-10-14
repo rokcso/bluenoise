@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { loadConfig } from "@/src/domain/defaults";
+import {
+	DEFAULT_DIM_OPACITY,
+	loadConfig,
+	MAX_DIM_OPACITY,
+	MIN_DIM_OPACITY,
+} from "@/src/domain/defaults";
 
 describe("configuration defaults", () => {
 	it("shows filter reasons for new and existing installations by default", () => {
@@ -19,5 +24,14 @@ describe("configuration defaults", () => {
 
 	it("accepts collapse as a persisted filtering mode", () => {
 		expect(loadConfig({ mode: "collapse" }).mode).toBe("collapse");
+	});
+
+	it("clamps the dim opacity to a perceivable range", () => {
+		expect(loadConfig(undefined).dimOpacity).toBe(DEFAULT_DIM_OPACITY);
+		expect(loadConfig({ dimOpacity: 0 }).dimOpacity).toBe(MIN_DIM_OPACITY);
+		expect(loadConfig({ dimOpacity: 5 }).dimOpacity).toBe(MAX_DIM_OPACITY);
+		expect(loadConfig({ dimOpacity: Number.NaN }).dimOpacity).toBe(
+			DEFAULT_DIM_OPACITY,
+		);
 	});
 });
