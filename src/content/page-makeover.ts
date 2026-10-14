@@ -13,6 +13,7 @@ const GROK_ATTR = "data-bluenoise-hide-grok";
 const MESSAGE_ATTR = "data-bluenoise-hide-message";
 const CUSTOM_HIDDEN_ATTR = "data-bluenoise-custom-hidden";
 const SIDEBAR_ATTR = "data-bluenoise-collapse-sidebar";
+const SPORTS_ATTR = "data-bluenoise-hide-sports";
 const COMPOSE_ICON_MARK = "data-bluenoise-compose-icon";
 const LIVE_STREAMS_HEADING_RE = /^(?:X \u4e0a\u7684\u76f4\u64ad|live on x)$/i;
 const MOBILE_LIVE_BUTTON_RE =
@@ -155,6 +156,15 @@ export function createPageMakeoverController(options: {
 				)
 					hide(next);
 			}
+		}
+		if (cfg.hideSportsScores) {
+			// X renders score modules (NFL, NBA, …) as a sidebar card whose stable
+			// test id sits on the sticky header, while the game rows are a sibling.
+			// Hide the header and its card wrapper so the whole module disappears.
+			for (const marker of document.querySelectorAll<HTMLElement>(
+				'[data-testid$="_scores_sidebar"]',
+			))
+				hideAncestors(marker, 1);
 		}
 		if (cfg.hideLiveStreams) {
 			for (const heading of document.querySelectorAll<HTMLElement>(
@@ -560,6 +570,7 @@ export function createPageMakeoverController(options: {
 		setRootAttribute(NEW_POSTS_ATTR, enabled && config.hideNewPostsPrompt);
 		setRootAttribute(GROK_ATTR, enabled && config.hideGrokButton);
 		setRootAttribute(MESSAGE_ATTR, enabled && config.hideMessageButton);
+		setRootAttribute(SPORTS_ATTR, enabled && config.hideSportsScores);
 		setRootAttribute(SIDEBAR_ATTR, enabled && config.collapseSidebar);
 		applySidebarCompactLayout();
 		applySidebarComposeIcons();

@@ -40,6 +40,8 @@ export interface AppConfig {
 	hideDiscoverMore: boolean;
 	/** Hide the "Live on X" live-stream cards on the home timeline. */
 	hideLiveStreams: boolean;
+	/** Hide X's sports/league score cards (e.g. NFL scores) in the sidebar. */
+	hideSportsScores: boolean;
 	hideTitleCount: boolean;
 	hideNotificationBadges: boolean;
 	hideNewPostsPrompt: boolean;

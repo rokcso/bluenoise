@@ -168,6 +168,7 @@ export function SettingsApp({
 		| "hideTimelineFollowSuggestions"
 		| "hideDiscoverMore"
 		| "hideLiveStreams"
+		| "hideSportsScores"
 		| "hideFooter"
 		| "hidePremiumPromo"
 		| "hidePremiumFeaturePrompt"
@@ -398,6 +399,13 @@ export function SettingsApp({
 									hint={t("hide_live_streams_hint")}
 									checked={config.hideLiveStreams}
 									onChange={toggleMakeover("hideLiveStreams")}
+								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("hide_sports_scores")}
+									hint={t("hide_sports_scores_hint")}
+									checked={config.hideSportsScores}
+									onChange={toggleMakeover("hideSportsScores")}
 								/>
 								<SettingsDivider />
 								<XToggle

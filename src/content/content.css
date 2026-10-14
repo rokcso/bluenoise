@@ -231,6 +231,15 @@ section[aria-labelledby]:has([data-testid="trend"]),
 	display: none !important;
 }
 
+/* Hide X's sports score cards (e.g. NFL) in the sidebar. The stable test id
+ * sits on the module's sticky header while the game rows are a sibling, so
+ * hide the card wrapper selected via :has as well. The `_scores_sidebar`
+ * suffix covers other leagues X may add. */
+[data-bluenoise-hide-sports] div:has(> [data-testid$="_scores_sidebar"]) {
+	/* biome-ignore lint/complexity/noImportantStyles: content scripts must override the host page's CSS */
+	display: none !important;
+}
+
 /* Hide X's "Subscribe to Premium" upsell card. The card is a localized
  * <aside role="complementary"> whose aria-label keeps the "Premium" brand name
  * in every language, so that stays stable while the generated r-/css- classes
