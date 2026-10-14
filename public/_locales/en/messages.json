@@ -29,6 +29,10 @@
 	"dim_opacity_hint": {
 		"message": "Opacity of filtered content in Dim mode; lower hides more. Only applies in Dim mode."
 	},
+	"dim_opacity_preview": { "message": "Preview" },
+	"dim_opacity_preview_text": {
+		"message": "A sample filtered post, so you can preview how strong the dimming is."
+	},
 	"collapse_filtered": { "message": "Filtered post" },
 	"collapse_filtered_reason": { "message": "Filtered: $1" },
 	"collapse_show": { "message": "Show" },
@@ -185,6 +189,7 @@
 	"makeover_distractions_floating": { "message": "Floating buttons" },
 	"makeover_branding": { "message": "Branding" },
 	"treatment": { "message": "Filtering mode" },
+	"filter_display": { "message": "Filter display" },
 	"matching": { "message": "Match options" },
 	"diagnostics": { "message": "Diagnostics" },
 	"ads": { "message": "Ads" },

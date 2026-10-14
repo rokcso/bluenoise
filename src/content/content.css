@@ -4,7 +4,7 @@
  */
 
 :root {
-	--bluenoise-opacity: 0.15;
+	--bluenoise-opacity: 0.05;
 }
 
 /* Dim the row's content while leaving the reason overlay crisp. Opacity only:
@@ -269,6 +269,10 @@ aside[role="complementary"][aria-label*="Premium"],
 	.bluenoise-filtered.bluenoise-revealing
 	> :not(.bluenoise-filter-reason) {
 	opacity: 1;
+	/* At rest `opacity < 1` already makes the content a stacking context, which
+	 * keeps X's z-indexed descendants below the reveal veil. Raising opacity to 1
+	 * drops it, so re-establish it or the tweet paints over the veil. */
+	isolation: isolate;
 }
 
 [data-bluenoise-mode="dim"] .bluenoise-filtered.bluenoise-revealing::after {
@@ -277,7 +281,7 @@ aside[role="complementary"][aria-label*="Premium"],
 	inset: 0;
 	pointer-events: none;
 	content: "";
-	background: rgb(255 255 255 / 85%);
+	background: rgb(255 255 255 / calc(1 - var(--bluenoise-opacity)));
 	mask-image: radial-gradient(
 		circle var(--bluenoise-reveal-radius) at var(--bluenoise-reveal-x)
 			var(--bluenoise-reveal-y),
@@ -288,7 +292,7 @@ aside[role="complementary"][aria-label*="Premium"],
 
 @media (prefers-color-scheme: dark) {
 	[data-bluenoise-mode="dim"] .bluenoise-filtered.bluenoise-revealing::after {
-		background: rgb(0 0 0 / 85%);
+		background: rgb(0 0 0 / calc(1 - var(--bluenoise-opacity)));
 	}
 }
 

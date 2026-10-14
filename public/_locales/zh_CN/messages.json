@@ -29,6 +29,10 @@
 	"dim_opacity_hint": {
 		"message": "被过滤内容在淡化模式下的不透明度，越低越隐蔽。仅对淡化模式生效。"
 	},
+	"dim_opacity_preview": { "message": "效果预览" },
+	"dim_opacity_preview_text": {
+		"message": "这是一条被过滤的示例帖子，用来预览淡化强度。"
+	},
 	"collapse_filtered": { "message": "已过滤帖子" },
 	"collapse_filtered_reason": { "message": "已过滤：$1" },
 	"collapse_show": { "message": "展开" },
@@ -181,6 +185,7 @@
 	"makeover_distractions_floating": { "message": "悬浮按钮" },
 	"makeover_branding": { "message": "品牌元素" },
 	"treatment": { "message": "过滤模式" },
+	"filter_display": { "message": "过滤显示" },
 	"matching": { "message": "匹配选项" },
 	"diagnostics": { "message": "诊断" },
 	"ads": { "message": "广告" },

@@ -40,6 +40,18 @@ describe("dim mode", () => {
 		expect(css).not.toContain("filter: blur(6px)");
 		expect(css).not.toContain("backdrop-filter");
 	});
+
+	it("keeps the reveal veil above the tweet's z-indexed content", () => {
+		// Without this the opacity:1 reveal drops the content's stacking context
+		// and X's z-indexed descendants paint over the veil.
+		expect(css).toContain("isolation: isolate");
+	});
+
+	it("keeps the reveal veil as dim as the resting content", () => {
+		// The veil alpha must mirror the configured opacity, otherwise hovering
+		// always looks like 15% regardless of the dimOpacity setting.
+		expect(css).toContain("calc(1 - var(--bluenoise-opacity))");
+	});
 });
 
 describe("collapsed filtering styles", () => {

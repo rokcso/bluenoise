@@ -1,7 +1,7 @@
 import type { AppConfig, RuleData } from "@/src/contracts/config";
 
 /** Default opacity of filtered content in "dim" mode. */
-export const DEFAULT_DIM_OPACITY = 0.15;
+export const DEFAULT_DIM_OPACITY = 0.05;
 /** Lower bound keeps filtered content perceivable (0 would read as "hide"). */
 export const MIN_DIM_OPACITY = 0.05;
 export const MAX_DIM_OPACITY = 1;

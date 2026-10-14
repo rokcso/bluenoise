@@ -63,33 +63,51 @@ export function useConfig() {
 		settings.keywordSourceEnabled = Object.fromEntries(
 			subscriptions.map((source) => [source.id, source.enabled]),
 		);
-		chrome.storage.local.get(RULE_DATA_KEY, (stored) => {
-			const current = loadRuleData(stored[RULE_DATA_KEY] ?? defaultRuleData());
-			const rules: RuleData = {
-				keywords: {
-					user: { block: userKeywords, allow: whitelist },
-					external: Object.fromEntries(
-						subscriptions.map((source) => [
-							source.id,
-							{
-								keywords: source.keywords,
-								syncedAt: source.syncedAt,
-								etag: source.etag,
-								syncError: source.syncError,
-							},
-						]),
-					),
-				},
-				accounts: {
-					user: { allow: accountWhitelist, block: accountBlacklist },
-					external: current.accounts.external,
-				},
-			};
-			void Promise.all([
-				chrome.storage.sync.set({ [SETTINGS_KEY]: settings }),
-				chrome.storage.local.set({ [RULE_DATA_KEY]: rules }),
-			]);
-		});
+
+		// Rule data lives in storage.local and its listener triggers a full
+		// recompile + rescan. Only write it when the patch really touches rules,
+		// so presentation-only changes (mode, dim opacity, toggles) stay cheap.
+		const touchesRules = [
+			"userKeywords",
+			"whitelist",
+			"accountWhitelist",
+			"accountBlacklist",
+			"subscriptions",
+		].some((key) => key in patch);
+
+		if (touchesRules) {
+			chrome.storage.local.get(RULE_DATA_KEY, (stored) => {
+				const current = loadRuleData(
+					stored[RULE_DATA_KEY] ?? defaultRuleData(),
+				);
+				const rules: RuleData = {
+					keywords: {
+						user: { block: userKeywords, allow: whitelist },
+						external: Object.fromEntries(
+							subscriptions.map((source) => [
+								source.id,
+								{
+									keywords: source.keywords,
+									syncedAt: source.syncedAt,
+									etag: source.etag,
+									syncError: source.syncError,
+								},
+							]),
+						),
+					},
+					accounts: {
+						user: { allow: accountWhitelist, block: accountBlacklist },
+						external: current.accounts.external,
+					},
+				};
+				void Promise.all([
+					chrome.storage.sync.set({ [SETTINGS_KEY]: settings }),
+					chrome.storage.local.set({ [RULE_DATA_KEY]: rules }),
+				]);
+			});
+		} else {
+			void chrome.storage.sync.set({ [SETTINGS_KEY]: settings });
+		}
 		// Apply locally immediately to avoid flicker while waiting for the storage callback.
 		setConfig(next);
 	}

@@ -589,7 +589,15 @@ export function SettingsApp({
 										</div>
 									}
 								/>
-								<SettingsDivider />
+								<DimPreview opacity={config.dimOpacity} />
+							</SettingsPanel>
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("filter_display")}
+							icon={SlidersIcon}
+							labelClassName="font-normal"
+						>
+							<SettingsPanel>
 								<XToggle
 									label={t("show_actual_reply_count")}
 									hint={t("show_actual_reply_count_hint")}
@@ -1320,9 +1328,9 @@ function EffectSettings({
 							</span>
 						)}
 					</span>
-					<div className="relative grid h-10 w-full grid-cols-3 rounded-lg border border-x-border bg-x-bg p-1">
+					<div className="relative grid h-10 w-full grid-cols-3 rounded-full border border-x-border bg-x-bg p-1">
 						<div
-							className="absolute bottom-1 left-1 top-1 w-[calc(33.333%-2.667px)] rounded-md bg-x-accent transition-transform duration-200"
+							className="absolute bottom-1 left-1 top-1 w-[calc(33.333%-2.667px)] rounded-full bg-x-accent transition-transform duration-200"
 							style={{ transform: `translateX(${activeIndex * 100}%)` }}
 						/>
 						{options.map((opt) => (
@@ -1331,7 +1339,7 @@ function EffectSettings({
 								type="button"
 								onClick={() => update({ mode: opt.value })}
 								aria-pressed={config.mode === opt.value}
-								className={`relative z-10 cursor-pointer rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-none ${
+								className={`relative z-10 cursor-pointer rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-none ${
 									config.mode === opt.value
 										? "text-x-accent-fg"
 										: "text-x-muted hover:text-x-fg"
@@ -1344,6 +1352,33 @@ function EffectSettings({
 				</>
 			)}
 		</section>
+	);
+}
+
+/** Inline sample so the dim opacity is observable on the settings page. */
+function DimPreview({ opacity }: { opacity: number }) {
+	return (
+		<div className="mb-1 rounded-lg border border-x-border bg-x-bg px-4 py-3">
+			<span className="mb-2 block text-xs font-medium text-x-muted">
+				{t("dim_opacity_preview")}
+			</span>
+			<div style={{ opacity }} className="pointer-events-none select-none">
+				<div className="flex items-center gap-2">
+					<img
+						src="/icons/icon-48.png"
+						alt=""
+						className="h-8 w-8 shrink-0 rounded-full"
+					/>
+					<div className="min-w-0">
+						<div className="text-sm font-semibold text-x-fg">BlueNoise</div>
+						<div className="text-xs text-x-muted">@bluenoise</div>
+					</div>
+				</div>
+				<p className="mt-2 text-sm leading-6 text-x-fg">
+					{t("dim_opacity_preview_text")}
+				</p>
+			</div>
+		</div>
 	);
 }
 

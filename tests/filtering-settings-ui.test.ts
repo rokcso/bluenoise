@@ -19,5 +19,6 @@ describe("filtering settings visibility", () => {
 		expect(app).toContain("MIN_DIM_OPACITY");
 		expect(app).toContain("MAX_DIM_OPACITY");
 		expect(app).toContain("update({ dimOpacity:");
+		expect(app).toContain("<DimPreview");
 	});
 });
