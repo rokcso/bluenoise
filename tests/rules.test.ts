@@ -38,6 +38,13 @@ describe("rule data", () => {
 		expect(defaultConfig().keywordSourceEnabled.bluenoise).toBe(true);
 	});
 
+	it("keeps community keyword and account sources off by default", () => {
+		const settings = defaultConfig();
+		expect(settings.keywordSourceEnabled["x-spam-filter"]).toBe(false);
+		expect(settings.keywordSourceEnabled["x-comment-blocker"]).toBe(false);
+		expect(settings.accountSourceEnabled.mxga).toBe(false);
+	});
+
 	it("adds an account identity to the selected user list", () => {
 		const rules = defaultRuleData();
 		rules.keywords.user.block = ["keep me"];
