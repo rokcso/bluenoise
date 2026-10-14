@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRevealController } from "../src/content/reveal";
 
 class FakeElement {
+	isConnected = true;
 	classList = {
 		values: new Set<string>(),
 		add: (name: string) => this.classList.values.add(name),
@@ -95,29 +96,48 @@ describe("reveal controller", () => {
 		expect(nextRow.classList.contains("bluenoise-revealing")).toBe(true);
 	});
 
-	it("hide clears orphaned reveal classes and CSS variables", () => {
-		const orphan = new FakeElement();
-		orphan.classList.add("bluenoise-revealing");
-		orphan.style.setProperty("--bluenoise-reveal-x", "20px");
+	it("hide clears the revealed row's class and CSS variables", () => {
+		const row = new FakeElement();
+		row.classList.add("filtered");
+		const documentListeners = new Map<string, EventListener>();
 		Object.assign(globalThis, {
 			Element: FakeElement,
 			document: {
-				querySelectorAll: (selector: string) =>
-					selector === ".bluenoise-revealing" ? [orphan] : [],
+				addEventListener: (type: string, listener: EventListener) =>
+					documentListeners.set(type, listener),
+				removeEventListener: vi.fn(),
+				elementFromPoint: () => row,
 			},
-			window: { cancelAnimationFrame: vi.fn() },
+			window: {
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				requestAnimationFrame: (callback: FrameRequestCallback) => {
+					callback(0);
+					return 1;
+				},
+				cancelAnimationFrame: vi.fn(),
+			},
 		});
 		const controller = createRevealController({
 			filteredClass: "filtered",
 			hitAttribute: "data-hit",
 			reasonClass: "reason",
 			radius: 40,
-			isEnabled: () => false,
+			isEnabled: () => true,
 		});
+
+		controller.start();
+		documentListeners.get("pointermove")?.({
+			target: row,
+			clientX: 5,
+			clientY: 6,
+		} as unknown as Event);
+		expect(row.classList.contains("bluenoise-revealing")).toBe(true);
+		expect(row.style.values.has("--bluenoise-reveal-x")).toBe(true);
 
 		controller.hide();
 
-		expect(orphan.classList.contains("bluenoise-revealing")).toBe(false);
-		expect(orphan.style.values.has("--bluenoise-reveal-x")).toBe(false);
+		expect(row.classList.contains("bluenoise-revealing")).toBe(false);
+		expect(row.style.values.has("--bluenoise-reveal-x")).toBe(false);
 	});
 });

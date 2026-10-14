@@ -23,6 +23,8 @@ export function createRevealController(
 ): RevealController {
 	let reveal: RevealState | null = null;
 	let pointer: { x: number; y: number } | null = null;
+	let pointerTarget: Element | null = null;
+	let preferEventTarget = true;
 	let syncFrame = 0;
 	let started = false;
 
@@ -41,18 +43,12 @@ export function createRevealController(
 	}
 
 	function clearReveal(): void {
-		if (reveal?.reason) clearReason(reveal.reason);
-		if (reveal) clearRow(reveal.row as HTMLElement);
-		// X can replace a virtualized row between pointer events. Clean orphaned
-		// state as well as the controller's current reference.
-		for (const row of document.querySelectorAll<HTMLElement>(
-			".bluenoise-revealing",
-		))
-			clearRow(row);
-		for (const reason of document.querySelectorAll<HTMLElement>(
-			".bluenoise-filter-reason-revealing",
-		))
-			clearReason(reason);
+		// Only this controller ever adds the revealing class, and only to one row
+		// at a time, so the tracked reference is the complete state. Scanning the
+		// document here ran on every pointermove and was the main freeze source.
+		if (!reveal) return;
+		if (reveal.reason) clearReason(reveal.reason);
+		clearRow(reveal.row as HTMLElement);
 		reveal = null;
 	}
 
@@ -60,6 +56,7 @@ export function createRevealController(
 		if (syncFrame) window.cancelAnimationFrame(syncFrame);
 		syncFrame = 0;
 		pointer = null;
+		pointerTarget = null;
 		clearReveal();
 	}
 
@@ -118,30 +115,47 @@ export function createRevealController(
 
 	function onPointerMove(event: PointerEvent): void {
 		pointer = { x: event.clientX, y: event.clientY };
-		const target = event.target;
-		const row =
-			target instanceof Element
-				? target.closest(`.${options.filteredClass}`)
-				: null;
-		if (row) show(row, event.clientX, event.clientY);
-		else hide();
+		pointerTarget = event.target instanceof Element ? event.target : null;
+		// Coalesce to one rAF per frame: a media viewer produces hundreds of
+		// pointermove events per second while panning, and each one used to force
+		// layout reads and style writes on the main thread.
+		schedulePointerSync(true);
 	}
 
 	function syncToPointer(): void {
-		syncFrame = 0;
 		if (!pointer) {
 			hide();
 			return;
 		}
-		const target = document.elementFromPoint(pointer.x, pointer.y);
+		const target =
+			preferEventTarget && pointerTarget?.isConnected
+				? pointerTarget
+				: document.elementFromPoint(pointer.x, pointer.y);
 		const row = target?.closest(`.${options.filteredClass}`) ?? null;
 		if (row) show(row, pointer.x, pointer.y);
 		else hide();
 	}
 
-	function schedulePointerSync(): void {
+	function schedulePointerSync(useEventTarget: boolean): void {
+		preferEventTarget = useEventTarget;
 		if (syncFrame) return;
-		syncFrame = window.requestAnimationFrame(syncToPointer);
+		// A test double may run the callback synchronously; only store the frame id
+		// when the rAF has not already completed.
+		let ran = false;
+		const frame = window.requestAnimationFrame(() => {
+			ran = true;
+			syncFrame = 0;
+			syncToPointer();
+		});
+		if (!ran) syncFrame = frame;
+	}
+
+	function onScroll(): void {
+		schedulePointerSync(false);
+	}
+
+	function onResize(): void {
+		schedulePointerSync(false);
 	}
 
 	return {
@@ -149,11 +163,11 @@ export function createRevealController(
 			if (started) return;
 			started = true;
 			document.addEventListener("pointermove", onPointerMove);
-			window.addEventListener("scroll", schedulePointerSync, {
+			window.addEventListener("scroll", onScroll, {
 				capture: true,
 				passive: true,
 			});
-			window.addEventListener("resize", schedulePointerSync, {
+			window.addEventListener("resize", onResize, {
 				passive: true,
 			});
 		},
@@ -161,13 +175,14 @@ export function createRevealController(
 			if (!started) return;
 			started = false;
 			document.removeEventListener("pointermove", onPointerMove);
-			window.removeEventListener("scroll", schedulePointerSync, {
+			window.removeEventListener("scroll", onScroll, {
 				capture: true,
 			});
-			window.removeEventListener("resize", schedulePointerSync);
+			window.removeEventListener("resize", onResize);
 			if (syncFrame) window.cancelAnimationFrame(syncFrame);
 			syncFrame = 0;
 			pointer = null;
+			pointerTarget = null;
 			hide();
 		},
 		hide,
