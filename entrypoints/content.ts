@@ -211,6 +211,7 @@ function debugConfigSnapshot(
 		filtering: active,
 		enabled: cfg.enabled,
 		mode: cfg.mode,
+		dimOpacity: cfg.dimOpacity,
 		filters: {
 			aiSecondPass: cfg.aiFilterEnabled,
 			mediaAds: cfg.filterMediaAds,
