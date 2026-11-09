@@ -1435,22 +1435,30 @@ function SettingsGroup({
 	description,
 	icon: Icon,
 	labelClassName,
+	action,
 	children,
 }: {
 	label: string;
 	description?: string;
 	icon?: React.ElementType;
 	labelClassName?: string;
+	/** Trailing control on the title line, e.g. an "add" button. */
+	action?: React.ReactNode;
 	children: React.ReactNode;
 }) {
 	return (
 		<section className="settings-group">
-			<div className="settings-group-label">
-				<div className="flex items-center gap-2">
-					{Icon && <Icon className="h-4 w-4 text-x-muted" aria-hidden="true" />}
-					<h2 className={labelClassName}>{label}</h2>
+			<div className="settings-group-label flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<div className="flex items-center gap-2">
+						{Icon && (
+							<Icon className="h-4 w-4 text-x-muted" aria-hidden="true" />
+						)}
+						<h2 className={labelClassName}>{label}</h2>
+					</div>
+					{description && <p>{description}</p>}
 				</div>
-				{description && <p>{description}</p>}
+				{action && <div className="shrink-0">{action}</div>}
 			</div>
 			{children}
 		</section>
@@ -2314,6 +2322,19 @@ function AiModelsPage({
 		setDraft(null);
 	}
 
+	/** The group's add entry point, rendered on the title line. */
+	function addButton(kind: AiProviderKind) {
+		return (
+			<button
+				type="button"
+				onClick={() => openNew(kind)}
+				className="cursor-pointer rounded-full border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+			>
+				{t(kind === "jev" ? "ai_model_add_jev" : "ai_model_add_llm")}
+			</button>
+		);
+	}
+
 	function renderGroup(kind: AiProviderKind, providers: AiProviderConfig[]) {
 		return (
 			<SettingsPanel>
@@ -2331,13 +2352,6 @@ function AiModelsPage({
 						/>
 					))
 				)}
-				<button
-					type="button"
-					onClick={() => openNew(kind)}
-					className="mt-3 cursor-pointer self-start rounded-full border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-				>
-					{t(kind === "jev" ? "ai_model_add_jev" : "ai_model_add_llm")}
-				</button>
 			</SettingsPanel>
 		);
 	}
@@ -2350,6 +2364,7 @@ function AiModelsPage({
 				description={t("ai_models_jev_hint")}
 				icon={ExperimentalIcon}
 				labelClassName="font-normal"
+				action={addButton("jev")}
 			>
 				{renderGroup("jev", providersOfKind(config.aiProviders, "jev"))}
 			</SettingsGroup>
@@ -2358,6 +2373,7 @@ function AiModelsPage({
 				description={t("ai_models_llm_hint")}
 				icon={KeyIcon}
 				labelClassName="font-normal"
+				action={addButton("llm")}
 			>
 				{renderGroup("llm", providersOfKind(config.aiProviders, "llm"))}
 			</SettingsGroup>
