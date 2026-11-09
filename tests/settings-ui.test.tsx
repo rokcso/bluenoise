@@ -169,12 +169,40 @@ describe("Jev second pass settings", () => {
 		});
 	});
 
+	it("portals the Jev model menu so the settings panel cannot clip it", async () => {
+		installChromeMock({ sync: { [SETTINGS_KEY]: DEFAULTS } });
+		render(<SettingsApp activeSection="experimental" />);
+
+		const trigger = await screen.findByRole("button", {
+			name: copy("ai_filter_model"),
+		});
+		fireEvent.click(trigger);
+
+		const listbox = await screen.findByRole("listbox");
+		// Settings panels clip their contents, so a menu nested inside one gets
+		// cut off (or shifts the panel's height). It has to live on body.
+		expect(listbox.parentElement).toBe(document.body);
+		expect(listbox.style.position).toBe("fixed");
+
+		fireEvent.keyDown(listbox, { key: "Escape" });
+		await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+	});
+
 	it("never writes the API key to the settings that sync", async () => {
 		const chrome = installChromeMock({ sync: { [SETTINGS_KEY]: DEFAULTS } });
 		render(<SettingsApp activeSection="ai-models" />);
 
+		// The form only exists inside the dialog, so open the provider first.
+		fireEvent.click(
+			(
+				await screen.findAllByRole("button", { name: copy("ai_model_edit") })
+			)[0],
+		);
 		const input = await screen.findByPlaceholderText("ts_…");
 		fireEvent.change(input, { target: { value: "ts_secret_value" } });
+		fireEvent.click(
+			screen.getByRole("button", { name: copy("ai_model_save") }),
+		);
 
 		await waitFor(() =>
 			expect(chrome.writes.local.some((write) => AI_SECRETS_KEY in write)).toBe(
@@ -193,15 +221,23 @@ describe("Jev second pass settings", () => {
 		});
 		render(<SettingsApp activeSection="ai-models" />);
 
+		// The list reports whether a key exists without printing it.
+		expect(await screen.findByText(copy("ai_model_key_set"))).toBeTruthy();
+
+		fireEvent.click(
+			(
+				await screen.findAllByRole("button", { name: copy("ai_model_edit") })
+			)[0],
+		);
 		const input = (await screen.findByPlaceholderText(
 			"ts_…",
 		)) as HTMLInputElement;
-		await waitFor(() => expect(input.type).toBe("password"));
+		await waitFor(() => expect(input.value).toBe("ts_live"));
+		expect(input.type).toBe("password");
 
-		const reveal = screen.getAllByRole("button", {
-			name: copy("ai_filter_key_show"),
-		})[0];
-		fireEvent.click(reveal);
+		fireEvent.click(
+			screen.getByRole("button", { name: copy("ai_filter_key_show") }),
+		);
 
 		await waitFor(() => expect(input.type).toBe("text"));
 	});

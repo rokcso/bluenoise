@@ -404,5 +404,13 @@
 	"ai_filter_endpoint_required": {
 		"message": "Add an endpoint for the selected Jev model on the AI models page first."
 	},
+	"ai_model_edit": { "message": "Edit" },
+	"ai_model_edit_title": { "message": "Edit model" },
+	"ai_model_save": { "message": "Save" },
+	"ai_model_key_set": { "message": "API key set" },
+	"ai_model_key_unset": { "message": "No API key" },
+	"ai_model_dialog_hint": {
+		"message": "Saved on this device only. The API key is never synced or exported."
+	},
 	"filter_reason_ai": { "message": "Jev: likely noise ($1)" }
 }

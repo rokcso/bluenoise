@@ -396,5 +396,13 @@
 	"ai_filter_endpoint_required": {
 		"message": "请先在「AI 模型」页面为选中的 Jev 模型填写接口地址。"
 	},
+	"ai_model_edit": { "message": "编辑" },
+	"ai_model_edit_title": { "message": "编辑模型" },
+	"ai_model_save": { "message": "保存" },
+	"ai_model_key_set": { "message": "已设置 API Key" },
+	"ai_model_key_unset": { "message": "未设置 API Key" },
+	"ai_model_dialog_hint": {
+		"message": "仅保存在本机。API Key 不会被同步，也不会写入规则导出文件。"
+	},
 	"filter_reason_ai": { "message": "Jev 判定为噪音（$1）" }
 }

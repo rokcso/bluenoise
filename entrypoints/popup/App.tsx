@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { t } from "@/lib/i18n";
 import {
 	AI_PROVIDER,
@@ -51,6 +52,8 @@ type AppConfig = SettingsConfig & RuleView;
 
 import {
 	AppearanceIcon,
+	CheckIcon,
+	ChevronDownIcon,
 	DatabaseIcon,
 	DeleteIcon,
 	DiagnosticsIcon,
@@ -1742,56 +1745,43 @@ function AiSecondPass({
 	return (
 		<>
 			<SettingsPanel>
-				<SettingsRow
-					label={t("ai_filter_model")}
-					description={t("ai_filter_model_hint")}
-					control={
-						<select
-							value={provider.id}
-							onChange={(event) =>
-								update({ aiFilterProviderId: event.target.value })
-							}
-							className="cursor-pointer self-center rounded-lg border border-x-border bg-x-bg px-2.5 py-1.5 text-xs text-x-fg outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-						>
-							{jevProviders.map((option) => (
-								<option key={option.id} value={option.id}>
-									{option.label || option.id}
-								</option>
-							))}
-						</select>
-					}
-				/>
-				<SettingsDivider />
 				<XToggle
 					label={t("ai_filter_enable")}
 					hint={t("ai_filter_enable_hint", providerLabel)}
 					checked={config.aiFilterEnabled}
 					onChange={(v) => void toggle(v)}
 				/>
+				<SettingsDivider />
+				<SettingsRow
+					label={t("ai_filter_model")}
+					description={t("ai_filter_model_hint")}
+					control={
+						<div className="w-40 shrink-0 self-center">
+							<SelectMenu
+								value={provider.id}
+								ariaLabel={t("ai_filter_model")}
+								options={jevProviders.map((option) => ({
+									value: option.id,
+									label: option.label || option.id,
+								}))}
+								onChange={(next) => update({ aiFilterProviderId: next })}
+							/>
+						</div>
+					}
+				/>
 			</SettingsPanel>
 			<div className="mt-3 flex flex-col gap-2 text-xs text-x-muted">
 				<p>{t("ai_filter_provider", providerLabel, provider.model || "—")}</p>
 				{provider.builtin && (
-					<div className="flex flex-wrap gap-3">
-						<a
-							href={AI_PROVIDER.keysUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-						>
-							{t("ai_filter_get_key")}
-							<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-						</a>
-						<a
-							href={AI_PROVIDER.docsUrl}
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-						>
-							{t("ai_filter_docs")}
-							<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-						</a>
-					</div>
+					<a
+						href={AI_PROVIDER.docsUrl}
+						target="_blank"
+						rel="noreferrer"
+						className="inline-flex w-fit items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+					>
+						{t("ai_filter_docs")}
+						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+					</a>
 				)}
 			</div>
 			{error && <p className="mt-3 text-xs text-x-muted">{error}</p>}
@@ -1799,135 +1789,384 @@ function AiSecondPass({
 	);
 }
 
-/** One provider's API key. Masked by default; revealing is view-only. */
-function AiProviderKey({ providerId }: { providerId: string }) {
-	const [apiKey, setApiKey] = useState("");
-	const [loaded, setLoaded] = useState(false);
-	// Reveal deliberately never persists, so reopening the page hides it again.
-	const [revealed, setRevealed] = useState(false);
+/** A provider form in flight. `isNew` decides append vs. replace on save. */
+type AiProviderDraft = AiProviderConfig & { isNew: boolean };
+
+/** One choice in a {@link SelectMenu}. */
+interface SelectOption {
+	value: string;
+	label: string;
+}
+
+/** Fixed coordinates for the portalled panel. */
+interface MenuPlacement {
+	left: number;
+	width: number;
+	top?: number;
+	bottom?: number;
+}
+
+const MENU_ESTIMATED_HEIGHT = 240;
+
+/**
+ * shadcn-style select: a trigger button plus a listbox panel.
+ *
+ * The panel is portalled to `document.body` and positioned with `fixed`, not
+ * nested in the trigger. Settings panels clip their contents
+ * (`.settings-panel { overflow: hidden }`), so an in-flow or absolutely
+ * positioned menu is cut off — or worse, drags the panel's height around.
+ */
+function SelectMenu({
+	value,
+	options,
+	onChange,
+	ariaLabel,
+}: {
+	value: string;
+	options: SelectOption[];
+	onChange: (value: string) => void;
+	ariaLabel: string;
+}) {
+	const [open, setOpen] = useState(false);
+	const [active, setActive] = useState(0);
+	const [placement, setPlacement] = useState<MenuPlacement | null>(null);
+	const triggerRef = useRef<HTMLButtonElement>(null);
+	const listRef = useRef<HTMLDivElement>(null);
+
+	const selectedIndex = Math.max(
+		0,
+		options.findIndex((option) => option.value === value),
+	);
+	const selected = options[selectedIndex];
 
 	useEffect(() => {
-		let active = true;
-		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
-			if (!active) return;
-			setApiKey(aiKeyFor(parseAiSecrets(stored[AI_SECRETS_KEY]), providerId));
-			setLoaded(true);
-		});
-		return () => {
-			active = false;
-		};
-	}, [providerId]);
+		if (open) setActive(selectedIndex);
+	}, [open, selectedIndex]);
 
-	function saveKey(next: string) {
-		setApiKey(next);
-		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
-			const { byProvider } = parseAiSecrets(stored[AI_SECRETS_KEY]);
-			const trimmed = next.trim();
-			// An empty field deletes the entry rather than storing "".
-			if (trimmed) byProvider[providerId] = { apiKey: trimmed };
-			else delete byProvider[providerId];
-			return chrome.storage.local.set({ [AI_SECRETS_KEY]: { byProvider } });
+	useEffect(() => {
+		// The panel holds focus so the arrow keys work without a second click.
+		if (open) listRef.current?.focus();
+	}, [open]);
+
+	useEffect(() => {
+		if (!open) return;
+		const onPointerDown = (event: MouseEvent) => {
+			const target = event.target as Node;
+			if (triggerRef.current?.contains(target)) return;
+			if (listRef.current?.contains(target)) return;
+			setOpen(false);
+		};
+		// Fixed coordinates would drift away from the trigger, so any reflow
+		// closes the menu instead of letting it float mid-air.
+		const onReflow = () => setOpen(false);
+		document.addEventListener("mousedown", onPointerDown);
+		window.addEventListener("resize", onReflow);
+		window.addEventListener("scroll", onReflow, true);
+		return () => {
+			document.removeEventListener("mousedown", onPointerDown);
+			window.removeEventListener("resize", onReflow);
+			window.removeEventListener("scroll", onReflow, true);
+		};
+	}, [open]);
+
+	function openMenu() {
+		const trigger = triggerRef.current;
+		if (!trigger) return;
+		const rect = trigger.getBoundingClientRect();
+		const below = window.innerHeight - rect.bottom;
+		// Open upwards when there is not enough room underneath.
+		setPlacement({
+			left: rect.left,
+			width: rect.width,
+			...(below < MENU_ESTIMATED_HEIGHT && rect.top > below
+				? { bottom: window.innerHeight - rect.top + 4 }
+				: { top: rect.bottom + 4 }),
 		});
+		setOpen(true);
+	}
+
+	function close() {
+		setOpen(false);
+		triggerRef.current?.focus();
+	}
+
+	function onListKeyDown(event: React.KeyboardEvent) {
+		if (event.key === "Escape") {
+			event.preventDefault();
+			close();
+			return;
+		}
+		if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+			event.preventDefault();
+			const step = event.key === "ArrowDown" ? 1 : -1;
+			setActive((index) => (index + step + options.length) % options.length);
+			return;
+		}
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			const option = options[active];
+			if (!option) return;
+			onChange(option.value);
+			close();
+		}
 	}
 
 	return (
-		<div className="relative">
-			<input
-				id={`ai-provider-key-${providerId}`}
-				type={revealed ? "text" : "password"}
-				value={loaded ? apiKey : ""}
-				onChange={(event) => saveKey(event.target.value)}
-				name={AI_SECRETS_KEY}
-				autoComplete="off"
-				autoCapitalize="none"
-				autoCorrect="off"
-				spellCheck={false}
-				placeholder="ts_…"
-				className="w-full rounded-lg border border-x-border bg-x-bg p-2.5 pr-11 font-mono text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
-			/>
+		<>
 			<button
+				ref={triggerRef}
 				type="button"
-				onClick={() => setRevealed((shown) => !shown)}
-				aria-label={t(revealed ? "ai_filter_key_hide" : "ai_filter_key_show")}
-				aria-controls={`ai-provider-key-${providerId}`}
-				aria-pressed={revealed}
-				title={t(revealed ? "ai_filter_key_hide" : "ai_filter_key_show")}
-				className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-x-muted transition-colors hover:bg-x-hover hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+				aria-haspopup="listbox"
+				aria-expanded={open}
+				aria-label={ariaLabel}
+				onClick={() => (open ? close() : openMenu())}
+				onKeyDown={(event) => {
+					if (
+						event.key === "ArrowDown" ||
+						event.key === "Enter" ||
+						event.key === " "
+					) {
+						event.preventDefault();
+						openMenu();
+					}
+				}}
+				className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-x-border bg-x-bg px-2.5 py-1.5 text-xs text-x-fg outline-none transition-colors hover:bg-x-hover focus-visible:ring-2 focus-visible:ring-x-accent/40"
 			>
-				{revealed ? (
-					<EyeOffIcon className="h-4 w-4" aria-hidden="true" />
-				) : (
-					<EyeIcon className="h-4 w-4" aria-hidden="true" />
-				)}
+				<span className="truncate">{selected?.label ?? ""}</span>
+				<ChevronDownIcon
+					className={`h-3.5 w-3.5 shrink-0 text-x-muted transition-transform ${open ? "rotate-180" : ""}`}
+					aria-hidden="true"
+				/>
 			</button>
-		</div>
+			{open &&
+				placement &&
+				createPortal(
+					<div
+						ref={listRef}
+						role="listbox"
+						aria-label={ariaLabel}
+						tabIndex={-1}
+						onKeyDown={onListKeyDown}
+						style={{
+							position: "fixed",
+							left: placement.left,
+							top: placement.top,
+							bottom: placement.bottom,
+							minWidth: placement.width,
+						}}
+						className="z-[100] max-h-60 overflow-auto rounded-lg border border-x-border bg-x-bg p-1 shadow-xl outline-none"
+					>
+						{options.map((option, index) => (
+							<button
+								key={option.value}
+								type="button"
+								role="option"
+								aria-selected={option.value === value}
+								onMouseEnter={() => setActive(index)}
+								onClick={() => {
+									onChange(option.value);
+									close();
+								}}
+								className={`flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors ${
+									index === active ? "bg-x-hover" : ""
+								} ${option.value === value ? "text-x-fg" : "text-x-muted"}`}
+							>
+								<span className="truncate">{option.label}</span>
+								{option.value === value && (
+									<CheckIcon
+										className="h-3.5 w-3.5 shrink-0"
+										aria-hidden="true"
+									/>
+								)}
+							</button>
+						))}
+					</div>,
+					document.body,
+				)}
+		</>
 	);
 }
 
 const PROVIDER_FIELD_CLASS =
 	"w-full rounded-lg border border-x-border bg-x-bg p-2.5 text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30";
 
-function AiProviderCard({
-	provider,
-	onChange,
-	onRemove,
+/**
+ * Modal shell. Mirrors the shadcn Dialog markup (`fixed inset-0` overlay plus a
+ * raised card) without pulling in a primitive library the project does not use;
+ * the existing rule-import dialog already speaks this dialect.
+ */
+function Dialog({
+	title,
+	description,
+	children,
+	footer,
+	onClose,
 }: {
-	provider: AiProviderConfig;
-	onChange: (patch: Partial<AiProviderConfig>) => void;
-	onRemove: () => void;
+	title: React.ReactNode;
+	description?: React.ReactNode;
+	children: React.ReactNode;
+	footer: React.ReactNode;
+	onClose: () => void;
 }) {
-	const endpointPlaceholder =
-		provider.kind === "jev"
-			? "https://api.typesafe.ai/v1/systemone"
-			: "https://api.openai.com/v1/chat/completions";
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [onClose]);
 
 	return (
-		<div className="flex flex-col gap-3 border-t border-x-border pt-4 first:border-t-0 first:pt-0">
-			<div className="flex items-center justify-between gap-3">
-				<span className="truncate text-sm font-medium">
-					{provider.label || t("ai_model_untitled")}
-				</span>
-				{provider.builtin ? (
-					<span className="shrink-0 rounded-full border border-x-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-x-muted">
-						{t("ai_model_builtin")}
+		<div
+			className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4"
+			role="dialog"
+			aria-modal="true"
+			aria-label={typeof title === "string" ? title : undefined}
+			onMouseDown={(event) => {
+				if (event.target === event.currentTarget) onClose();
+			}}
+		>
+			<div className="w-full max-w-md rounded-xl border border-x-border bg-x-bg p-5 shadow-xl">
+				<h2 className="text-base font-semibold">{title}</h2>
+				{description && (
+					<p className="mt-1 text-xs text-x-muted">{description}</p>
+				)}
+				<div className="mt-4 flex flex-col gap-3">{children}</div>
+				<div className="mt-5 flex items-center justify-end gap-2">{footer}</div>
+			</div>
+		</div>
+	);
+}
+
+/** One configured provider, collapsed to what a picker needs. */
+function AiProviderRow({
+	provider,
+	hasKey,
+	onEdit,
+}: {
+	provider: AiProviderConfig;
+	hasKey: boolean;
+	onEdit: () => void;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-3 border-t border-x-border pt-3 first:border-t-0 first:pt-0">
+			<div className="flex min-w-0 flex-col gap-0.5">
+				<span className="flex min-w-0 items-center gap-2">
+					<span className="truncate text-sm font-medium">
+						{provider.label || t("ai_model_untitled")}
 					</span>
-				) : (
+				</span>
+				<span className="truncate font-mono text-[11px] text-x-muted">
+					{provider.endpoint || "—"} · {provider.model || "—"}
+				</span>
+				<span className="text-[11px] text-x-muted">
+					{hasKey ? t("ai_model_key_set") : t("ai_model_key_unset")}
+				</span>
+			</div>
+			<button
+				type="button"
+				onClick={onEdit}
+				className="shrink-0 cursor-pointer rounded-full border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+			>
+				{t("ai_model_edit")}
+			</button>
+		</div>
+	);
+}
+
+/** The provider form. Edits a draft; nothing is persisted until Save. */
+function AiProviderDialog({
+	draft,
+	initialKey,
+	onClose,
+	onSave,
+	onRemove,
+}: {
+	draft: AiProviderDraft;
+	initialKey: string;
+	onClose: () => void;
+	onSave: (draft: AiProviderDraft, apiKey: string) => void;
+	onRemove?: () => void;
+}) {
+	const [form, setForm] = useState(draft);
+	const [apiKey, setApiKey] = useState(initialKey);
+	const [revealed, setRevealed] = useState(false);
+	const fieldId = `ai-provider-${draft.id}`;
+	const title = draft.isNew
+		? t(draft.kind === "jev" ? "ai_model_add_jev" : "ai_model_add_llm")
+		: t("ai_model_edit_title");
+
+	function patch(next: Partial<AiProviderDraft>) {
+		setForm((current) => ({ ...current, ...next }));
+	}
+
+	return (
+		<Dialog
+			title={title}
+			description={t("ai_model_dialog_hint")}
+			onClose={onClose}
+			footer={
+				<>
+					{onRemove && (
+						<button
+							type="button"
+							onClick={onRemove}
+							className="mr-auto cursor-pointer rounded-full px-3 py-1.5 text-sm text-x-red transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							{t("ai_model_remove")}
+						</button>
+					)}
 					<button
 						type="button"
-						onClick={onRemove}
-						className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-xs text-x-muted transition-colors hover:bg-x-hover hover:text-x-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						onClick={onClose}
+						className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-x-muted transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
 					>
-						{t("ai_model_remove")}
+						{t("cancel")}
 					</button>
-				)}
-			</div>
-			<label className="flex flex-col gap-1.5">
+					<button
+						type="button"
+						onClick={() => onSave(form, apiKey)}
+						className="cursor-pointer rounded-full bg-x-accent px-4 py-1.5 text-sm font-medium text-x-accent-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+					>
+						{t("ai_model_save")}
+					</button>
+				</>
+			}
+		>
+			<label className="flex flex-col gap-1.5" htmlFor={`${fieldId}-label`}>
 				<span className="text-xs text-x-muted">{t("ai_model_label")}</span>
 				<input
-					value={provider.label}
-					onChange={(event) => onChange({ label: event.target.value })}
+					id={`${fieldId}-label`}
+					value={form.label}
+					onChange={(event) => patch({ label: event.target.value })}
 					placeholder={t("ai_model_untitled")}
 					className={PROVIDER_FIELD_CLASS}
 				/>
 			</label>
-			<label className="flex flex-col gap-1.5">
+			<label className="flex flex-col gap-1.5" htmlFor={`${fieldId}-endpoint`}>
 				<span className="text-xs text-x-muted">{t("ai_model_endpoint")}</span>
 				<input
-					value={provider.endpoint}
-					onChange={(event) => onChange({ endpoint: event.target.value })}
-					placeholder={endpointPlaceholder}
+					id={`${fieldId}-endpoint`}
+					value={form.endpoint}
+					onChange={(event) => patch({ endpoint: event.target.value })}
+					placeholder={
+						draft.kind === "jev"
+							? "https://api.typesafe.ai/v1/systemone"
+							: "https://api.openai.com/v1/chat/completions"
+					}
 					autoComplete="off"
 					autoCapitalize="none"
 					spellCheck={false}
 					className={`${PROVIDER_FIELD_CLASS} font-mono`}
 				/>
 			</label>
-			<label className="flex flex-col gap-1.5">
+			<label className="flex flex-col gap-1.5" htmlFor={`${fieldId}-model`}>
 				<span className="text-xs text-x-muted">{t("ai_model_model")}</span>
 				<input
-					value={provider.model}
-					onChange={(event) => onChange({ model: event.target.value })}
-					placeholder={provider.kind === "jev" ? "jev-latest" : "gpt-4o-mini"}
+					id={`${fieldId}-model`}
+					value={form.model}
+					onChange={(event) => patch({ model: event.target.value })}
+					placeholder={draft.kind === "jev" ? "jev-latest" : "gpt-4o-mini"}
 					autoComplete="off"
 					autoCapitalize="none"
 					spellCheck={false}
@@ -1935,17 +2174,50 @@ function AiProviderCard({
 				/>
 			</label>
 			<div className="flex flex-col gap-1.5">
-				<span className="text-xs text-x-muted">{t("ai_model_key")}</span>
-				<AiProviderKey providerId={provider.id} />
+				<label className="text-xs text-x-muted" htmlFor={`${fieldId}-key`}>
+					{t("ai_model_key")}
+				</label>
+				<div className="relative">
+					<input
+						id={`${fieldId}-key`}
+						type={revealed ? "text" : "password"}
+						value={apiKey}
+						onChange={(event) => setApiKey(event.target.value)}
+						name={AI_SECRETS_KEY}
+						autoComplete="off"
+						autoCapitalize="none"
+						autoCorrect="off"
+						spellCheck={false}
+						placeholder="ts_…"
+						className={`${PROVIDER_FIELD_CLASS} pr-11 font-mono`}
+					/>
+					<button
+						type="button"
+						onClick={() => setRevealed((shown) => !shown)}
+						aria-label={t(
+							revealed ? "ai_filter_key_hide" : "ai_filter_key_show",
+						)}
+						aria-controls={`${fieldId}-key`}
+						aria-pressed={revealed}
+						title={t(revealed ? "ai_filter_key_hide" : "ai_filter_key_show")}
+						className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-x-muted transition-colors hover:bg-x-hover hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+					>
+						{revealed ? (
+							<EyeOffIcon className="h-4 w-4" aria-hidden="true" />
+						) : (
+							<EyeIcon className="h-4 w-4" aria-hidden="true" />
+						)}
+					</button>
+				</div>
 			</div>
-		</div>
+		</Dialog>
 	);
 }
 
 /**
- * The provider registry screen. Judgment models and chat models live in one
- * place so a future feature can pick a configured model instead of growing its
- * own key field.
+ * The provider registry screen. Configured models are listed, not spread out:
+ * the form only exists inside a dialog, so the page stays readable as the list
+ * grows.
  */
 function AiModelsPage({
 	config,
@@ -1954,27 +2226,75 @@ function AiModelsPage({
 	config: AppConfig;
 	update: (p: Partial<AppConfig>) => void;
 }) {
-	const jevProviders = providersOfKind(config.aiProviders, "jev");
-	const llmProviders = providersOfKind(config.aiProviders, "llm");
+	const [draft, setDraft] = useState<AiProviderDraft | null>(null);
+	const [draftKey, setDraftKey] = useState("");
+	const [keyed, setKeyed] = useState<Record<string, boolean>>({});
 
-	function patchProvider(id: string, patch: Partial<AiProviderConfig>) {
-		update({
-			aiProviders: config.aiProviders.map((provider) =>
-				provider.id === id ? { ...provider, ...patch } : provider,
-			),
+	useEffect(() => {
+		const read = () =>
+			chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+				const { byProvider } = parseAiSecrets(stored[AI_SECRETS_KEY]);
+				setKeyed(
+					Object.fromEntries(
+						Object.entries(byProvider).map(([id, entry]) => [
+							id,
+							Boolean(entry.apiKey),
+						]),
+					),
+				);
+			});
+		void read();
+		const onChange = (
+			changes: { [key: string]: chrome.storage.StorageChange },
+			area: string,
+		) => {
+			if (area === "local" && changes[AI_SECRETS_KEY]) void read();
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => chrome.storage.onChanged.removeListener(onChange);
+	}, []);
+
+	function openNew(kind: AiProviderKind) {
+		setDraft({
+			id: createProviderId(),
+			kind,
+			label: "",
+			endpoint: "",
+			model: "",
+			isNew: true,
 		});
+		setDraftKey("");
 	}
 
-	function addProvider(kind: AiProviderKind) {
-		update({
-			aiProviders: [
-				...config.aiProviders,
-				{ id: createProviderId(), kind, label: "", endpoint: "", model: "" },
-			],
-		});
+	async function openEdit(provider: AiProviderConfig) {
+		// Read the key before mounting the dialog: the form takes its initial
+		// value once, so a late arrival would show an empty field.
+		const stored = await chrome.storage.local.get(AI_SECRETS_KEY);
+		setDraftKey(aiKeyFor(parseAiSecrets(stored[AI_SECRETS_KEY]), provider.id));
+		setDraft({ ...provider, isNew: false });
 	}
 
-	function removeProvider(id: string) {
+	function save(next: AiProviderDraft, apiKey: string) {
+		const { isNew, ...provider } = next;
+		update({
+			aiProviders: isNew
+				? [...config.aiProviders, provider]
+				: config.aiProviders.map((entry) =>
+						entry.id === provider.id ? { ...entry, ...provider } : entry,
+					),
+		});
+		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+			const { byProvider } = parseAiSecrets(stored[AI_SECRETS_KEY]);
+			const trimmed = apiKey.trim();
+			// An empty field deletes the entry rather than storing "".
+			if (trimmed) byProvider[provider.id] = { apiKey: trimmed };
+			else delete byProvider[provider.id];
+			return chrome.storage.local.set({ [AI_SECRETS_KEY]: { byProvider } });
+		});
+		setDraft(null);
+	}
+
+	function remove(id: string) {
 		const next = config.aiProviders.filter((provider) => provider.id !== id);
 		update({
 			aiProviders: next,
@@ -1991,30 +2311,30 @@ function AiModelsPage({
 			delete byProvider[id];
 			return chrome.storage.local.set({ [AI_SECRETS_KEY]: { byProvider } });
 		});
+		setDraft(null);
 	}
 
 	function renderGroup(kind: AiProviderKind, providers: AiProviderConfig[]) {
-		const empty = providers.length === 0;
 		return (
 			<SettingsPanel>
-				{empty ? (
+				{providers.length === 0 ? (
 					<p className="text-xs text-x-muted">
 						{t(kind === "jev" ? "ai_models_jev_empty" : "ai_models_llm_empty")}
 					</p>
 				) : (
 					providers.map((provider) => (
-						<AiProviderCard
+						<AiProviderRow
 							key={provider.id}
 							provider={provider}
-							onChange={(patch) => patchProvider(provider.id, patch)}
-							onRemove={() => removeProvider(provider.id)}
+							hasKey={Boolean(keyed[provider.id])}
+							onEdit={() => void openEdit(provider)}
 						/>
 					))
 				)}
 				<button
 					type="button"
-					onClick={() => addProvider(kind)}
-					className="mt-3 cursor-pointer self-start rounded-lg border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+					onClick={() => openNew(kind)}
+					className="mt-3 cursor-pointer self-start rounded-full border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
 				>
 					{t(kind === "jev" ? "ai_model_add_jev" : "ai_model_add_llm")}
 				</button>
@@ -2031,7 +2351,7 @@ function AiModelsPage({
 				icon={ExperimentalIcon}
 				labelClassName="font-normal"
 			>
-				{renderGroup("jev", jevProviders)}
+				{renderGroup("jev", providersOfKind(config.aiProviders, "jev"))}
 			</SettingsGroup>
 			<SettingsGroup
 				label={t("ai_models_llm")}
@@ -2039,8 +2359,20 @@ function AiModelsPage({
 				icon={KeyIcon}
 				labelClassName="font-normal"
 			>
-				{renderGroup("llm", llmProviders)}
+				{renderGroup("llm", providersOfKind(config.aiProviders, "llm"))}
 			</SettingsGroup>
+			{draft && (
+				<AiProviderDialog
+					key={draft.id}
+					draft={draft}
+					initialKey={draftKey}
+					onClose={() => setDraft(null)}
+					onSave={save}
+					{...(!draft.isNew && !draft.builtin
+						? { onRemove: () => remove(draft.id) }
+						: {})}
+				/>
+			)}
 		</>
 	);
 }

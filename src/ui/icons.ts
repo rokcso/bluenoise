@@ -3,8 +3,10 @@
  * so screens only depend on the small set of icons they actually use.
  */
 export {
+	RiArrowDownSLine as ChevronDownIcon,
 	RiArrowRightUpLine as ExternalLinkIcon,
 	RiBugLine as DiagnosticsIcon,
+	RiCheckLine as CheckIcon,
 	RiComputerLine as MonitorIcon,
 	RiDashboardLine as ToolbarIcon,
 	RiDatabase2Line as DatabaseIcon,
