@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { classifyArticle } from "@/src/content/article-classifier";
+import {
+	classifyArticle,
+	type FilterContext,
+} from "@/src/content/article-classifier";
 import type { AppConfig } from "@/src/contracts/config";
 import { DEFAULTS } from "@/src/domain/defaults";
 import { buildMatchers } from "@/src/domain/matcher";
 
-function context(userKeywords: string[] = []) {
+function context(userKeywords: string[] = []): FilterContext {
 	return {
 		matchers: buildMatchers({
 			...(DEFAULTS as AppConfig),

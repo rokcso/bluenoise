@@ -1,3 +1,9 @@
+import { AI_DEFAULT_PROVIDER_ID } from "@/src/contracts/ai";
+import {
+	AI_BUILTIN_PROVIDER,
+	parseAiProviders,
+	resolveJevProvider,
+} from "@/src/contracts/ai-providers";
 import type { AppConfig, RuleData } from "@/src/contracts/config";
 
 /** Default opacity of filtered content in "dim" mode. */
@@ -49,6 +55,8 @@ export const DEFAULTS: AppConfig = {
 	caseSensitive: false,
 	debugLogging: false,
 	aiFilterEnabled: false,
+	aiProviders: [AI_BUILTIN_PROVIDER],
+	aiFilterProviderId: AI_DEFAULT_PROVIDER_ID,
 	filterMediaAds: false,
 	filterCardAds: false,
 	filterParodyAccounts: false,
@@ -64,7 +72,10 @@ export const DEFAULT_RULE_DATA: RuleData = {
 };
 
 export function defaultConfig(): AppConfig {
-	return { ...DEFAULTS };
+	return {
+		...DEFAULTS,
+		aiProviders: DEFAULTS.aiProviders.map((provider) => ({ ...provider })),
+	};
 }
 
 export function defaultRuleData(): RuleData {
@@ -74,10 +85,20 @@ export function defaultRuleData(): RuleData {
 /** Merge a partial (e.g. stored) object over the defaults. */
 export function loadConfig(partial: unknown): AppConfig {
 	const stored = (partial ?? {}) as Partial<AppConfig>;
+	const aiProviders = parseAiProviders(stored.aiProviders);
 	return {
 		...DEFAULTS,
 		...stored,
 		dimOpacity: clampDimOpacity(stored.dimOpacity),
+		aiProviders,
+		// A stale selection (provider removed, or pointing at a chat model) must
+		// fall back instead of leaving the second pass with nothing to call.
+		aiFilterProviderId: resolveJevProvider(
+			aiProviders,
+			typeof stored.aiFilterProviderId === "string"
+				? stored.aiFilterProviderId
+				: DEFAULTS.aiFilterProviderId,
+		).id,
 		keywordSourceEnabled: {
 			...DEFAULTS.keywordSourceEnabled,
 			...stored.keywordSourceEnabled,

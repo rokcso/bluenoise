@@ -2,16 +2,20 @@ import { setLanguage, t } from "@/lib/i18n";
 import {
 	AI_CACHE_KEY,
 	AI_GATE_KEY,
-	AI_PROVIDER,
 	AI_SECRETS_KEY,
+	type AiCacheMap,
 	type AiCandidate,
 	type AiEvaluateRequest,
 	type AiEvaluateResponse,
 	type AiGate,
-	parseAiCache,
-	parseAiGate,
+	type AiGateMap,
+	type AiSecrets,
+	aiKeyFor,
+	parseAiCacheMap,
+	parseAiGateMap,
 	parseAiSecrets,
 } from "@/src/contracts/ai";
+import { resolveJevProvider } from "@/src/contracts/ai-providers";
 import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
 import {
 	DEBUG_LOG_FLUSH_DELAY_MS,
@@ -111,20 +115,29 @@ export default defineBackground(() => {
 	// ==================== Experimental: Jev second pass ====================
 
 	/**
-	 * The API key is read here, never in the content script: the page-world
-	 * script has no business holding a credential, and this keeps the network
-	 * call inside the worker where host permissions apply.
+	 * Keys are read here, never in the content script: the page-world script has
+	 * no business holding a credential, and this keeps the network call inside
+	 * the worker where host permissions apply.
 	 */
-	async function readAiKey(): Promise<string> {
+	async function readAiSecrets(): Promise<AiSecrets> {
 		const stored = await chrome.storage.local.get(AI_SECRETS_KEY);
-		return parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey;
+		return parseAiSecrets(stored[AI_SECRETS_KEY]);
 	}
 
-	/** Judge replies with Jev, reusing stored verdicts so identical text is paid for once. */
+	/** Judge replies with the selected judgment provider, reusing stored verdicts so identical text is paid for once. */
 	async function evaluateWithJev(
 		request: AiEvaluateRequest,
 	): Promise<AiEvaluateResponse> {
-		const apiKey = await readAiKey();
+		// The provider is resolved from settings on every batch: the user may
+		// switch models while a scan is already running.
+		const { settings: cfg } = await readState();
+		const provider = resolveJevProvider(
+			cfg.aiProviders,
+			cfg.aiFilterProviderId,
+		);
+		if (!provider.endpoint || !provider.model)
+			return { ok: false, error: "incomplete-provider" };
+		const apiKey = aiKeyFor(await readAiSecrets(), provider.id);
 		if (!apiKey) return { ok: false, error: "missing-key" };
 
 		const items: AiCandidate[] = request.items
@@ -132,11 +145,19 @@ export default defineBackground(() => {
 			.filter((item) => typeof item?.text === "string" && item.text.trim());
 		if (!items.length) return { ok: true, probabilities: {} };
 
+		// Verdicts and rate limits are per provider: a verdict belongs to the model
+		// that produced it, and the quota belongs to the key that paid for it.
 		const now = Date.now();
-		const [cache, storedGate] = await Promise.all([
-			readAiCache(),
-			readAiGate(),
+		const [cacheMap, gateMap] = await Promise.all([
+			readAiCacheMap(),
+			readAiGateMap(),
 		]);
+		const cache = cacheMap[provider.id] ?? {};
+		const storedGate = gateMap[provider.id] ?? emptyGate();
+		const writeAiGate = async (next: AiGate) => {
+			gateMap[provider.id] = next;
+			await chrome.storage.local.set({ [AI_GATE_KEY]: gateMap });
+		};
 		const probabilities: Record<string, number> = {};
 		const pending: AiCandidate[] = [];
 		for (const item of items) {
@@ -159,13 +180,15 @@ export default defineBackground(() => {
 
 		let next = cache;
 		try {
-			const response = await fetch(AI_PROVIDER.endpoint, {
+			const response = await fetch(provider.endpoint, {
 				method: "POST",
 				headers: {
 					Authorization: `Bearer ${apiKey}`,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(buildAiRequest(request.parent, pending)),
+				body: JSON.stringify(
+					buildAiRequest(provider.model, request.parent, pending),
+				),
 			});
 			if (!response.ok) {
 				gate = recordFailure(
@@ -203,27 +226,24 @@ export default defineBackground(() => {
 				probabilities,
 			};
 		}
-		await chrome.storage.local.set({ [AI_CACHE_KEY]: next });
+		cacheMap[provider.id] = next;
+		await chrome.storage.local.set({ [AI_CACHE_KEY]: cacheMap });
 		return { ok: true, probabilities };
 	}
 
-	async function readAiCache() {
+	async function readAiCacheMap(): Promise<AiCacheMap> {
 		const stored = await chrome.storage.local.get(AI_CACHE_KEY);
-		return parseAiCache(stored[AI_CACHE_KEY]);
+		return parseAiCacheMap(stored[AI_CACHE_KEY]);
 	}
 
 	/**
-	 * The guard is persisted rather than held in a module variable: MV3 stops
+	 * The guards are persisted rather than held in module variables: MV3 stops
 	 * the worker between batches, and a cooldown that evaporates on suspension
 	 * would let every new scan retry a key the provider just rejected.
 	 */
-	async function readAiGate(): Promise<AiGate> {
+	async function readAiGateMap(): Promise<AiGateMap> {
 		const stored = await chrome.storage.local.get(AI_GATE_KEY);
-		return parseAiGate(stored[AI_GATE_KEY] ?? emptyGate());
-	}
-
-	async function writeAiGate(gate: AiGate): Promise<void> {
-		await chrome.storage.local.set({ [AI_GATE_KEY]: gate });
+		return parseAiGateMap(stored[AI_GATE_KEY]);
 	}
 
 	// Public keyword sources change slowly; refresh them twice per day.

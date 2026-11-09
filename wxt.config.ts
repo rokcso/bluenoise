@@ -17,7 +17,9 @@ export default defineConfig({
 		short_name: "BlueNoise",
 		description: "__MSG_extDescription__",
 		homepage_url: "https://github.com/rokcso/bluenoise",
-		version: "0.5.5",
+		// No `version` here on purpose: WXT falls back to package.json, and a
+		// second copy silently wins over it (see wxt/dist/core/utils/manifest.mjs).
+		// Bump the version in package.json only.
 		minimum_chrome_version: "116",
 		default_locale: "en",
 		permissions: ["storage", "unlimitedStorage", "alarms", "contextMenus"],
@@ -27,10 +29,12 @@ export default defineConfig({
 			"https://raw.githubusercontent.com/*",
 			"https://x.zuoluo.tv/*",
 		],
-		// The experimental Jev second pass is opt-in: the origin is requested at
-		// runtime from the options page, so a default install keeps only the two
-		// public-list hosts above. Mirrors AI_PROVIDER.origin.
-		optional_host_permissions: ["https://api.typesafe.ai/*"],
+		// AI model endpoints are user-configured, so the grant is declared broadly
+		// but still requested per origin at runtime, from the settings page. A
+		// default install therefore keeps only the two public-list hosts above;
+		// see `originPatternFor`, which narrows this to the endpoint the user
+		// actually selected.
+		optional_host_permissions: ["https://*/*"],
 		icons: {
 			16: "icons/icon-16.png",
 			32: "icons/icon-32.png",

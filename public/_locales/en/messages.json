@@ -360,6 +360,8 @@
 		"message": "Your own key, stored only on this device. It is never synced and never included in a rules export."
 	},
 	"ai_filter_key_placeholder": { "message": "ts_…" },
+	"ai_filter_key_show": { "message": "Show API key" },
+	"ai_filter_key_hide": { "message": "Hide API key" },
 	"ai_filter_privacy": {
 		"message": "When this is on, the text of unmatched replies on X pages is sent to $1 to be judged. Nothing is sent while it is off."
 	},
@@ -370,7 +372,37 @@
 		"message": "BlueNoise needs permission to reach the Jev API before this can be turned on."
 	},
 	"ai_filter_key_required": {
-		"message": "Add your TypeSafe API key before turning this on."
+		"message": "Add an API key for the selected Jev model on the AI models page before turning this on."
+	},
+	"ai_models": { "message": "AI models" },
+	"ai_models_hint": {
+		"message": "Model endpoints BlueNoise may call. API keys stay on this device: never synced, never included in a rules export."
+	},
+	"ai_models_jev": { "message": "Jev models" },
+	"ai_models_jev_hint": {
+		"message": "Judgment models answer a yes/no question with a probability. The experimental second pass filters with the one selected on the Experimental page."
+	},
+	"ai_models_jev_empty": { "message": "No Jev model configured yet." },
+	"ai_models_llm": { "message": "LLM models" },
+	"ai_models_llm_hint": {
+		"message": "Chat models, kept for features that will ask a model to write rather than score. Nothing uses them yet."
+	},
+	"ai_models_llm_empty": { "message": "No LLM model configured yet." },
+	"ai_model_add_jev": { "message": "Add Jev model" },
+	"ai_model_add_llm": { "message": "Add LLM model" },
+	"ai_model_builtin": { "message": "Built-in" },
+	"ai_model_remove": { "message": "Remove" },
+	"ai_model_untitled": { "message": "Untitled model" },
+	"ai_model_label": { "message": "Name" },
+	"ai_model_endpoint": { "message": "Endpoint" },
+	"ai_model_model": { "message": "Model" },
+	"ai_model_key": { "message": "API key" },
+	"ai_filter_model": { "message": "Jev model" },
+	"ai_filter_model_hint": {
+		"message": "Which configured Jev model judges replies no rule matched."
+	},
+	"ai_filter_endpoint_required": {
+		"message": "Add an endpoint for the selected Jev model on the AI models page first."
 	},
 	"filter_reason_ai": { "message": "Jev: likely noise ($1)" }
 }

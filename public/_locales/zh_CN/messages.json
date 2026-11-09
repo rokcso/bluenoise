@@ -352,6 +352,8 @@
 		"message": "使用你自己的 Key，仅保存在本机。不会同步，也不会写入规则导出文件。"
 	},
 	"ai_filter_key_placeholder": { "message": "ts_…" },
+	"ai_filter_key_show": { "message": "显示 API Key" },
+	"ai_filter_key_hide": { "message": "隐藏 API Key" },
 	"ai_filter_privacy": {
 		"message": "开启后，X 页面上未被规则命中的回复文本会发送给 $1 进行判断；关闭时不会发送任何内容。"
 	},
@@ -361,6 +363,38 @@
 	"ai_filter_permission_denied": {
 		"message": "需要先授权 BlueNoise 访问 Jev API 才能开启此功能。"
 	},
-	"ai_filter_key_required": { "message": "请先填入你的 TypeSafe API Key。" },
+	"ai_filter_key_required": {
+		"message": "开启前，请先在「AI 模型」页面为选中的 Jev 模型填写 API Key。"
+	},
+	"ai_models": { "message": "AI 模型" },
+	"ai_models_hint": {
+		"message": "BlueNoise 可以调用的模型接口。API Key 只保存在本机：不会同步，也不会写入规则导出文件。"
+	},
+	"ai_models_jev": { "message": "Jev 判断模型" },
+	"ai_models_jev_hint": {
+		"message": "判断模型用一个概率回答是/否问题。Experimental 页面里的二次判断会使用在那里选中的那一个。"
+	},
+	"ai_models_jev_empty": { "message": "尚未配置 Jev 模型。" },
+	"ai_models_llm": { "message": "LLM 生成模型" },
+	"ai_models_llm_hint": {
+		"message": "对话模型，为将来需要模型生成内容（而不是打分）的功能预留。目前没有功能使用它们。"
+	},
+	"ai_models_llm_empty": { "message": "尚未配置 LLM 模型。" },
+	"ai_model_add_jev": { "message": "添加 Jev 模型" },
+	"ai_model_add_llm": { "message": "添加 LLM 模型" },
+	"ai_model_builtin": { "message": "内置" },
+	"ai_model_remove": { "message": "移除" },
+	"ai_model_untitled": { "message": "未命名模型" },
+	"ai_model_label": { "message": "名称" },
+	"ai_model_endpoint": { "message": "接口地址" },
+	"ai_model_model": { "message": "模型" },
+	"ai_model_key": { "message": "API Key" },
+	"ai_filter_model": { "message": "Jev 模型" },
+	"ai_filter_model_hint": {
+		"message": "选择用哪个已配置的 Jev 模型复判未命中规则的回复。"
+	},
+	"ai_filter_endpoint_required": {
+		"message": "请先在「AI 模型」页面为选中的 Jev 模型填写接口地址。"
+	},
 	"filter_reason_ai": { "message": "Jev 判定为噪音（$1）" }
 }

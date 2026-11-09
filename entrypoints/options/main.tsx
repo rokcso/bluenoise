@@ -13,6 +13,7 @@ import {
 	FilterIcon,
 	InformationFillIcon,
 	InformationIcon,
+	KeyIcon,
 	ListFilterFillIcon,
 	ListFilterIcon,
 	MenuIcon,
@@ -60,6 +61,12 @@ const navigation: {
 		label: "filtering",
 		lineIcon: FilterIcon,
 		fillIcon: FilterFillIcon,
+	},
+	{
+		id: "ai-models",
+		label: "ai_models",
+		lineIcon: KeyIcon,
+		fillIcon: KeyIcon,
 	},
 	{
 		id: "advanced",

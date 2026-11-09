@@ -1,27 +1,49 @@
 import "../src/content/content.css";
 import { setLanguage, t } from "@/lib/i18n";
 import {
-	classifyArticle,
-	type FilteredLog,
-} from "@/src/content/article-classifier";
-import {
-	type ArticlePreset,
-	canReuseFastEvaluation,
-} from "@/src/content/evaluation-cache";
-import { readFiberUserId } from "@/src/content/fiber";
-import {
-	type FilterReason,
-	formatFilterReason,
-} from "@/src/content/filter-reason";
+	AI_HIT,
+	aiVerdictReason,
+	createAiSecondPass,
+} from "@/src/content/ai-second-pass";
+import type { FilteredLog } from "@/src/content/article-classifier";
+import { createArticleEvaluator } from "@/src/content/evaluation";
 import { createLatestRevision } from "@/src/content/latest-revision";
 import { handleContentProcessingError } from "@/src/content/lifecycle";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
+import {
+	createTweetMarker,
+	FILTERED_CLASS,
+	HIT_ATTR,
+	REASON_CLASS,
+} from "@/src/content/marking";
 import { createPageMakeoverController } from "@/src/content/page-makeover";
 import { mutationMayChangePreset } from "@/src/content/preset-mutation";
 import { isPromotedPost } from "@/src/content/promoted";
 import { createReplyCountController } from "@/src/content/reply-count";
 import { createRevealController } from "@/src/content/reveal";
-import type { AiCandidate, AiEvaluateResponse } from "@/src/contracts/ai";
+import {
+	countReasonBuckets,
+	itemReasonOf,
+	scanReport,
+} from "@/src/content/scan-report";
+import {
+	ARTICLE_SEL,
+	isFilterablePath,
+	isHomePath,
+	isMainTweetArticle,
+	isStatusPath,
+	MENU_OPENER_SEL,
+	MENU_SEL,
+	REGION_SEL,
+	readAuthorIdentity,
+	readTextContent,
+	rowOf,
+	statusIdFromPath,
+	TWEET_TEXT_SEL,
+	USER_NAME_SEL,
+} from "@/src/content/selectors";
+import { drainWithinBudget, type ScanTrigger } from "@/src/content/work-budget";
+import type { AiEvaluateResponse } from "@/src/contracts/ai";
 import type {
 	AppConfig,
 	Matchers,
@@ -42,12 +64,6 @@ import {
 	mergeAccountListSnapshots,
 } from "@/src/domain/account-list";
 import {
-	AI_MAX_BATCH,
-	AI_NOISE_THRESHOLD,
-	aiFingerprint,
-	shouldFilter,
-} from "@/src/domain/ai-filter";
-import {
 	defaultConfig,
 	defaultRuleData,
 	loadConfig,
@@ -59,24 +75,11 @@ import {
 	loadRuleData,
 } from "@/src/domain/rules";
 
-const ARTICLE_SEL = 'article[data-testid="tweet"], article[role="article"]';
-const CELL_SEL = 'div[data-testid="cellInnerDiv"]';
-const TEXT_SEL = '[data-testid="tweetText"], [data-testid="postText"]';
-const NAME_SEL = '[data-testid="User-Name"], [data-testid="userName"]';
-
-const HIT_CLASS = "bluenoise-filtered";
-const SEP = "\u001f";
-const HIT_ATTR = "data-bluenoise-keyword";
-const REASON_CLASS = "bluenoise-filter-reason";
-const COLLAPSE_CLASS = "bluenoise-collapse-placeholder";
-const COLLAPSE_EXPANDED_CLASS = "bluenoise-collapse-expanded";
-const collapseAnimations = new WeakMap<Element, Animation>();
-const DOM_OWNER_ATTR = "data-bluenoise-owner";
-const INERT_ATTR = "data-bluenoise-inert";
+const REVEAL_RADIUS = 40;
 const MODE_ATTR = "data-bluenoise-mode";
 const INVISIBLE_ATTR = "data-bluenoise-invisible";
 const OPACITY_VAR = "--bluenoise-opacity";
-const REVEAL_RADIUS = 40;
+const DOM_OWNER_ATTR = "data-bluenoise-owner";
 
 /** X renders async after SPA navigation; rescan at these delays to catch stragglers. */
 const RESCAN_DELAYS = [0, 250, 800, 1800, 3500];
@@ -91,19 +94,6 @@ const ACCOUNT_SOURCE_NAMES = new Map(
 const DEBUG_SESSION_ID = crypto.randomUUID();
 let debugSequence = 0;
 let nextScanId = 0;
-
-type ScanTrigger =
-	| "initial"
-	| "navigation"
-	| "pageshow"
-	| "mutation"
-	| "mutation-burst"
-	| "visibility"
-	| "config-change"
-	| "rules-change"
-	| "account-list-change"
-	| "debug-enabled"
-	| "continuation";
 
 export default defineContentScript({
 	matches: ["https://x.com/*", "https://twitter.com/*"],
@@ -133,23 +123,10 @@ let accountListVersion = 0;
 
 /** Whether the current page is filterable: a status (tweet detail) page or the home timeline. */
 let active = false;
-/** Bumped on config change to invalidate stale results cached in the WeakMap. */
+/** Bumped on config change to invalidate stale results cached by the evaluator. */
 let generation = 0;
 
-const state = new WeakMap<
-	Element,
-	{
-		sig: string;
-		preset?: ArticlePreset;
-		hit: string | null;
-		reason: FilterReason | null;
-		log: FilteredLog | null;
-	}
->();
 const pending = new Set<Element>();
-/** Articles whose text/name subtree changed since the last evaluation. */
-const textDirty = new WeakSet<Element>();
-const structureDirty = new WeakSet<Element>();
 
 let flushScheduled = false;
 let rafId = 0;
@@ -164,14 +141,19 @@ const configRevision = createLatestRevision();
 const rescanTimers: number[] = [];
 let badgeTimer = 0;
 let lastBadge = -1;
+
+/** True once the extension context is invalidated (dev-mode reload / update). */
+let dead = false;
+
 const revealController = createRevealController({
-	filteredClass: HIT_CLASS,
+	filteredClass: FILTERED_CLASS,
 	hitAttribute: HIT_ATTR,
 	reasonClass: REASON_CLASS,
 	radius: REVEAL_RADIUS,
 	isEnabled: () =>
 		cfg.enabled && active && cfg.mode === "dim" && cfg.revealOnHover,
 });
+
 function reportInitError(error: unknown): void {
 	handleContentProcessingError(error, teardown, (cause) => {
 		console.error("[BlueNoise] Content script initialization failed:", cause);
@@ -249,108 +231,36 @@ function refreshMatchers(): void {
 	matchers = buildMatchers({ ...cfg, ...ruleView });
 }
 
-function clearAllMarks(): void {
-	for (const el of document.querySelectorAll(`.${HIT_CLASS}`)) {
-		el.classList.remove(HIT_CLASS);
-		el.classList.remove(COLLAPSE_EXPANDED_CLASS);
-		el.classList.remove("bluenoise-revealing");
-		el.removeAttribute(HIT_ATTR);
-		el.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
-		el.querySelector(`:scope > .${COLLAPSE_CLASS}`)?.remove();
-		setRowInert(el, false);
-	}
-}
-
-/**
- * X can keep a profile link focused while its virtualized row is removed.
- * Move focus out first, then make the row inert so X cannot hide focused
- * content from assistive technology during its next reconciliation.
- */
-function setRowInert(row: Element, inert: boolean): void {
-	const el = row as HTMLElement;
-	if (inert) {
-		const focused = document.activeElement;
-		if (focused instanceof HTMLElement && row.contains(focused)) focused.blur();
-		el.inert = true;
-		el.setAttribute(INERT_ATTR, "");
-		return;
-	}
-	if (!el.hasAttribute(INERT_ATTR)) return;
-	el.inert = false;
-	el.removeAttribute(INERT_ATTR);
-}
-
-// ==================== DOM reading ====================
-
-/** Read text, newlines and image alts in DOM order for accurate matching. */
-function readText(el: Element | null): string {
-	if (!el) return "";
-	let text = "";
-	const walker = document.createTreeWalker(
-		el,
-		NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-	);
-	let node: Node | null = walker.currentNode;
-	while (node) {
-		if (node.nodeType === Node.TEXT_NODE) {
-			text += node.textContent ?? "";
-		} else if (node.nodeType === Node.ELEMENT_NODE) {
-			const tagName = (node as Element).tagName.toLowerCase();
-			if (["br", "div", "p"].includes(tagName)) {
-				if (text && !text.endsWith("\n")) text += "\n";
-			} else if (tagName === "img") {
-				text += (node as Element).getAttribute("alt") ?? "";
-			}
-		}
-		node = walker.nextNode();
-	}
-	return text;
-}
+// ==================== Route state ====================
 
 function currentStatusId(): string | null {
-	const m = location.pathname.match(/^\/[^/]+\/status\/(\d+)/);
-	return m ? m[1] : null;
+	return statusIdFromPath(location.pathname);
 }
 
 function isStatusPage(): boolean {
-	return currentStatusId() !== null;
+	return isStatusPath(location.pathname);
 }
 
 /** Home feed — "For You" and "Following" share the /home route. */
 function isHomeTimeline(): boolean {
-	return location.pathname === "/home";
+	return isHomePath(location.pathname);
 }
 
-/** Pages where filtering applies: tweet detail pages and the home timeline. */
 function isFilterablePage(): boolean {
-	return isStatusPage() || isHomeTimeline();
+	return isFilterablePath(location.pathname);
 }
 
-/** The main tweet (the one you opened) is never filtered — only replies are.
- *  This exemption only exists on status pages; on the home timeline every
- *  tweet is a filtering candidate. */
 function isMainTweet(article: Element): boolean {
-	if (!isStatusPage()) return false;
-	const id = currentStatusId();
-	if (id) {
-		const links = article.querySelectorAll('a[href*="/status/"]');
-		for (const a of links) {
-			const m = (a.getAttribute("href") ?? "").match(/\/status\/(\d+)/);
-			if (m && m[1] === id) return true;
-		}
-	}
-	return article === document.querySelector(ARTICLE_SEL);
+	return isMainTweetArticle(article, currentStatusId());
 }
 
-// ==================== Marking & styling ====================
+// ==================== Feature controllers ====================
 
-function rowOf(article: Element): Element {
-	return article.closest(CELL_SEL) ?? article;
-}
+const marker = createTweetMarker({ getConfig: () => cfg });
 
 const replyCounts = createReplyCountController({
 	articleSelector: ARTICLE_SEL,
-	filteredClass: HIT_CLASS,
+	filteredClass: FILTERED_CLASS,
 	isStatusPage,
 	isHomeTimeline,
 	isMainTweet,
@@ -359,193 +269,53 @@ const replyCounts = createReplyCountController({
 });
 const pageMakeover = createPageMakeoverController({ birdSvg, isStatusPage });
 
-function animateCollapseResize(row: Element, beforeHeight: number): void {
-	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-	const afterHeight = row.getBoundingClientRect().height;
-	if (Math.abs(afterHeight - beforeHeight) < 1) return;
-	const animation = row.animate(
-		[
-			{ height: `${beforeHeight}px`, overflow: "clip" },
-			{ height: `${afterHeight}px`, overflow: "clip" },
-		],
-		{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" },
-	);
-	collapseAnimations.set(row, animation);
-	const forget = () => {
-		if (collapseAnimations.get(row) === animation)
-			collapseAnimations.delete(row);
-	};
-	animation.addEventListener("finish", forget, { once: true });
-	animation.addEventListener("cancel", forget, { once: true });
-}
-
-function syncCollapsePlaceholder(
-	row: Element,
-	reason: FilterReason | null,
-): void {
-	let placeholder = row.querySelector<HTMLElement>(
-		`:scope > .${COLLAPSE_CLASS}`,
-	);
-	if (cfg.mode !== "collapse") {
-		placeholder?.remove();
-		row.classList.remove(COLLAPSE_EXPANDED_CLASS);
-		return;
-	}
-	if (!placeholder) {
-		placeholder = document.createElement("div");
-		placeholder.className = COLLAPSE_CLASS;
-		const button = document.createElement("button");
-		button.type = "button";
-		button.addEventListener("click", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			const beforeHeight = row.getBoundingClientRect().height;
-			collapseAnimations.get(row)?.cancel();
-			const expanded = row.classList.toggle(COLLAPSE_EXPANDED_CLASS);
-			button.setAttribute("aria-expanded", String(expanded));
-			const action = button.querySelector<HTMLElement>(
-				"[data-bluenoise-collapse-action]",
-			);
-			if (action)
-				action.textContent = t(expanded ? "collapse_again" : "collapse_show");
-			animateCollapseResize(row, beforeHeight);
-		});
-		placeholder.append(button);
-		row.prepend(placeholder);
-	}
-
-	const button = placeholder.querySelector("button");
-	if (!button) return;
-	button.setAttribute(
-		"aria-expanded",
-		String(row.classList.contains(COLLAPSE_EXPANDED_CLASS)),
-	);
-	const detail =
-		reason && cfg.showFilterReason ? formatFilterReason(reason, t) : "";
-	button.replaceChildren();
-	const summary = document.createElement("span");
-	summary.className = "bluenoise-collapse-summary";
-	summary.textContent = detail
-		? t("collapse_filtered_reason", detail)
-		: t("collapse_filtered");
-	const action = document.createElement("span");
-	action.className = "bluenoise-collapse-action";
-	action.setAttribute("data-bluenoise-collapse-action", "");
-	action.textContent = t(
-		row.classList.contains(COLLAPSE_EXPANDED_CLASS)
-			? "collapse_again"
-			: "collapse_show",
-	);
-	button.append(summary, action);
-}
-
-function applyMark(
-	article: Element,
-	hit: string | null,
-	reason: FilterReason | null = null,
-): void {
-	const row = rowOf(article);
-	if (hit) {
-		setRowInert(row, cfg.mode === "hide");
-		row.classList.add(HIT_CLASS);
-		row.setAttribute(HIT_ATTR, hit);
-		syncCollapsePlaceholder(row, reason);
-		let label = row.querySelector<HTMLElement>(`:scope > .${REASON_CLASS}`);
-		if (reason && cfg.mode === "dim" && cfg.showFilterReason) {
-			const detail = formatFilterReason(reason, t);
-			const text = t("filter_reason_label", detail);
-			if (!label) {
-				label = document.createElement("div");
-				label.className = REASON_CLASS;
-				row.append(label);
-			}
-			label.textContent = text;
-			label.title = text;
-		} else {
-			label?.remove();
-		}
-	} else if (row.classList.contains(HIT_CLASS)) {
-		row.classList.remove(HIT_CLASS);
-		row.classList.remove(COLLAPSE_EXPANDED_CLASS);
-		row.removeAttribute(HIT_ATTR);
-		row.querySelector(`:scope > .${REASON_CLASS}`)?.remove();
-		row.querySelector(`:scope > .${COLLAPSE_CLASS}`)?.remove();
-		setRowInert(row, false);
+/** Message the worker and wait for its reply, tolerating a dead context. */
+async function sendToBackgroundAsync<T>(message: unknown): Promise<T | null> {
+	if (dead) return null;
+	try {
+		return (await chrome.runtime.sendMessage(message)) as T;
+	} catch {
+		return null;
 	}
 }
 
-function isMediaAd(article: Element): boolean {
-	return (
-		isPromotedPost(article) &&
-		Boolean(
-			article.querySelector(
-				'[data-testid="videoPlayer"], [data-testid="tweetPhoto"]',
-			),
+/** On a status page the post under discussion is context a keyword rule cannot see. */
+function aiParentText(): string {
+	if (!isStatusPage()) return "";
+	const first = document.querySelector(ARTICLE_SEL);
+	return first ? readTextContent(first.querySelector(TWEET_TEXT_SEL)) : "";
+}
+
+const aiSecondPass = createAiSecondPass({
+	isDead: () => dead,
+	isActive: () => cfg.aiFilterEnabled && cfg.enabled && active,
+	readParentText: aiParentText,
+	getGeneration: () => generation,
+	send: (message) => sendToBackgroundAsync<AiEvaluateResponse>(message),
+	log: (event, details, level) => debugLog(event, details, level),
+	verdictHit: AI_HIT,
+	applyVerdict: (article, probability) => {
+		// Turn the verdict into an ordinary filter hit, so presentation modes,
+		// filter reasons, collapsing, and the toolbar count all work unchanged.
+		if (
+			evaluator.applyExternalHit(article, AI_HIT, aiVerdictReason(probability))
 		)
-	);
-}
+			scheduleBadge();
+	},
+});
 
-function isCardAd(article: Element): boolean {
-	return (
-		isPromotedPost(article) &&
-		Boolean(article.querySelector('[data-testid="card.wrapper"]'))
-	);
-}
-
-function readPresetFilter(
-	article: Element,
-): "ad" | "parody" | "fan" | "commentary" | "automated" | undefined {
-	let preset: ReturnType<typeof readPresetFilter>;
-	if (
-		(cfg.filterMediaAds && isMediaAd(article)) ||
-		(cfg.filterCardAds && isCardAd(article))
-	)
-		preset = "ad";
-	if (cfg.filterParodyAccounts && isParodyAccount(article)) preset = "parody";
-	if (cfg.filterFanAccounts && isFanAccount(article)) preset = "fan";
-	if (cfg.filterCommentaryAccounts && isCommentaryAccount(article))
-		preset = "commentary";
-	if (cfg.filterAutomatedAccounts && isAutomatedAccount(article))
-		preset = "automated";
-	return preset;
-}
-
-/** Read X's localized account label from its official authenticity link. */
-function getAccountLabel(article: Element): string {
-	return (
-		article
-			.querySelector(
-				'a[href="https://help.x.com/rules-and-policies/authenticity"]',
-			)
-			?.textContent?.trim() ?? ""
-	);
-}
-
-function isParodyAccount(article: Element): boolean {
-	return /^(戏仿账号|parody account)$/i.test(getAccountLabel(article));
-}
-
-function isFanAccount(article: Element): boolean {
-	return /^(粉丝账号|fan account)$/i.test(getAccountLabel(article));
-}
-
-function isCommentaryAccount(article: Element): boolean {
-	return /^(评论账号|评论性账号|commentary account)$/i.test(
-		getAccountLabel(article),
-	);
-}
-
-/** X displays this account status beside the author handle. */
-function isAutomatedAccount(article: Element): boolean {
-	const name = article.querySelector(NAME_SEL);
-	return /自动发推|automated account/i.test(name?.textContent ?? "");
-}
-
-function syncMarkedRowsInteractivity(): void {
-	for (const row of document.querySelectorAll(`.${HIT_CLASS}`)) {
-		setRowInert(row, cfg.mode === "hide");
-	}
-}
+const evaluator = createArticleEvaluator({
+	getConfig: () => cfg,
+	getMatchers: () => matchers,
+	getRuleView: () => ruleView,
+	getAccountSourceIndexes: () => accountSourceIndexes,
+	accountSourceNames: ACCOUNT_SOURCE_NAMES,
+	getGeneration: () => generation,
+	getAccountListVersion: () => accountListVersion,
+	isMainTweet,
+	applyMark: (article, hit, reason) => marker.applyMark(article, hit, reason),
+	queueForAi: (article, text) => aiSecondPass.queue(article, text),
+});
 
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
 function applyStyleVars(): void {
@@ -560,7 +330,7 @@ function applyStyleVars(): void {
 	root.setAttribute(MODE_ATTR, cfg.mode);
 	root.style.setProperty(OPACITY_VAR, String(cfg.dimOpacity));
 	root.removeAttribute(INVISIBLE_ATTR);
-	syncMarkedRowsInteractivity();
+	marker.syncInteractivity();
 	if (cfg.mode !== "dim" || !cfg.revealOnHover) revealController.hide();
 }
 
@@ -569,159 +339,22 @@ function syncPresentation(): void {
 	revealController.hide();
 	applyStyleVars();
 	for (const article of document.querySelectorAll(ARTICLE_SEL)) {
-		const cached = state.get(article);
-		if (cached) applyMark(article, cached.hit, cached.reason);
+		const cached = evaluator.cachedMark(article);
+		if (cached) marker.applyMark(article, cached.hit, cached.reason);
 	}
 	scheduleBadge();
 }
 
-// ==================== Evaluation ====================
-
-function evaluate(article: Element): {
-	fresh: boolean;
-	log: FilteredLog | null;
-	outcome:
-		| "cache-hit"
-		| "filtered"
-		| "main-tweet"
-		| "no-active-rules"
-		| "no-match";
-} {
-	// X can add promotion/account labels after the article is first rendered.
-	// Include this cheap structural state in the cache key so those changes
-	// cannot reuse an earlier non-advertisement result.
-	const preset = readPresetFilter(article);
-	const cached = state.get(article);
-	// Most mutations X emits are layout or accessibility updates. If the rule
-	// generation is unchanged and neither matching subtree is dirty, avoid the
-	// expensive TreeWalker pass entirely.
-	if (
-		cached &&
-		canReuseFastEvaluation({
-			cachedSignature: cached.sig,
-			cachedPreset: cached.preset,
-			currentPreset: preset,
-			textDirty: textDirty.has(article),
-			structureDirty: structureDirty.has(article),
-			generation,
-			accountListVersion,
-			separator: SEP,
-		})
-	) {
-		applyMark(article, cached.hit, cached.reason);
-		return { fresh: false, log: null, outcome: "cache-hit" };
-	}
-	textDirty.delete(article);
-	structureDirty.delete(article);
-	const text = readText(article.querySelector(TEXT_SEL));
-	const name = cfg.matchNames ? readText(article.querySelector(NAME_SEL)) : "";
-	const sig = [generation, accountListVersion, preset ?? "", text, name].join(
-		SEP,
-	);
-
-	if (cached && cached.sig === sig) {
-		applyMark(article, cached.hit, cached.reason);
-		return { fresh: false, log: null, outcome: "cache-hit" };
-	}
-
-	// Account matching needs the numeric user id (React internals); keyword
-	// matching only needs the @handle from the DOM.
-	const externalAccountSourcesActive = Object.values(
-		cfg.accountSourceEnabled,
-	).some(Boolean);
-	const accountListsActive =
-		externalAccountSourcesActive ||
-		ruleView.accountWhitelist.length > 0 ||
-		ruleView.accountBlacklist.length > 0;
-
-	let decision = { hit: null, reason: null, log: null } as ReturnType<
-		typeof classifyArticle
-	>;
-	const mainTweet = isMainTweet(article);
-	const hasActiveRules =
-		matchers.count > 0 ||
-		accountListsActive ||
-		cfg.filterMediaAds ||
-		cfg.filterCardAds ||
-		cfg.filterParodyAccounts ||
-		cfg.filterFanAccounts ||
-		cfg.filterCommentaryAccounts ||
-		cfg.filterAutomatedAccounts;
-	if (!mainTweet && hasActiveRules) {
-		decision = classifyArticle(
-			{
-				body: text,
-				name,
-				identity: preset
-					? cfg.debugLogging
-						? readAuthorIdentity(article, false)
-						: {}
-					: readAuthorIdentity(article, accountListsActive),
-				preset,
-			},
-			{
-				matchers,
-				accountSources: externalAccountSourcesActive
-					? accountSourceIndexes
-					: [],
-				accountWhitelist: ruleView.accountWhitelist,
-				accountBlacklist: ruleView.accountBlacklist,
-				accountSourceNames: ACCOUNT_SOURCE_NAMES,
-				debugLogging: cfg.debugLogging,
-			},
-		);
-	}
-
-	state.set(article, { sig, preset, ...decision });
-	applyMark(article, decision.hit, decision.reason);
-	// Jev only ever sees replies that no local rule matched, and never one the
-	// user explicitly whitelisted. It is a second opinion, not a replacement
-	// for the keyword and account lists.
-	if (
-		cfg.aiFilterEnabled &&
-		!mainTweet &&
-		!decision.hit &&
-		!decision.whitelisted
-	) {
-		queueForAi(article, text, name);
-	}
-	return {
-		fresh: true,
-		log: decision.log,
-		outcome: mainTweet
-			? "main-tweet"
-			: !hasActiveRules
-				? "no-active-rules"
-				: decision.hit
-					? "filtered"
-					: "no-match",
-	};
-}
+// ==================== Batch scanning ====================
 
 /** Emit structured entries for each match, followed by a compact batch summary. */
 function emitFilteredLogs(scanId: number, logs: FilteredLog[]): void {
-	const reasonCount = new Map<string, number>();
-	for (const log of logs) {
-		const key =
-			log.category === "preset"
-				? `preset:${log.preset}`
-				: log.category === "account"
-					? "account:blacklist"
-					: `${log.source ?? "?"} :: ${log.rule}`;
-		reasonCount.set(key, (reasonCount.get(key) ?? 0) + 1);
-	}
-
 	for (const log of logs) {
 		debugLog("item.filtered", {
 			scanId,
 			handle: log.handle,
 			accountId: log.id,
-			reason:
-				log.category === "preset"
-					? `preset:${log.preset}`
-					: log.category === "account"
-						? "account blacklist"
-						: `keyword:${log.field}`,
+			reason: itemReasonOf(log),
 			rule: log.rule,
 			kind: log.kind,
 			source: log.source,
@@ -731,44 +364,8 @@ function emitFilteredLogs(scanId: number, logs: FilteredLog[]): void {
 	debugLog("filter.batch", {
 		scanId,
 		filteredCount: logs.length,
-		reasons: Object.fromEntries(
-			[...reasonCount.entries()].sort((a, b) => b[1] - a[1]),
-		),
+		reasons: countReasonBuckets(logs),
 	});
-}
-
-function readAuthorIdentity(
-	article: Element,
-	needId: boolean,
-): {
-	id?: string;
-	handle?: string;
-} {
-	const name = article.querySelector(NAME_SEL);
-	let handle: string | undefined;
-	for (const link of name?.querySelectorAll<HTMLAnchorElement>(
-		'a[href^="/"]',
-	) ?? []) {
-		const path = link.getAttribute("href")?.split("/").filter(Boolean);
-		if (path?.length === 1 && /^[A-Za-z0-9_]{1,15}$/.test(path[0] ?? "")) {
-			handle = path[0];
-			break;
-		}
-	}
-	// X does not expose the numeric user id in the DOM (no `data-user-id`); read
-	// it from React internals so account filtering survives @handle renames
-	// (mirrors MXGA). The fiber walk is budgeted but not free — skip it for
-	// keyword-only setups, where the cheap DOM reads below are enough.
-	const fiberId = needId ? readFiberUserId(article, handle) : undefined;
-	const attrId =
-		article.getAttribute("data-user-id") ??
-		name?.getAttribute("data-user-id") ??
-		name
-			?.querySelector<HTMLElement>("[data-user-id]")
-			?.getAttribute("data-user-id") ??
-		undefined;
-	const id = fiberId ?? attrId;
-	return { id: id && /^\d+$/.test(id) ? id : undefined, handle };
 }
 
 function flush(): void {
@@ -794,83 +391,85 @@ function flush(): void {
 	let mainTweetSkippedCount = 0;
 	let noActiveRulesCount = 0;
 	let noMatchCount = 0;
-	let disconnectedCount = 0;
 	let errorCount = 0;
 	const startedAt = performance.now();
-	let processed = 0;
-	for (let i = 0; i < queue.length; i++) {
-		const article = queue[i];
-		if (!article.isConnected) {
-			disconnectedCount++;
-			continue;
-		}
-		try {
-			const result = evaluate(article);
-			if (result.fresh) evaluatedCount++;
-			if (result.log) logs.push(result.log);
-			switch (result.outcome) {
-				case "cache-hit":
-					cacheHitCount++;
-					break;
-				case "filtered":
-					filteredCount++;
-					break;
-				case "main-tweet":
-					mainTweetSkippedCount++;
-					break;
-				case "no-active-rules":
-					noActiveRulesCount++;
-					break;
-				case "no-match":
-					noMatchCount++;
-					break;
+
+	let disconnectedCount = 0;
+
+	const result = drainWithinBudget(queue, {
+		budgetMs: FLUSH_BUDGET_MS,
+		maxItems: FLUSH_MAX_ARTICLES,
+		process(article) {
+			if (!article.isConnected) {
+				disconnectedCount++;
+				return true;
 			}
-		} catch (error) {
-			errorCount++;
-			const shouldContinue = handleContentProcessingError(
-				error,
-				teardown,
-				(cause) => {
-					console.error("[BlueNoise] Failed to process an item:", cause);
-					debugLog(
-						"item.error",
-						{ scanId, error: serializeDebugError(cause) },
-						"error",
-					);
-				},
-			);
-			if (!shouldContinue) return;
-		}
-		processed++;
-		// Always make progress on at least one article, even if one unusually
-		// complex rule consumes the whole budget by itself.
-		if (
-			processed >= FLUSH_MAX_ARTICLES ||
-			(processed > 0 && performance.now() - startedAt >= FLUSH_BUDGET_MS)
-		) {
-			for (let rest = i + 1; rest < queue.length; rest++)
-				pending.add(queue[rest]);
-			break;
-		}
-	}
-	if (logs.length) emitFilteredLogs(scanId, logs);
-	debugLog("scan.completed", {
-		scanId,
-		triggers,
-		queuedArticleCount: queuedCount,
-		evaluatedCount,
-		processedArticleCount: processed,
-		remainingArticleCount: pending.size,
-		durationMs: Math.round(performance.now() - startedAt),
-		cacheHitCount,
-		filteredCount,
-		mainTweetSkippedCount,
-		noActiveRulesCount,
-		noMatchCount,
-		disconnectedCount,
-		errorCount,
-		totalFilteredOnPage: document.querySelectorAll(`.${HIT_CLASS}`).length,
+			try {
+				const evaluation = evaluator.evaluate(article);
+				if (evaluation.fresh) evaluatedCount++;
+				if (evaluation.log) logs.push(evaluation.log);
+				switch (evaluation.outcome) {
+					case "cache-hit":
+						cacheHitCount++;
+						break;
+					case "filtered":
+						filteredCount++;
+						break;
+					case "main-tweet":
+						mainTweetSkippedCount++;
+						break;
+					case "no-active-rules":
+						noActiveRulesCount++;
+						break;
+					case "no-match":
+						noMatchCount++;
+						break;
+				}
+			} catch (error) {
+				errorCount++;
+				const shouldContinue = handleContentProcessingError(
+					error,
+					teardown,
+					(cause) => {
+						console.error("[BlueNoise] Failed to process an item:", cause);
+						debugLog(
+							"item.error",
+							{ scanId, error: serializeDebugError(cause) },
+							"error",
+						);
+					},
+				);
+				if (!shouldContinue) return false;
+			}
+			return true;
+		},
 	});
+
+	for (const article of result.remaining) pending.add(article);
+
+	if (logs.length) emitFilteredLogs(scanId, logs);
+	debugLog(
+		"scan.completed",
+		scanReport({
+			scanId,
+			triggers,
+			queuedArticleCount: queuedCount,
+			evaluatedCount,
+			processedArticleCount: result.processed,
+			remainingArticleCount: pending.size,
+			durationMs: Math.round(performance.now() - startedAt),
+			cacheHitCount,
+			filteredCount,
+			mainTweetSkippedCount,
+			noActiveRulesCount,
+			noMatchCount,
+			disconnectedCount,
+			errorCount,
+			totalFilteredOnPage: document.querySelectorAll(`.${FILTERED_CLASS}`)
+				.length,
+		}),
+	);
+
 	if (pending.size) {
 		schedule("continuation");
 		return;
@@ -921,9 +520,9 @@ function queueArticle(node: Node): void {
 function markArticleStructureDirty(node: Node): void {
 	if (!(node instanceof Element)) return;
 	const owner = node.closest(ARTICLE_SEL);
-	if (owner) structureDirty.add(owner);
+	if (owner) evaluator.markStructureDirty(owner);
 	for (const article of node.querySelectorAll(ARTICLE_SEL))
-		structureDirty.add(article);
+		evaluator.markStructureDirty(article);
 }
 
 function fullScan(
@@ -934,7 +533,7 @@ function fullScan(
 	let articleCount = 0;
 	for (const a of document.querySelectorAll(ARTICLE_SEL)) {
 		articleCount++;
-		if (options.markTextDirty) textDirty.add(a);
+		if (options.markTextDirty) evaluator.markTextDirty(a);
 		pending.add(a);
 	}
 	const scanId = schedule(trigger);
@@ -979,7 +578,7 @@ function onMutations(records: MutationRecord[]): void {
 			// A childList target can be the article itself when X replaces the
 			// text container, so inspect added nodes as well as the target.
 			const textChanged = Boolean(
-				targetElement?.closest(`${TEXT_SEL}, ${NAME_SEL}`) ??
+				targetElement?.closest(`${TWEET_TEXT_SEL}, ${USER_NAME_SEL}`) ??
 					((targetElement?.matches(ARTICLE_SEL) &&
 						[...rec.addedNodes].some(
 							(node) => node.nodeType === Node.TEXT_NODE,
@@ -987,16 +586,17 @@ function onMutations(records: MutationRecord[]): void {
 						[...rec.addedNodes].some(
 							(node) =>
 								node.nodeType === Node.ELEMENT_NODE &&
-								((node as Element).matches(`${TEXT_SEL}, ${NAME_SEL}`) ||
-									(node as Element).querySelector(`${TEXT_SEL}, ${NAME_SEL}`)),
+								((node as Element).matches(
+									`${TWEET_TEXT_SEL}, ${USER_NAME_SEL}`,
+								) ||
+									(node as Element).querySelector(
+										`${TWEET_TEXT_SEL}, ${USER_NAME_SEL}`,
+									)),
 						)),
 			);
-			if (textChanged) textDirty.add(article);
+			if (textChanged) evaluator.markTextDirty(article);
 		}
-		if (
-			rec.type === "childList" &&
-			targetElement?.closest('section[role="region"]')
-		)
+		if (rec.type === "childList" && targetElement?.closest(REGION_SEL))
 			conversationChanged = true;
 	}
 	if (pending.size || conversationChanged) schedule("mutation");
@@ -1048,9 +648,6 @@ function stopCleanupObserving(): void {
 
 // ==================== Badge count ====================
 
-/** True once the extension context is invalidated (dev-mode reload / update). */
-let dead = false;
-
 /** Send a message, tolerating an invalidated extension context.
  *  After invalidation Chrome throws synchronously, so a bare `.catch()` on the
  *  returned promise is not enough — the timer/rAF callback would rethrow. */
@@ -1063,185 +660,13 @@ function sendToBackground(message: unknown): void {
 	}
 }
 
-// ==================== Experimental: Jev second pass ====================
-
-/** Marker for a hit that came from Jev rather than from a local rule. */
-const AI_HIT = "ai:noise";
-/** Let the local pass settle before spending the user's money on a request. */
-const AI_DEBOUNCE_MS = 500;
-/** Session cap on remembered verdicts; the durable cache lives in the worker. */
-const AI_RESOLVED_LIMIT = 4000;
-/**
- * Hard ceiling on the requests one page may spend before it stops queueing.
- * The worker caps the rate; this caps the total for a single stretch of
- * browsing, so an endlessly scrolling timeline cannot run up a bill.
- */
-const AI_SESSION_MAX_REQUESTS = 200;
-
-/** Replies waiting for a verdict, keyed by element so re-renders replace rows. */
-const aiQueue = new Map<
-	Element,
-	{ key: string; author: string; text: string }
->();
-/** Verdicts seen this session, so a rescan never re-asks for the same text. */
-const aiResolved = new Map<string, number>();
-let aiTimer = 0;
-let aiInFlight = false;
-let aiRequestSequence = 0;
-let aiRequestsSpent = 0;
-
-/** Message the worker and wait for its reply, tolerating a dead context. */
-async function sendToBackgroundAsync<T>(message: unknown): Promise<T | null> {
-	if (dead) return null;
-	try {
-		return (await chrome.runtime.sendMessage(message)) as T;
-	} catch {
-		return null;
-	}
-}
-
-/** On a status page the post under discussion is context a keyword rule cannot see. */
-function aiParentText(): string {
-	if (!isStatusPage()) return "";
-	const first = document.querySelector(ARTICLE_SEL);
-	return first ? readText(first.querySelector(TEXT_SEL)) : "";
-}
-
-function rememberAiVerdict(key: string, probability: number): void {
-	aiResolved.set(key, probability);
-	if (aiResolved.size <= AI_RESOLVED_LIMIT) return;
-	const oldest = aiResolved.keys().next().value;
-	if (oldest !== undefined) aiResolved.delete(oldest);
-}
-
-/**
- * Turn a Jev verdict into an ordinary filter hit, so presentation modes,
- * filter reasons, collapsing, and the toolbar count all work unchanged.
- *
- * The cached signature is preserved deliberately: rewriting it would make the
- * next scan treat the article as stale, re-evaluate it, and queue it again —
- * an endless loop of paid requests.
- */
-function applyAiVerdict(article: Element, probability: number): void {
-	const cached = state.get(article);
-	if (!cached || cached.hit) return;
-	const reason: FilterReason = { category: "ai", probability };
-	state.set(article, { ...cached, hit: AI_HIT, reason, log: null });
-	applyMark(article, AI_HIT, reason);
-	scheduleBadge();
-}
-
-function queueForAi(article: Element, text: string, author: string): void {
-	if (dead || !text.trim()) return;
-	const key = aiFingerprint(text);
-	const known = aiResolved.get(key);
-	// A re-rendered reply still gets the verdict we already paid for.
-	if (known !== undefined) {
-		if (shouldFilter(known)) applyAiVerdict(article, known);
-		return;
-	}
-	aiQueue.set(article, { key, author, text });
-	scheduleAiFlush();
-}
-
-function scheduleAiFlush(): void {
-	if (aiTimer) return;
-	aiTimer = window.setTimeout(() => {
-		aiTimer = 0;
-		void flushAi();
-	}, AI_DEBOUNCE_MS);
-}
-
-async function flushAi(): Promise<void> {
-	if (dead || aiInFlight) return;
-	if (!cfg.aiFilterEnabled || !cfg.enabled || !active) {
-		aiQueue.clear();
-		return;
-	}
-
-	if (aiRequestsSpent >= AI_SESSION_MAX_REQUESTS) {
-		aiQueue.clear();
-		debugLog(
-			"ai.budget",
-			{ spent: aiRequestsSpent, limit: AI_SESSION_MAX_REQUESTS },
-			"warn",
-		);
-		return;
-	}
-
-	const batch: { el: Element; key: string; item: AiCandidate }[] = [];
-	for (const [el, entry] of aiQueue) {
-		aiQueue.delete(el);
-		if (!el.isConnected) continue;
-		if (batch.length >= AI_MAX_BATCH) {
-			aiQueue.set(el, entry);
-			continue;
-		}
-		batch.push({
-			el,
-			key: entry.key,
-			item: {
-				id: `r${++aiRequestSequence}`,
-				author: entry.author,
-				text: entry.text,
-			},
-		});
-	}
-	if (!batch.length) return;
-	aiRequestsSpent++;
-
-	const generationAtRequest = generation;
-	aiInFlight = true;
-	try {
-		const response = await sendToBackgroundAsync<AiEvaluateResponse>({
-			type: "BLUENOISE_AI_EVALUATE",
-			parent: aiParentText(),
-			items: batch.map((entry) => entry.item),
-		});
-		if (!response) return;
-		if (!response.ok) {
-			debugLog("ai.failed", { error: response.error ?? "unknown" }, "warn");
-			return;
-		}
-		let filtered = 0;
-		for (const entry of batch) {
-			const probability = response.probabilities?.[entry.item.id];
-			if (typeof probability !== "number") continue;
-			rememberAiVerdict(entry.key, probability);
-			if (!shouldFilter(probability)) continue;
-			// A config or rule change mid-flight invalidates the whole verdict.
-			if (generation !== generationAtRequest) continue;
-			if (!entry.el.isConnected) continue;
-			applyAiVerdict(entry.el, probability);
-			filtered++;
-		}
-		debugLog("ai.batch", {
-			requested: batch.length,
-			filtered,
-			threshold: AI_NOISE_THRESHOLD,
-		});
-	} finally {
-		aiInFlight = false;
-		if (dead) aiQueue.clear();
-		else if (aiQueue.size) scheduleAiFlush();
-	}
-}
-
-function clearAiState(): void {
-	if (aiTimer) clearTimeout(aiTimer);
-	aiTimer = 0;
-	aiQueue.clear();
-	aiResolved.clear();
-	aiRequestsSpent = 0;
-}
-
 function scheduleBadge(): void {
 	if (badgeTimer) return;
 	badgeTimer = window.setTimeout(() => {
 		badgeTimer = 0;
 		const count =
 			active && cfg.enabled && cfg.showBadgeCount
-				? document.querySelectorAll(`.${HIT_CLASS}`).length
+				? document.querySelectorAll(`.${FILTERED_CLASS}`).length
 				: 0;
 		if (count === lastBadge) return;
 		lastBadge = count;
@@ -1252,7 +677,7 @@ function scheduleBadge(): void {
 /** Let the popup read the current filtered count on this page. */
 function currentFilteredCount(): number {
 	return active && cfg.enabled && cfg.showBadgeCount
-		? document.querySelectorAll(`.${HIT_CLASS}`).length
+		? document.querySelectorAll(`.${FILTERED_CLASS}`).length
 		: 0;
 }
 
@@ -1270,10 +695,6 @@ function hookMessages(): void {
 
 // ==================== Tweet ⋯ menu injection ====================
 
-/** X renders dropdowns in a portal, so remember which tweet opened the menu. */
-const MENU_SEL = '[data-testid="Dropdown"]';
-/** X's per-post overflow button. Stable and not localized. */
-const MENU_OPENER_SEL = '[data-testid="caret"][aria-haspopup="menu"]';
 const MENU_ITEM_CLASS = "bluenoise-menu-item";
 const MENU_ICONS = {
 	whitelist:
@@ -1478,8 +899,8 @@ function stop(): void {
 	pending.clear();
 	scheduledScanTriggers.clear();
 	scheduledScanId = 0;
-	clearAiState();
-	clearAllMarks();
+	aiSecondPass.clear();
+	marker.clearAll();
 	replyCounts.clearRendered();
 	applyStyleVars();
 	scheduleBadge();
@@ -1505,7 +926,7 @@ function teardown(): void {
 	scheduledScanId = 0;
 	if (badgeTimer) clearTimeout(badgeTimer);
 	badgeTimer = 0;
-	clearAiState();
+	aiSecondPass.clear();
 	observer?.disconnect();
 	observer = null;
 	unhookTweetMenu();
@@ -1523,7 +944,7 @@ function teardown(): void {
 	if (root.getAttribute(DOM_OWNER_ATTR) === DEBUG_SESSION_ID) {
 		pageMakeover.reset();
 		revealController.hide();
-		clearAllMarks();
+		marker.clearAll();
 		root.removeAttribute(MODE_ATTR);
 		root.removeAttribute(INVISIBLE_ATTR);
 		root.removeAttribute(DOM_OWNER_ATTR);
@@ -1552,7 +973,7 @@ function refresh(options: {
 		stop();
 		return;
 	}
-	clearAllMarks();
+	marker.clearAll();
 	start(options.trigger);
 }
 
@@ -1593,7 +1014,7 @@ function hookHistory(): void {
 			const result = (
 				original as unknown as (...a: unknown[]) => unknown
 			).apply(this, args);
-			// pushState/replaceState don't fire popstate — notify ourselves
+			// pushState/replaceState don't fire popstate — notify ourselves.
 			queueMicrotask(onUrlChange);
 			return result;
 		};

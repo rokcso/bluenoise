@@ -61,10 +61,14 @@ export interface AppConfig {
 	debugLogging: boolean;
 	/**
 	 * Experimental: send replies no rule matched to Jev for a second opinion.
-	 * Off by default; the user supplies their own TypeSafe API key, which is
-	 * stored separately in `storage.local` and never synced or exported.
+	 * Off by default; the model is one of the providers in `aiProviders`, and its
+	 * API key lives in `storage.local`, never synced or exported.
 	 */
 	aiFilterEnabled: boolean;
+	/** Configured AI providers. No credentials: those stay in `storage.local`. */
+	aiProviders: import("@/src/contracts/ai-providers").AiProviderConfig[];
+	/** Which `jev` provider the second pass calls. */
+	aiFilterProviderId: string;
 	/** Filter promoted posts whose creative contains video or media. */
 	filterMediaAds: boolean;
 	/** Filter promoted posts containing an external website card. */

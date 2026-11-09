@@ -1,3 +1,5 @@
+import { tweetIdOf } from "@/src/content/selectors";
+
 interface DisplayState {
 	button: HTMLButtonElement;
 	text: HTMLElement;
@@ -30,17 +32,6 @@ interface ReplyCountOptions {
 const DISCOVER_MORE_RE = /^(?:\u53d1\u73b0\u66f4\u591a|discover more)$/i;
 const COUNT_PREFIX_RE = /^(\s*)\d[\d,.]*\s*/;
 const MAX_CACHED_THREADS = 50;
-
-function tweetIdOf(article: Element): string | null {
-	for (const link of article.querySelectorAll<HTMLAnchorElement>(
-		'a[href*="/status/"]',
-	)) {
-		if (!link.querySelector("time")) continue;
-		const id = link.getAttribute("href")?.match(/\/status\/(\d+)/)?.[1];
-		if (id) return id;
-	}
-	return null;
-}
 
 function replaceCount(label: string | null, count: string): string | null {
 	return label?.replace(COUNT_PREFIX_RE, `$1${count} `) ?? null;

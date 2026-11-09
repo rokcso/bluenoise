@@ -1,5 +1,9 @@
-const CELL_SEL = 'div[data-testid="cellInnerDiv"]';
-const PLACEMENT_SEL = '[data-testid="placementTracking"]';
+import {
+	CARD_SEL,
+	CELL_SEL,
+	MEDIA_SEL,
+	PLACEMENT_SEL,
+} from "@/src/content/selectors";
 
 /** X wraps promoted articles in placementTracking; media can contain it too. */
 export function isPromotedPost(article: Element): boolean {
@@ -13,4 +17,14 @@ export function isPromotedPost(article: Element): boolean {
 		node = node.parentElement;
 	}
 	return false;
+}
+
+/** A promoted post whose payload is a video or image. */
+export function isMediaAd(article: Element): boolean {
+	return isPromotedPost(article) && Boolean(article.querySelector(MEDIA_SEL));
+}
+
+/** A promoted post whose payload is a link card. */
+export function isCardAd(article: Element): boolean {
+	return isPromotedPost(article) && Boolean(article.querySelector(CARD_SEL));
 }

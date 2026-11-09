@@ -1,11 +1,22 @@
 import { describe, expect, it } from "vitest";
-import type { AppConfig } from "@/src/contracts/config";
+import type { AppConfig, RuleView } from "@/src/contracts/config";
 import { DEFAULTS } from "@/src/domain/defaults";
 import { buildMatchers, matchAny, matchDetail } from "@/src/domain/matcher";
 import { KEYWORD_SOURCES } from "@/src/domain/rules";
 
-function cfg(overrides: Partial<AppConfig> = {}): AppConfig {
-	return { ...DEFAULTS, ...overrides };
+/** Settings plus the rule snapshot `buildMatchers` compiles. */
+type MatcherConfig = AppConfig & RuleView;
+
+function cfg(overrides: Partial<MatcherConfig> = {}): MatcherConfig {
+	return {
+		...DEFAULTS,
+		userKeywords: [],
+		whitelist: [],
+		accountWhitelist: [],
+		accountBlacklist: [],
+		subscriptions: [],
+		...overrides,
+	};
 }
 
 describe("buildMatchers", () => {

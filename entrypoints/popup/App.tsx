@@ -3,8 +3,17 @@ import { t } from "@/lib/i18n";
 import {
 	AI_PROVIDER,
 	AI_SECRETS_KEY,
+	aiKeyFor,
 	parseAiSecrets,
 } from "@/src/contracts/ai";
+import {
+	type AiProviderConfig,
+	type AiProviderKind,
+	createProviderId,
+	originPatternFor,
+	providersOfKind,
+	resolveJevProvider,
+} from "@/src/contracts/ai-providers";
 import type {
 	KeywordSubscription,
 	RuleView,
@@ -48,6 +57,8 @@ import {
 	DownloadIcon,
 	ExperimentalIcon,
 	ExternalLinkIcon,
+	EyeIcon,
+	EyeOffIcon,
 	KeyIcon,
 	LayoutIcon,
 	LayoutRightIcon,
@@ -137,6 +148,7 @@ export type SettingsSection =
 	| "account-rules"
 	| "backup"
 	| "filtering"
+	| "ai-models"
 	| "advanced"
 	| "experimental"
 	| "makeover"
@@ -564,32 +576,45 @@ export function SettingsApp({
 									update={update}
 									description={t("filter_effect_hint")}
 								/>
-								<SettingsDivider />
-								<SettingsRow
-									label={t("dim_opacity")}
-									description={t("dim_opacity_hint")}
-									control={
-										<div className="flex shrink-0 items-center gap-2">
-											<input
-												type="range"
-												min={MIN_DIM_OPACITY}
-												max={MAX_DIM_OPACITY}
-												step={0.05}
-												value={config.dimOpacity}
-												onChange={(event) =>
-													update({ dimOpacity: Number(event.target.value) })
-												}
-												aria-label={t("dim_opacity")}
-												aria-valuetext={`${Math.round(config.dimOpacity * 100)}%`}
-												className="h-1.5 w-36 cursor-pointer accent-x-accent"
-											/>
-											<span className="w-9 text-right text-xs tabular-nums text-x-muted">
-												{Math.round(config.dimOpacity * 100)}%
-											</span>
-										</div>
-									}
-								/>
-								<DimPreview opacity={config.dimOpacity} />
+								{/* Dim opacity is meaningless outside Dim mode. It stays mounted so
+								    the slider keeps its state, and collapses through CSS so the
+								    height animates instead of jumping when the mode changes. */}
+								<div
+									className="settings-reveal"
+									data-open={config.mode === "dim"}
+									inert={config.mode !== "dim"}
+								>
+									<div className="settings-reveal-inner">
+										<SettingsDivider />
+										<SettingsRow
+											label={t("dim_opacity")}
+											description={t("dim_opacity_hint")}
+											control={
+												<div className="flex shrink-0 items-center gap-2">
+													<input
+														type="range"
+														min={MIN_DIM_OPACITY}
+														max={MAX_DIM_OPACITY}
+														step={0.05}
+														value={config.dimOpacity}
+														onChange={(event) =>
+															update({
+																dimOpacity: Number(event.target.value),
+															})
+														}
+														aria-label={t("dim_opacity")}
+														aria-valuetext={`${Math.round(config.dimOpacity * 100)}%`}
+														className="h-1.5 w-36 cursor-pointer accent-x-accent"
+													/>
+													<span className="w-9 text-right text-xs tabular-nums text-x-muted">
+														{Math.round(config.dimOpacity * 100)}%
+													</span>
+												</div>
+											}
+										/>
+										<DimPreview opacity={config.dimOpacity} />
+									</div>
+								</div>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup
@@ -654,23 +679,26 @@ export function SettingsApp({
 
 				{activeSection === "about" && <AboutPage />}
 
+				{activeSection === "ai-models" && (
+					<AiModelsPage config={config} update={update} />
+				)}
+
 				{activeSection === "experimental" && (
 					<>
 						<PageHeading title={t("experimental")} />
 						<SettingsGroup
 							label={t("ai_filter_group")}
-							description={t("ai_filter_privacy", AI_PROVIDER.name)}
+							description={t(
+								"ai_filter_privacy",
+								resolveJevProvider(
+									config.aiProviders,
+									config.aiFilterProviderId,
+								).label,
+							)}
 							icon={ExperimentalIcon}
 							labelClassName="font-normal"
 						>
 							<AiSecondPass config={config} update={update} />
-						</SettingsGroup>
-						<SettingsGroup
-							label={t("ai_filter_key")}
-							icon={KeyIcon}
-							labelClassName="font-normal"
-						>
-							<AiApiKey />
 						</SettingsGroup>
 					</>
 				)}
@@ -1654,14 +1682,22 @@ function AiSecondPass({
 }) {
 	const [error, setError] = useState("");
 	const [apiKey, setApiKey] = useState("");
+	const provider = resolveJevProvider(
+		config.aiProviders,
+		config.aiFilterProviderId,
+	);
+	const jevProviders = providersOfKind(config.aiProviders, "jev");
+	const providerLabel = provider.label || provider.id;
 
-	// Mirror the field in the group below so the toggle can gate on the key
+	// Mirror the selected provider's key so the toggle can gate on it
 	// synchronously: the origin request has to sit inside the click's user
 	// gesture, and an await before it would drop that gesture.
 	useEffect(() => {
 		const read = () =>
 			chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
-				setApiKey(parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey);
+				setApiKey(
+					aiKeyFor(parseAiSecrets(stored[AI_SECRETS_KEY]), provider.id),
+				);
 			});
 		void read();
 		const onChange = (
@@ -1672,7 +1708,7 @@ function AiSecondPass({
 		};
 		chrome.storage.onChanged.addListener(onChange);
 		return () => chrome.storage.onChanged.removeListener(onChange);
-	}, []);
+	}, [provider.id]);
 
 	async function toggle(enabled: boolean) {
 		setError("");
@@ -1685,10 +1721,15 @@ function AiSecondPass({
 				setError(t("ai_filter_key_required"));
 				return;
 			}
-			// The worker can only reach the API once the user grants the origin;
-			// asking here keeps the install-time permission list unchanged.
+			const origin = originPatternFor(provider.endpoint);
+			if (!origin) {
+				setError(t("ai_filter_endpoint_required"));
+				return;
+			}
+			// The worker can only reach the endpoint once the user grants its
+			// origin; asking here keeps the install-time permission list unchanged.
 			const granted = await chrome.permissions
-				.request({ origins: [AI_PROVIDER.origin] })
+				.request({ origins: [origin] })
 				.catch(() => false);
 			if (!granted) {
 				setError(t("ai_filter_permission_denied"));
@@ -1701,79 +1742,306 @@ function AiSecondPass({
 	return (
 		<>
 			<SettingsPanel>
+				<SettingsRow
+					label={t("ai_filter_model")}
+					description={t("ai_filter_model_hint")}
+					control={
+						<select
+							value={provider.id}
+							onChange={(event) =>
+								update({ aiFilterProviderId: event.target.value })
+							}
+							className="cursor-pointer self-center rounded-lg border border-x-border bg-x-bg px-2.5 py-1.5 text-xs text-x-fg outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							{jevProviders.map((option) => (
+								<option key={option.id} value={option.id}>
+									{option.label || option.id}
+								</option>
+							))}
+						</select>
+					}
+				/>
+				<SettingsDivider />
 				<XToggle
 					label={t("ai_filter_enable")}
-					hint={t("ai_filter_enable_hint", AI_PROVIDER.name)}
+					hint={t("ai_filter_enable_hint", providerLabel)}
 					checked={config.aiFilterEnabled}
 					onChange={(v) => void toggle(v)}
 				/>
 			</SettingsPanel>
+			<div className="mt-3 flex flex-col gap-2 text-xs text-x-muted">
+				<p>{t("ai_filter_provider", providerLabel, provider.model || "—")}</p>
+				{provider.builtin && (
+					<div className="flex flex-wrap gap-3">
+						<a
+							href={AI_PROVIDER.keysUrl}
+							target="_blank"
+							rel="noreferrer"
+							className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							{t("ai_filter_get_key")}
+							<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						</a>
+						<a
+							href={AI_PROVIDER.docsUrl}
+							target="_blank"
+							rel="noreferrer"
+							className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+						>
+							{t("ai_filter_docs")}
+							<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+						</a>
+					</div>
+				)}
+			</div>
 			{error && <p className="mt-3 text-xs text-x-muted">{error}</p>}
 		</>
 	);
 }
 
-/** The API key field. Sits outside a SettingsPanel, like every other text input in the app. */
-function AiApiKey() {
+/** One provider's API key. Masked by default; revealing is view-only. */
+function AiProviderKey({ providerId }: { providerId: string }) {
 	const [apiKey, setApiKey] = useState("");
 	const [loaded, setLoaded] = useState(false);
+	// Reveal deliberately never persists, so reopening the page hides it again.
+	const [revealed, setRevealed] = useState(false);
 
 	useEffect(() => {
+		let active = true;
 		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
-			setApiKey(parseAiSecrets(stored[AI_SECRETS_KEY]).apiKey);
+			if (!active) return;
+			setApiKey(aiKeyFor(parseAiSecrets(stored[AI_SECRETS_KEY]), providerId));
 			setLoaded(true);
 		});
-	}, []);
+		return () => {
+			active = false;
+		};
+	}, [providerId]);
 
 	function saveKey(next: string) {
 		setApiKey(next);
-		void chrome.storage.local.set({
-			[AI_SECRETS_KEY]: { apiKey: next.trim() },
+		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+			const { byProvider } = parseAiSecrets(stored[AI_SECRETS_KEY]);
+			const trimmed = next.trim();
+			// An empty field deletes the entry rather than storing "".
+			if (trimmed) byProvider[providerId] = { apiKey: trimmed };
+			else delete byProvider[providerId];
+			return chrome.storage.local.set({ [AI_SECRETS_KEY]: { byProvider } });
 		});
 	}
 
 	return (
-		<div className="rules-keywords-control flex flex-col gap-1.5">
-			<label className="text-xs text-x-muted" htmlFor="ai-filter-key">
-				{t("ai_filter_key_hint")}
-			</label>
+		<div className="relative">
 			<input
-				id="ai-filter-key"
-				type="password"
+				id={`ai-provider-key-${providerId}`}
+				type={revealed ? "text" : "password"}
 				value={loaded ? apiKey : ""}
-				onChange={(e) => saveKey(e.target.value)}
+				onChange={(event) => saveKey(event.target.value)}
 				name={AI_SECRETS_KEY}
 				autoComplete="off"
 				autoCapitalize="none"
 				autoCorrect="off"
 				spellCheck={false}
-				placeholder={t("ai_filter_key_placeholder")}
-				className="w-full rounded-lg border border-x-border bg-x-bg p-3 font-mono text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
+				placeholder="ts_…"
+				className="w-full rounded-lg border border-x-border bg-x-bg p-2.5 pr-11 font-mono text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
 			/>
-			<div className="mt-1 flex flex-col gap-2 text-xs text-x-muted">
-				<p>{t("ai_filter_provider", AI_PROVIDER.name, AI_PROVIDER.model)}</p>
-				<div className="flex flex-wrap gap-3">
-					<a
-						href={AI_PROVIDER.keysUrl}
-						target="_blank"
-						rel="noreferrer"
-						className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+			<button
+				type="button"
+				onClick={() => setRevealed((shown) => !shown)}
+				aria-label={t(revealed ? "ai_filter_key_hide" : "ai_filter_key_show")}
+				aria-controls={`ai-provider-key-${providerId}`}
+				aria-pressed={revealed}
+				title={t(revealed ? "ai_filter_key_hide" : "ai_filter_key_show")}
+				className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-x-muted transition-colors hover:bg-x-hover hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+			>
+				{revealed ? (
+					<EyeOffIcon className="h-4 w-4" aria-hidden="true" />
+				) : (
+					<EyeIcon className="h-4 w-4" aria-hidden="true" />
+				)}
+			</button>
+		</div>
+	);
+}
+
+const PROVIDER_FIELD_CLASS =
+	"w-full rounded-lg border border-x-border bg-x-bg p-2.5 text-xs text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30";
+
+function AiProviderCard({
+	provider,
+	onChange,
+	onRemove,
+}: {
+	provider: AiProviderConfig;
+	onChange: (patch: Partial<AiProviderConfig>) => void;
+	onRemove: () => void;
+}) {
+	const endpointPlaceholder =
+		provider.kind === "jev"
+			? "https://api.typesafe.ai/v1/systemone"
+			: "https://api.openai.com/v1/chat/completions";
+
+	return (
+		<div className="flex flex-col gap-3 border-t border-x-border pt-4 first:border-t-0 first:pt-0">
+			<div className="flex items-center justify-between gap-3">
+				<span className="truncate text-sm font-medium">
+					{provider.label || t("ai_model_untitled")}
+				</span>
+				{provider.builtin ? (
+					<span className="shrink-0 rounded-full border border-x-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-x-muted">
+						{t("ai_model_builtin")}
+					</span>
+				) : (
+					<button
+						type="button"
+						onClick={onRemove}
+						className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-xs text-x-muted transition-colors hover:bg-x-hover hover:text-x-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
 					>
-						{t("ai_filter_get_key")}
-						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-					</a>
-					<a
-						href={AI_PROVIDER.docsUrl}
-						target="_blank"
-						rel="noreferrer"
-						className="inline-flex items-center gap-1 underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
-					>
-						{t("ai_filter_docs")}
-						<ExternalLinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
-					</a>
-				</div>
+						{t("ai_model_remove")}
+					</button>
+				)}
+			</div>
+			<label className="flex flex-col gap-1.5">
+				<span className="text-xs text-x-muted">{t("ai_model_label")}</span>
+				<input
+					value={provider.label}
+					onChange={(event) => onChange({ label: event.target.value })}
+					placeholder={t("ai_model_untitled")}
+					className={PROVIDER_FIELD_CLASS}
+				/>
+			</label>
+			<label className="flex flex-col gap-1.5">
+				<span className="text-xs text-x-muted">{t("ai_model_endpoint")}</span>
+				<input
+					value={provider.endpoint}
+					onChange={(event) => onChange({ endpoint: event.target.value })}
+					placeholder={endpointPlaceholder}
+					autoComplete="off"
+					autoCapitalize="none"
+					spellCheck={false}
+					className={`${PROVIDER_FIELD_CLASS} font-mono`}
+				/>
+			</label>
+			<label className="flex flex-col gap-1.5">
+				<span className="text-xs text-x-muted">{t("ai_model_model")}</span>
+				<input
+					value={provider.model}
+					onChange={(event) => onChange({ model: event.target.value })}
+					placeholder={provider.kind === "jev" ? "jev-latest" : "gpt-4o-mini"}
+					autoComplete="off"
+					autoCapitalize="none"
+					spellCheck={false}
+					className={`${PROVIDER_FIELD_CLASS} font-mono`}
+				/>
+			</label>
+			<div className="flex flex-col gap-1.5">
+				<span className="text-xs text-x-muted">{t("ai_model_key")}</span>
+				<AiProviderKey providerId={provider.id} />
 			</div>
 		</div>
+	);
+}
+
+/**
+ * The provider registry screen. Judgment models and chat models live in one
+ * place so a future feature can pick a configured model instead of growing its
+ * own key field.
+ */
+function AiModelsPage({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	const jevProviders = providersOfKind(config.aiProviders, "jev");
+	const llmProviders = providersOfKind(config.aiProviders, "llm");
+
+	function patchProvider(id: string, patch: Partial<AiProviderConfig>) {
+		update({
+			aiProviders: config.aiProviders.map((provider) =>
+				provider.id === id ? { ...provider, ...patch } : provider,
+			),
+		});
+	}
+
+	function addProvider(kind: AiProviderKind) {
+		update({
+			aiProviders: [
+				...config.aiProviders,
+				{ id: createProviderId(), kind, label: "", endpoint: "", model: "" },
+			],
+		});
+	}
+
+	function removeProvider(id: string) {
+		const next = config.aiProviders.filter((provider) => provider.id !== id);
+		update({
+			aiProviders: next,
+			// Move the selection off the removed provider now, rather than waiting
+			// for the next load to repair it.
+			...(config.aiFilterProviderId === id
+				? { aiFilterProviderId: resolveJevProvider(next, "").id }
+				: {}),
+		});
+		// Drop its key too; a credential with no provider cannot be used again.
+		void chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+			const { byProvider } = parseAiSecrets(stored[AI_SECRETS_KEY]);
+			if (!(id in byProvider)) return;
+			delete byProvider[id];
+			return chrome.storage.local.set({ [AI_SECRETS_KEY]: { byProvider } });
+		});
+	}
+
+	function renderGroup(kind: AiProviderKind, providers: AiProviderConfig[]) {
+		const empty = providers.length === 0;
+		return (
+			<SettingsPanel>
+				{empty ? (
+					<p className="text-xs text-x-muted">
+						{t(kind === "jev" ? "ai_models_jev_empty" : "ai_models_llm_empty")}
+					</p>
+				) : (
+					providers.map((provider) => (
+						<AiProviderCard
+							key={provider.id}
+							provider={provider}
+							onChange={(patch) => patchProvider(provider.id, patch)}
+							onRemove={() => removeProvider(provider.id)}
+						/>
+					))
+				)}
+				<button
+					type="button"
+					onClick={() => addProvider(kind)}
+					className="mt-3 cursor-pointer self-start rounded-lg border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40"
+				>
+					{t(kind === "jev" ? "ai_model_add_jev" : "ai_model_add_llm")}
+				</button>
+			</SettingsPanel>
+		);
+	}
+
+	return (
+		<>
+			<PageHeading title={t("ai_models")} description={t("ai_models_hint")} />
+			<SettingsGroup
+				label={t("ai_models_jev")}
+				description={t("ai_models_jev_hint")}
+				icon={ExperimentalIcon}
+				labelClassName="font-normal"
+			>
+				{renderGroup("jev", jevProviders)}
+			</SettingsGroup>
+			<SettingsGroup
+				label={t("ai_models_llm")}
+				description={t("ai_models_llm_hint")}
+				icon={KeyIcon}
+				labelClassName="font-normal"
+			>
+				{renderGroup("llm", llmProviders)}
+			</SettingsGroup>
+		</>
 	);
 }
 

@@ -11,6 +11,7 @@ export {
 	RiDeleteBinLine as DeleteIcon,
 	RiDownloadLine as DownloadIcon,
 	RiEqualizerLine as SlidersIcon,
+	RiEyeLine as EyeIcon,
 	RiEyeOffLine as EyeOffIcon,
 	RiFilter3Fill as FilterFillIcon,
 	RiFilter3Line as FilterIcon,

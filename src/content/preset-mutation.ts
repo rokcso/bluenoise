@@ -1,10 +1,4 @@
-const PRESET_MARKER_SEL = [
-	'[data-testid="placementTracking"]',
-	'[data-testid="videoPlayer"]',
-	'[data-testid="tweetPhoto"]',
-	'[data-testid="card.wrapper"]',
-	'a[href="https://help.x.com/rules-and-policies/authenticity"]',
-].join(", ");
+import { PRESET_MARKER_SEL } from "@/src/content/selectors";
 
 /** True when a DOM mutation can change an article's preset classification. */
 export function mutationMayChangePreset(record: MutationRecord): boolean {

@@ -27,8 +27,12 @@ export const AI_PROVIDER = {
 	origin: "https://api.typesafe.ai/*",
 } as const;
 
+/** The provider the extension ships with; also the migration target for old data. */
+export const AI_DEFAULT_PROVIDER_ID = "typesafe";
+
 export interface AiSecrets {
-	apiKey: string;
+	/** Key material, partitioned by provider id. Never leaves `storage.local`. */
+	byProvider: Record<string, { apiKey: string }>;
 }
 
 /** One cached verdict: P(reply is noise), plus when it was obtained. */
@@ -76,10 +80,77 @@ export interface AiEvaluateResponse {
 }
 
 export function parseAiSecrets(value: unknown): AiSecrets {
-	const stored = value as Partial<AiSecrets> | undefined;
-	return {
-		apiKey: typeof stored?.apiKey === "string" ? stored.apiKey.trim() : "",
-	};
+	const stored = value as
+		| (Partial<AiSecrets> & { apiKey?: unknown })
+		| undefined;
+	// Shape before the provider registry: a single key that belonged to the
+	// built-in provider. Keep reading it so an upgrade never asks for it again.
+	if (typeof stored?.apiKey === "string") {
+		const legacy = stored.apiKey.trim();
+		return {
+			byProvider: legacy
+				? { [AI_DEFAULT_PROVIDER_ID]: { apiKey: legacy } }
+				: {},
+		};
+	}
+	const byProvider: AiSecrets["byProvider"] = {};
+	const entries = stored?.byProvider;
+	if (entries && typeof entries === "object") {
+		for (const [id, entry] of Object.entries(
+			entries as Record<string, { apiKey?: unknown } | undefined>,
+		)) {
+			if (!id || typeof entry?.apiKey !== "string") continue;
+			const apiKey = entry.apiKey.trim();
+			if (apiKey) byProvider[id] = { apiKey };
+		}
+	}
+	return { byProvider };
+}
+
+/** The key for one provider, or "" when it has none. */
+export function aiKeyFor(secrets: AiSecrets, providerId: string): string {
+	return secrets.byProvider[providerId]?.apiKey ?? "";
+}
+
+/**
+ * Verdict caches and quota guards are keyed by provider: a verdict is a
+ * property of the model that produced it, and rate limits belong to whoever
+ * issued the key. Sharing either across providers would be wrong, not just slow.
+ */
+export type AiCacheMap = Record<string, AiCache>;
+export type AiGateMap = Record<string, AiGate>;
+
+function looksLikeVerdict(value: unknown): boolean {
+	const entry = value as Partial<AiVerdict> | undefined;
+	return typeof entry?.probability === "number" && typeof entry.at === "number";
+}
+
+export function parseAiCacheMap(value: unknown): AiCacheMap {
+	const stored = value as Record<string, unknown> | undefined;
+	if (!stored || typeof stored !== "object") return {};
+	const entries = Object.values(stored);
+	// Unpartitioned shape: one flat cache, produced by the built-in provider.
+	if (entries.length && entries.every(looksLikeVerdict)) {
+		return { [AI_DEFAULT_PROVIDER_ID]: parseAiCache(stored) };
+	}
+	const map: AiCacheMap = {};
+	for (const [id, cache] of Object.entries(stored)) {
+		if (id) map[id] = parseAiCache(cache);
+	}
+	return map;
+}
+
+export function parseAiGateMap(value: unknown): AiGateMap {
+	const stored = value as Record<string, unknown> | undefined;
+	if (!stored || typeof stored !== "object") return {};
+	if (Array.isArray(stored.window)) {
+		return { [AI_DEFAULT_PROVIDER_ID]: parseAiGate(stored) };
+	}
+	const map: AiGateMap = {};
+	for (const [id, gate] of Object.entries(stored)) {
+		if (id) map[id] = parseAiGate(gate);
+	}
+	return map;
 }
 
 export function parseAiCache(value: unknown): AiCache {

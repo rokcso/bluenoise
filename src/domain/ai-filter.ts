@@ -11,11 +11,7 @@
  * renders. It never gets to decide *how* a match is displayed.
  */
 
-import {
-	AI_PROVIDER,
-	type AiCache,
-	type AiCandidate,
-} from "@/src/contracts/ai";
+import type { AiCache, AiCandidate } from "@/src/contracts/ai";
 
 /** P(reply is noise) at or above this filters the reply. */
 export const AI_NOISE_THRESHOLD = 0.9;
@@ -85,16 +81,20 @@ export function aiQuestionKey(id: string): string {
 }
 
 /**
- * Build the `POST /v1/systemone` body. The thread is sent as structured state
- * so one call can judge every loaded reply, which is both cheaper than one
- * call per reply and gives the model the context it needs.
+ * Build the judgment request body (System One dialect). The thread is sent as
+ * structured state so one call can judge every loaded reply, which is both
+ * cheaper than one call per reply and gives the model the context it needs.
+ *
+ * `model` is a parameter rather than a constant: the dialect is fixed by the
+ * provider kind, but which model answers is the user's choice.
  */
 export function buildAiRequest(
+	model: string,
 	parent: string,
 	items: AiCandidate[],
 ): Record<string, unknown> {
 	return {
-		model: AI_PROVIDER.model,
+		model,
 		state: {
 			parent_post: parent ? truncate(parent, AI_PARENT_LIMIT) : null,
 			replies: items.map((item) => ({

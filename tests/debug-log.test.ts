@@ -46,9 +46,11 @@ describe("debug log storage", () => {
 
 	it("serializes one JSON object per line", () => {
 		const entries = [entry("1"), entry("2")];
-		expect(debugLogToJsonl(entries).split("\n").map(JSON.parse)).toEqual(
-			entries,
-		);
+		expect(
+			debugLogToJsonl(entries)
+				.split("\n")
+				.map((line) => JSON.parse(line)),
+		).toEqual(entries);
 	});
 
 	it("rejects malformed messages", () => {

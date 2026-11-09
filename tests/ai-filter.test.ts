@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { AiCandidate } from "@/src/contracts/ai";
-import { parseAiCache, parseAiSecrets } from "@/src/contracts/ai";
+import {
+	AI_DEFAULT_PROVIDER_ID,
+	aiKeyFor,
+	parseAiCache,
+	parseAiCacheMap,
+	parseAiGateMap,
+	parseAiSecrets,
+} from "@/src/contracts/ai";
 import {
 	AI_CACHE_MAX_ENTRIES,
 	AI_CACHE_TTL_MS,
@@ -22,7 +29,7 @@ const items: AiCandidate[] = [
 
 describe("ai filter request", () => {
 	it("asks one typed question per reply and shares the thread as state", () => {
-		const body = buildAiRequest("Original post", items) as {
+		const body = buildAiRequest("jev-latest", "Original post", items) as {
 			model: string;
 			state: { parent_post: string | null; replies: unknown[] };
 			questions: Record<string, { type: string; instructions: string }>;
@@ -44,7 +51,9 @@ describe("ai filter request", () => {
 	});
 
 	it("omits the parent post when the page has none", () => {
-		const body = buildAiRequest("", items) as { state: { parent_post: null } };
+		const body = buildAiRequest("jev-latest", "", items) as {
+			state: { parent_post: null };
+		};
 		expect(body.state.parent_post).toBeNull();
 	});
 
@@ -123,9 +132,55 @@ describe("ai filter cache", () => {
 
 describe("ai credentials", () => {
 	it("never surfaces a key it was not given", () => {
-		expect(parseAiSecrets(undefined).apiKey).toBe("");
-		expect(parseAiSecrets({ apiKey: 42 }).apiKey).toBe("");
-		expect(parseAiSecrets({ apiKey: "  ts_abc  " }).apiKey).toBe("ts_abc");
+		expect(parseAiSecrets(undefined).byProvider).toEqual({});
+		expect(parseAiSecrets({ apiKey: 42 }).byProvider).toEqual({});
+		expect(
+			parseAiSecrets({ byProvider: { x: { apiKey: 42 } } }).byProvider,
+		).toEqual({});
+		expect(
+			parseAiSecrets({ byProvider: { x: { apiKey: "  ts_abc  " } } })
+				.byProvider,
+		).toEqual({ x: { apiKey: "ts_abc" } });
+	});
+
+	it("keeps one key per provider and reads them independently", () => {
+		const secrets = parseAiSecrets({
+			byProvider: { jev: { apiKey: "a" }, other: { apiKey: "b" } },
+		});
+		expect(aiKeyFor(secrets, "jev")).toBe("a");
+		expect(aiKeyFor(secrets, "other")).toBe("b");
+		expect(aiKeyFor(secrets, "missing")).toBe("");
+	});
+
+	it("migrates the pre-registry single key to the built-in provider", () => {
+		// Upgrading must not make the user re-enter a key they already had.
+		expect(parseAiSecrets({ apiKey: "  ts_old  " }).byProvider).toEqual({
+			[AI_DEFAULT_PROVIDER_ID]: { apiKey: "ts_old" },
+		});
+	});
+
+	it("partitions caches and guards by provider", () => {
+		expect(
+			parseAiCacheMap({ jev: { k: { probability: 0.5, at: 1 } } }),
+		).toEqual({ jev: { k: { probability: 0.5, at: 1 } } });
+		// Unpartitioned data belonged to whichever provider shipped first.
+		expect(parseAiCacheMap({ k: { probability: 0.5, at: 1 } })).toEqual({
+			[AI_DEFAULT_PROVIDER_ID]: { k: { probability: 0.5, at: 1 } },
+		});
+		expect(
+			parseAiGateMap({ jev: { window: [1], cooldownUntil: 0, failures: 0 } }),
+		).toEqual({
+			jev: { window: [1], cooldownUntil: 0, failures: 0 },
+		});
+		expect(
+			parseAiGateMap({ window: [1], cooldownUntil: 0, failures: 0 }),
+		).toEqual({
+			[AI_DEFAULT_PROVIDER_ID]: {
+				window: [1],
+				cooldownUntil: 0,
+				failures: 0,
+			},
+		});
 	});
 
 	it("drops malformed cache entries instead of trusting them", () => {

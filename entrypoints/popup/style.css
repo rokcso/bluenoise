@@ -199,6 +199,28 @@ body::-webkit-scrollbar {
 	margin-inline: 8px;
 	border-top: 1px solid var(--x-border);
 }
+/* Mode-dependent settings collapse through grid rows rather than unmounting:
+   the real height animates (no layout jump, no JS measurement) and the
+   controls keep their state instead of remounting on every mode change. */
+.settings-reveal {
+	display: grid;
+	grid-template-rows: 0fr;
+	opacity: 0;
+	transition:
+		grid-template-rows 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+		opacity 120ms ease;
+}
+.settings-reveal[data-open="true"] {
+	grid-template-rows: 1fr;
+	opacity: 1;
+	transition:
+		grid-template-rows 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+		opacity 180ms ease 40ms;
+}
+.settings-reveal-inner {
+	min-height: 0;
+	overflow: hidden;
+}
 
 .debug-log-transition {
 	margin-top: 12px;
@@ -395,6 +417,9 @@ body::-webkit-scrollbar {
 	.binary-switch-track,
 	.binary-switch-thumb,
 	.theme-segment-indicator {
+		transition: none;
+	}
+	.settings-reveal {
 		transition: none;
 	}
 }
