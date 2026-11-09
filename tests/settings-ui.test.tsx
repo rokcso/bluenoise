@@ -9,7 +9,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SettingsApp } from "@/entrypoints/popup/App";
 import en from "@/public/_locales/en/messages.json";
-import { AI_SECRETS_KEY } from "@/src/contracts/ai";
+import { AI_PROVIDER_TEST_KEY, AI_SECRETS_KEY } from "@/src/contracts/ai";
 import { SETTINGS_KEY } from "@/src/contracts/config";
 import { DEBUG_LOG_KEY, type DebugLogEntry } from "@/src/contracts/debug-log";
 import { DEFAULTS } from "@/src/domain/defaults";
@@ -167,6 +167,32 @@ describe("Jev second pass settings", () => {
 				expect.objectContaining({ aiFilterEnabled: true }),
 			]);
 		});
+	});
+
+	it("shows the cached connection result as a dot on the provider row", async () => {
+		installChromeMock({
+			sync: { [SETTINGS_KEY]: DEFAULTS },
+			local: {
+				[AI_PROVIDER_TEST_KEY]: {
+					typesafe: { ok: false, at: 1, detail: "http-401" },
+				},
+			},
+		});
+		render(<SettingsApp activeSection="ai-models" />);
+
+		const dot = await screen.findByRole("img", {
+			name: copy("ai_model_test_failed"),
+		});
+		expect(dot.getAttribute("title")).toContain("http-401");
+	});
+
+	it("marks a provider that was never tested", async () => {
+		installChromeMock({ sync: { [SETTINGS_KEY]: DEFAULTS } });
+		render(<SettingsApp activeSection="ai-models" />);
+
+		expect(
+			await screen.findByRole("img", { name: copy("ai_model_test_untested") }),
+		).toBeTruthy();
 	});
 
 	it("portals the Jev model menu so the settings panel cannot clip it", async () => {

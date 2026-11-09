@@ -3,8 +3,11 @@ import { createPortal } from "react-dom";
 import { t } from "@/lib/i18n";
 import {
 	AI_PROVIDER,
+	AI_PROVIDER_TEST_KEY,
 	AI_SECRETS_KEY,
+	type AiProviderTest,
 	aiKeyFor,
+	parseAiProviderTests,
 	parseAiSecrets,
 } from "@/src/contracts/ai";
 import {
@@ -34,6 +37,7 @@ import {
 	MXGA_DATA_URL,
 	MXGA_REPO_URL,
 } from "@/src/domain/account-list";
+import { buildProviderProbe, judgeProbeResponse } from "@/src/domain/ai-test";
 import {
 	defaultRuleData,
 	MAX_DIM_OPACITY,
@@ -2047,13 +2051,38 @@ function Dialog({
 }
 
 /** One configured provider, collapsed to what a picker needs. */
+/** Connection state of one provider, as a dot beside its name. */
+function ProviderTestDot({ test }: { test?: AiProviderTest }) {
+	const label = !test
+		? t("ai_model_test_untested")
+		: test.ok
+			? t("ai_model_test_ok")
+			: t("ai_model_test_failed");
+	// Untested reads as an empty ring, so a dot always means "tested".
+	const tone = !test
+		? "border border-x-border bg-transparent"
+		: test.ok
+			? "bg-emerald-500"
+			: "bg-x-red";
+	return (
+		<span
+			role="img"
+			aria-label={label}
+			title={test?.detail ? `${label} (${test.detail})` : label}
+			className={`h-2 w-2 shrink-0 rounded-full ${tone}`}
+		/>
+	);
+}
+
 function AiProviderRow({
 	provider,
 	hasKey,
+	test,
 	onEdit,
 }: {
 	provider: AiProviderConfig;
 	hasKey: boolean;
+	test?: AiProviderTest;
 	onEdit: () => void;
 }) {
 	return (
@@ -2063,6 +2092,7 @@ function AiProviderRow({
 					<span className="truncate text-sm font-medium">
 						{provider.label || t("ai_model_untitled")}
 					</span>
+					<ProviderTestDot test={test} />
 				</span>
 				<span className="truncate font-mono text-[11px] text-x-muted">
 					{provider.endpoint || "—"} · {provider.model || "—"}
@@ -2086,19 +2116,25 @@ function AiProviderRow({
 function AiProviderDialog({
 	draft,
 	initialKey,
+	test,
 	onClose,
 	onSave,
+	onTested,
 	onRemove,
 }: {
 	draft: AiProviderDraft;
 	initialKey: string;
+	test?: AiProviderTest;
 	onClose: () => void;
 	onSave: (draft: AiProviderDraft, apiKey: string) => void;
+	onTested: (test: AiProviderTest) => void;
 	onRemove?: () => void;
 }) {
 	const [form, setForm] = useState(draft);
 	const [apiKey, setApiKey] = useState(initialKey);
 	const [revealed, setRevealed] = useState(false);
+	const [testing, setTesting] = useState(false);
+	const [testError, setTestError] = useState("");
 	const fieldId = `ai-provider-${draft.id}`;
 	const title = draft.isNew
 		? t(draft.kind === "jev" ? "ai_model_add_jev" : "ai_model_add_llm")
@@ -2106,6 +2142,52 @@ function AiProviderDialog({
 
 	function patch(next: Partial<AiProviderDraft>) {
 		setForm((current) => ({ ...current, ...next }));
+	}
+
+	/**
+	 * Probe the endpoint with the values currently in the form, not the saved
+	 * ones: the point of the button is to check a URL before committing to it.
+	 */
+	async function runTest() {
+		setTestError("");
+		const probe = buildProviderProbe(form, apiKey.trim());
+		if (!probe) {
+			setTestError(t("ai_model_test_incomplete"));
+			return;
+		}
+		const origin = originPatternFor(form.endpoint);
+		if (!origin) {
+			setTestError(t("ai_filter_endpoint_required"));
+			return;
+		}
+		// Testing without a grant would only produce a network error that says
+		// nothing about the provider.
+		const granted = await chrome.permissions
+			.request({ origins: [origin] })
+			.catch(() => false);
+		if (!granted) {
+			setTestError(t("ai_filter_permission_denied"));
+			return;
+		}
+		setTesting(true);
+		try {
+			const response = await fetch(probe.url, probe.init);
+			const payload = await response.json().catch(() => null);
+			const verdict = judgeProbeResponse(form.kind, response.status, payload);
+			onTested({
+				ok: verdict.ok,
+				at: Date.now(),
+				...(verdict.detail ? { detail: verdict.detail } : {}),
+			});
+		} catch (error) {
+			onTested({
+				ok: false,
+				at: Date.now(),
+				detail: error instanceof Error ? error.message : String(error),
+			});
+		} finally {
+			setTesting(false);
+		}
 	}
 
 	return (
@@ -2218,6 +2300,28 @@ function AiProviderDialog({
 					</button>
 				</div>
 			</div>
+			<div className="flex items-center justify-between gap-3 border-t border-x-border pt-3">
+				<span className="flex min-w-0 items-center gap-2 text-xs text-x-muted">
+					<ProviderTestDot test={test} />
+					<span className="truncate">
+						{testError
+							? testError
+							: !test
+								? t("ai_model_test_untested")
+								: test.ok
+									? t("ai_model_test_ok")
+									: `${t("ai_model_test_failed")}${test.detail ? ` · ${test.detail}` : ""}`}
+					</span>
+				</span>
+				<button
+					type="button"
+					onClick={() => void runTest()}
+					disabled={testing}
+					className="shrink-0 cursor-pointer rounded-full border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-progress disabled:opacity-60"
+				>
+					{testing ? t("ai_model_testing") : t("ai_model_test")}
+				</button>
+			</div>
 		</Dialog>
 	);
 }
@@ -2237,6 +2341,7 @@ function AiModelsPage({
 	const [draft, setDraft] = useState<AiProviderDraft | null>(null);
 	const [draftKey, setDraftKey] = useState("");
 	const [keyed, setKeyed] = useState<Record<string, boolean>>({});
+	const [tests, setTests] = useState<Record<string, AiProviderTest>>({});
 
 	useEffect(() => {
 		const read = () =>
@@ -2261,6 +2366,32 @@ function AiModelsPage({
 		chrome.storage.onChanged.addListener(onChange);
 		return () => chrome.storage.onChanged.removeListener(onChange);
 	}, []);
+
+	useEffect(() => {
+		const read = () =>
+			chrome.storage.local.get(AI_PROVIDER_TEST_KEY).then((stored) => {
+				setTests(parseAiProviderTests(stored[AI_PROVIDER_TEST_KEY]));
+			});
+		void read();
+		const onChange = (
+			changes: { [key: string]: chrome.storage.StorageChange },
+			area: string,
+		) => {
+			if (area === "local" && changes[AI_PROVIDER_TEST_KEY]) void read();
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => chrome.storage.onChanged.removeListener(onChange);
+	}, []);
+
+	/** Cache a probe result so the list can show it without re-testing. */
+	function recordTest(providerId: string, test: AiProviderTest) {
+		setTests((current) => ({ ...current, [providerId]: test }));
+		void chrome.storage.local.get(AI_PROVIDER_TEST_KEY).then((stored) => {
+			const map = parseAiProviderTests(stored[AI_PROVIDER_TEST_KEY]);
+			map[providerId] = test;
+			return chrome.storage.local.set({ [AI_PROVIDER_TEST_KEY]: map });
+		});
+	}
 
 	function openNew(kind: AiProviderKind) {
 		setDraft({
@@ -2319,6 +2450,12 @@ function AiModelsPage({
 			delete byProvider[id];
 			return chrome.storage.local.set({ [AI_SECRETS_KEY]: { byProvider } });
 		});
+		void chrome.storage.local.get(AI_PROVIDER_TEST_KEY).then((stored) => {
+			const map = parseAiProviderTests(stored[AI_PROVIDER_TEST_KEY]);
+			if (!(id in map)) return;
+			delete map[id];
+			return chrome.storage.local.set({ [AI_PROVIDER_TEST_KEY]: map });
+		});
 		setDraft(null);
 	}
 
@@ -2348,6 +2485,7 @@ function AiModelsPage({
 							key={provider.id}
 							provider={provider}
 							hasKey={Boolean(keyed[provider.id])}
+							test={tests[provider.id]}
 							onEdit={() => void openEdit(provider)}
 						/>
 					))
@@ -2382,8 +2520,10 @@ function AiModelsPage({
 					key={draft.id}
 					draft={draft}
 					initialKey={draftKey}
+					test={tests[draft.id]}
 					onClose={() => setDraft(null)}
 					onSave={save}
+					onTested={(test) => recordTest(draft.id, test)}
 					{...(!draft.isNew && !draft.builtin
 						? { onRemove: () => remove(draft.id) }
 						: {})}

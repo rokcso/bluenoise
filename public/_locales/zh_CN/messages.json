@@ -404,5 +404,11 @@
 	"ai_model_dialog_hint": {
 		"message": "仅保存在本机。API Key 不会被同步，也不会写入规则导出文件。"
 	},
+	"ai_model_test": { "message": "测试" },
+	"ai_model_testing": { "message": "测试中…" },
+	"ai_model_test_ok": { "message": "连接正常" },
+	"ai_model_test_failed": { "message": "连接失败" },
+	"ai_model_test_untested": { "message": "未测试" },
+	"ai_model_test_incomplete": { "message": "请先填写接口地址和模型。" },
 	"filter_reason_ai": { "message": "Jev 判定为噪音（$1）" }
 }

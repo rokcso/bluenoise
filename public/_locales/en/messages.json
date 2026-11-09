@@ -412,5 +412,13 @@
 	"ai_model_dialog_hint": {
 		"message": "Saved on this device only. The API key is never synced or exported."
 	},
+	"ai_model_test": { "message": "Test" },
+	"ai_model_testing": { "message": "Testing…" },
+	"ai_model_test_ok": { "message": "Connection works" },
+	"ai_model_test_failed": { "message": "Connection failed" },
+	"ai_model_test_untested": { "message": "Not tested" },
+	"ai_model_test_incomplete": {
+		"message": "Fill in the endpoint and model first."
+	},
 	"filter_reason_ai": { "message": "Jev: likely noise ($1)" }
 }

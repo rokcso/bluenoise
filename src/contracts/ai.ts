@@ -13,6 +13,8 @@ export const AI_SECRETS_KEY = "ai-secrets";
 export const AI_CACHE_KEY = "ai-filter-cache";
 /** Storage key for the quota guard: rolling request window plus cooldown. */
 export const AI_GATE_KEY = "ai-gate";
+/** Storage key for the last connection test per provider. */
+export const AI_PROVIDER_TEST_KEY = "ai-provider-tests";
 
 /** The provider this feature is built around. Metadata only; no key material. */
 export const AI_PROVIDER = {
@@ -119,6 +121,35 @@ export function aiKeyFor(secrets: AiSecrets, providerId: string): string {
  */
 export type AiCacheMap = Record<string, AiCache>;
 export type AiGateMap = Record<string, AiGate>;
+
+/** Outcome of the last connection test for one provider. */
+export interface AiProviderTest {
+	ok: boolean;
+	at: number;
+	/** Short machine-ish reason shown to the user; absent when ok. */
+	detail?: string;
+}
+
+export type AiProviderTestMap = Record<string, AiProviderTest>;
+
+export function parseAiProviderTests(value: unknown): AiProviderTestMap {
+	const stored = value as Record<string, unknown> | undefined;
+	if (!stored || typeof stored !== "object") return {};
+	const map: AiProviderTestMap = {};
+	for (const [id, entry] of Object.entries(stored)) {
+		if (!id) continue;
+		const test = entry as Partial<AiProviderTest> | undefined;
+		if (typeof test?.ok !== "boolean" || typeof test.at !== "number") continue;
+		map[id] = {
+			ok: test.ok,
+			at: test.at,
+			...(typeof test.detail === "string" && test.detail
+				? { detail: test.detail }
+				: {}),
+		};
+	}
+	return map;
+}
 
 function looksLikeVerdict(value: unknown): boolean {
 	const entry = value as Partial<AiVerdict> | undefined;
