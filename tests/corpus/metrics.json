@@ -1,0 +1,14 @@
+{
+	"corpus_version": 1,
+	"builtin_rule_count": 387,
+	"cases": 32,
+	"scored": 28,
+	"known_limitation": 4,
+	"tp": 12,
+	"fp": 0,
+	"fn": 0,
+	"tn": 16,
+	"precision": 1,
+	"recall": 1,
+	"accuracy": 1
+}

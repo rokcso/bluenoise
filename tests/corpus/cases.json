@@ -1,0 +1,183 @@
+{
+	"corpus_version": 1,
+	"description": "Golden cases for the built-in keyword list (data/keywords.txt). Every entry is a real shape seen on Chinese X: spam posts that must be caught, and legitimate posts that must not be. A rule change that flips any case fails the suite on purpose — precision is the product, so it may not drift silently. `known_limitation` cases are recorded flips we accept, and are counted separately so they cannot hide a regression.",
+	"cases": [
+		{
+			"id": "spam-direct-adult-invite",
+			"text": "真实线下 点我主页 进群选人",
+			"expected": "spam",
+			"note": "Three spam phrases stacked, the classic bot template."
+		},
+		{
+			"id": "spam-contact-to-profile",
+			"text": "哥哥宝藏 添加主页微信 自取资源",
+			"expected": "spam"
+		},
+		{
+			"id": "spam-single-male-ask",
+			"text": "有没有单男 附近约p 全天可约",
+			"expected": "spam"
+		},
+		{
+			"id": "spam-student-bait",
+			"text": "学生求哥哥照顾 处男免费 线下直接对接",
+			"expected": "spam"
+		},
+		{
+			"id": "spam-schedule-frame",
+			"text": "不分早晚 昼夜不拒 晨昏不拒 寻欢必备",
+			"expected": "spam",
+			"note": "Spintax filler lines that only exist to defeat exact matching."
+		},
+		{
+			"id": "spam-kuaishou-teaser",
+			"text": "我好奇去快手搜了一下还真的是他 快手的一个网黄",
+			"expected": "spam",
+			"note": "Teaser toward an off-platform adult account."
+		},
+		{
+			"id": "spam-video-collection",
+			"text": "整理了大赛合集 完整的存好 合集视频来了",
+			"expected": "spam"
+		},
+		{
+			"id": "spam-ai-adult-roleplay",
+			"text": "AI女友在线成人角色扮演 零注册零下载",
+			"expected": "spam"
+		},
+		{
+			"id": "spam-comparison-bait",
+			"text": "没她好看 比她骚 就她的主页能打",
+			"expected": "spam",
+			"note": "Comparison bait that funnels to a profile."
+		},
+		{
+			"id": "spam-variant-sao",
+			"text": "sao货 玩的就是反差",
+			"expected": "spam"
+		},
+		{
+			"id": "spam-quoting-link-hint",
+			"text": "进群选人 dd个线下的",
+			"expected": "spam"
+		},
+		{
+			"id": "clean-quoting-spam",
+			"text": "这条广告说“进群选人 点我主页”，看到就举报，别点。",
+			"expected": "clean",
+			"note": "Quoting spam to report it matches the quoted phrase. Fixing this needs quote-context detection (the surrounding sentence says 广告/举报/别点), which the matcher deliberately does not do today.",
+			"known_limitation": true
+		},
+		{
+			"id": "clean-english-quoting-spam",
+			"text": "This scam DM literally says 真实线下 点我主页 — report it.",
+			"expected": "clean",
+			"known_limitation": true,
+			"note": "Same as clean-quoting-spam: an English sentence quoting Chinese spam still matches the phrase."
+		},
+		{
+			"id": "clean-metadiscussion",
+			"text": "最近评论区全是机器人，关键词过滤把“真实线下”“点我主页”这类都拦掉了。",
+			"expected": "clean",
+			"known_limitation": true,
+			"note": "Talking *about* the spam phrases trips them. Needs the same quote-context signal."
+		},
+		{
+			"id": "clean-self-intro",
+			"text": "我是一个产品经理，喜欢摄影和长跑，周末常去爬山。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-everyday-word-zipai",
+			"text": "今天自拍了一张，光线不错。",
+			"expected": "clean",
+			"note": "Over-matched before the list was trimmed; short everyday words must stay clean."
+		},
+		{
+			"id": "clean-everyday-word-siwang",
+			"text": "这家店的丝袜质量还可以，价格也公道。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-everyday-word-renqi",
+			"text": "他老婆人妻感很强，演得挺好。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-politics",
+			"text": "这个政策对小微企业的影响还需要观察。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-code",
+			"text": "const result = await fetch(url).then((r) => r.json());",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-crypto-topic",
+			"text": "比特币今天又跌了，市场情绪很差。",
+			"expected": "clean",
+			"note": "Topic words are deliberately left to the opt-in community lists."
+		},
+		{
+			"id": "clean-vpn-topic",
+			"text": "公司内网要用 VPN 才能连上。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-price-with-number",
+			"text": "这台二手相机 3200 出，成色九成新。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-id-like",
+			"text": "订单号 1234567890 麻烦帮我查一下物流。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-substring-idiom",
+			"text": "他做事一向不分早晚，随时都在回消息。",
+			"expected": "clean",
+			"note": "“不分早晚” is ordinary speech in a longer sentence, but it is also a spintax filler line in the list. Short filler phrases carry this risk by construction.",
+			"known_limitation": true
+		},
+		{
+			"id": "clean-news-report",
+			"text": "警方通报：某平台因涉黄被处罚，相关账号已封禁。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-product-review",
+			"text": "用了三个月，续航比宣传的差一点，其他都还行。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-sports",
+			"text": "昨晚那场球真心精彩，最后三分钟翻盘。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-job-post",
+			"text": "招前端一名，三年以上经验，远程可谈。",
+			"expected": "clean"
+		},
+		{
+			"id": "clean-adult-discussion",
+			"text": "性教育读物推荐：这本适合初中生家长一起读。",
+			"expected": "clean",
+			"note": "Talking about sex education is not solicitation."
+		},
+		{
+			"id": "spam-quote-reproducing-whole-template",
+			"text": "看一下这个号：真实线下 点我主页 进群选人 附近约p 全天可约 找我",
+			"expected": "spam",
+			"note": "A quote that reproduces the whole template is still spam-shaped; catching it is the right call."
+		},
+		{
+			"id": "clean-lonely-homepage-word",
+			"text": "我在主页放了个链接，有兴趣可以看看。",
+			"expected": "clean",
+			"note": "“主页” alone is legitimate: only the longer spam phrases are in the list."
+		}
+	]
+}

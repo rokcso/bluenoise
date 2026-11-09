@@ -1,0 +1,38 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`keyword corpus > keeps every case on its recorded verdict 1`] = `
+{
+  "clean-adult-discussion": null,
+  "clean-code": null,
+  "clean-crypto-topic": null,
+  "clean-english-quoting-spam": "真实线下",
+  "clean-everyday-word-renqi": null,
+  "clean-everyday-word-siwang": null,
+  "clean-everyday-word-zipai": null,
+  "clean-id-like": null,
+  "clean-job-post": null,
+  "clean-lonely-homepage-word": null,
+  "clean-metadiscussion": "真实线下",
+  "clean-news-report": null,
+  "clean-politics": null,
+  "clean-price-with-number": null,
+  "clean-product-review": null,
+  "clean-quoting-spam": "进群选人",
+  "clean-self-intro": null,
+  "clean-sports": null,
+  "clean-substring-idiom": "不分早晚",
+  "clean-vpn-topic": null,
+  "spam-ai-adult-roleplay": "ai女友在线成人角色扮演",
+  "spam-comparison-bait": "没她好看",
+  "spam-contact-to-profile": "哥哥宝藏",
+  "spam-direct-adult-invite": "真实线下",
+  "spam-kuaishou-teaser": "我好奇去快手搜了一下还真的是他",
+  "spam-quote-reproducing-whole-template": "真实线下",
+  "spam-quoting-link-hint": "进群选人",
+  "spam-schedule-frame": "不分早晚",
+  "spam-single-male-ask": "有没有单男",
+  "spam-student-bait": "学生求哥哥照顾",
+  "spam-variant-sao": "sao货",
+  "spam-video-collection": "整理了大赛合集",
+}
+`;

@@ -1,0 +1,53 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to the same branch makes the previous run obsolete.
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.24.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # --frozen-lockfile: the lockfile is the contract, CI must not resolve anew.
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint and format
+        run: pnpm check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      # The corpus report is only a snapshot in the repo; fail if it drifts, so a
+      # rule change that moves precision has to update metrics.json in the PR.
+      - name: Keyword corpus metrics are up to date
+        run: |
+          pnpm corpus:report
+          git diff --exit-code tests/corpus/metrics.json
+
+      - name: Build extension
+        run: pnpm build

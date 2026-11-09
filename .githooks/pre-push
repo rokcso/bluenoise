@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# Refuse to push code that does not pass the gate.
+#
+# `pnpm install` points core.hooksPath here (see the prepare script), so a
+# fresh clone gets this automatically. Bypass only when you know why:
+#   git push --no-verify
+
+set -e
+
+echo 'pre-push: running pnpm verify (skip with --no-verify)'
+pnpm verify

@@ -6,7 +6,8 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"ignoreUnknown": false
+		"ignoreUnknown": false,
+		"includes": ["**", "!tests/__snapshots__", "!tests/corpus/metrics.json"]
 	},
 	"formatter": {
 		"enabled": true,
