@@ -437,5 +437,15 @@
 	"ai_llm_key_required": {
 		"message": "请先在「AI 模型」页面为选中的 LLM 模型填写 API Key。"
 	},
+	"filter_reason_behavior_burst": { "message": "$2 秒内回复了 $1 个不同账号" },
+	"filter_reason_behavior_flood": { "message": "$2 秒内发了 $1 条回复" },
+	"filter_reason_behavior_cadence": { "message": "$2 条回复平均每 $1 秒一条" },
+	"filter_reason_behavior_regular": { "message": "$2 条回复固定每 $1 秒一条" },
+	"filter_reason_behavior_opening": { "message": "$1 条回复使用同一开头" },
+	"filter_reason_behavior_phrase": { "message": "$1 条回复复用同一段措辞" },
+	"behavior_filter": { "message": "识别机器人回复农场" },
+	"behavior_filter_hint": {
+		"message": "标记以机器速度回复大量不同账号的号。用页面里已有的发帖时间在本地判断：不调模型、不联网，记录 24 小时后自动丢弃。"
+	},
 	"filter_reason_ai": { "message": "AI 判定：疑似噪音（$1）" }
 }

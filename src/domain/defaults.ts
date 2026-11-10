@@ -55,6 +55,7 @@ export const DEFAULTS: AppConfig = {
 	ignoreSpaces: true,
 	caseSensitive: false,
 	debugLogging: false,
+	behaviorFilterEnabled: false,
 	aiFilterEnabled: false,
 	aiProviders: [AI_BUILTIN_PROVIDER],
 	aiFilterProviderId: AI_DEFAULT_PROVIDER_ID,

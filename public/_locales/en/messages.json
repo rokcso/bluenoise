@@ -449,5 +449,25 @@
 	"ai_llm_key_required": {
 		"message": "Add an API key for the selected LLM model on the AI models page."
 	},
+	"filter_reason_behavior_burst": {
+		"message": "Replied to $1 accounts in $2s"
+	},
+	"filter_reason_behavior_flood": { "message": "$1 replies in $2s" },
+	"filter_reason_behavior_cadence": {
+		"message": "One reply every $1s across $2 replies"
+	},
+	"filter_reason_behavior_regular": {
+		"message": "Fixed $1s cadence across $2 replies"
+	},
+	"filter_reason_behavior_opening": {
+		"message": "Same opening line across $1 replies"
+	},
+	"filter_reason_behavior_phrase": {
+		"message": "Same wording reused across $1 replies"
+	},
+	"behavior_filter": { "message": "Detect reply farms" },
+	"behavior_filter_hint": {
+		"message": "Flag accounts that reply to many different people at machine speed. Judged locally from post times already in the page: no model, no network, and the history is discarded after 24 hours."
+	},
 	"filter_reason_ai": { "message": "AI-matched: likely noise ($1)" }
 }

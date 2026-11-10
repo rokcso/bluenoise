@@ -6,7 +6,12 @@ import {
 	createAiSecondPass,
 } from "@/src/content/ai-second-pass";
 import type { FilteredLog } from "@/src/content/article-classifier";
+import { createBehaviorSource } from "@/src/content/behavior-source";
 import { createArticleEvaluator } from "@/src/content/evaluation";
+import type {
+	BehaviorReasonSignal,
+	FilterReason,
+} from "@/src/content/filter-reason";
 import { createLatestRevision } from "@/src/content/latest-revision";
 import { handleContentProcessingError } from "@/src/content/lifecycle";
 import birdSvg from "@/src/content/logo-twitter.svg?raw";
@@ -40,10 +45,12 @@ import {
 	rowOf,
 	statusIdFromPath,
 	TWEET_TEXT_SEL,
+	tweetIdOf,
 	USER_NAME_SEL,
 } from "@/src/content/selectors";
 import { drainWithinBudget, type ScanTrigger } from "@/src/content/work-budget";
 import type { AiEvaluateResponse } from "@/src/contracts/ai";
+import { BEHAVIOR_HISTORY_KEY } from "@/src/contracts/behavior";
 import type {
 	AppConfig,
 	Matchers,
@@ -56,6 +63,7 @@ import {
 	type DebugLogLevel,
 	serializeDebugError,
 } from "@/src/contracts/debug-log";
+import type { BehaviorVerdict } from "@/src/domain/account-behavior";
 import {
 	type AccountListIndex,
 	type AccountListSnapshot,
@@ -74,6 +82,7 @@ import {
 	createRuleView,
 	loadRuleData,
 } from "@/src/domain/rules";
+import { postedAtFromStatusId } from "@/src/domain/snowflake";
 
 const REVEAL_RADIUS = 40;
 const MODE_ATTR = "data-bluenoise-mode";
@@ -287,6 +296,51 @@ function aiParentText(): string {
 	return first ? readTextContent(first.querySelector(TWEET_TEXT_SEL)) : "";
 }
 
+/**
+ * Records every reply's post time per account and flags machine-speed replies.
+ * Local only: the history never leaves the browser.
+ */
+/** Hit marker for a reply the behavior source flagged. */
+const BEHAVIOR_HIT = "behavior:farm";
+
+/**
+ * Turn a verdict into a reason the user can argue with. The strongest signal
+ * supplies the wording: it is the one that actually pushed the score over.
+ */
+function behaviorReason(verdict: BehaviorVerdict): FilterReason {
+	const strongest = [...verdict.signals].sort((a, b) => b.weight - a.weight)[0];
+	const id = strongest?.id;
+	const signal: BehaviorReasonSignal =
+		id === "cadence" || id === "regular" ? id : mapBehaviorSignal(id);
+	return {
+		category: "behavior",
+		signal,
+		replies: verdict.replies,
+		windowSeconds: verdict.windowSeconds,
+		...(verdict.medianGapSeconds !== undefined
+			? { medianGapSeconds: verdict.medianGapSeconds }
+			: {}),
+	};
+}
+
+/** Signals the reason text can describe; the rest fall back to the burst wording. */
+function mapBehaviorSignal(
+	id: BehaviorVerdict["signals"][number]["id"] | undefined,
+): Extract<BehaviorReasonSignal, "burst" | "flood" | "opening" | "phrase"> {
+	if (id === "flood" || id === "opening" || id === "phrase") return id;
+	return "burst";
+}
+
+const behaviorSource = createBehaviorSource({
+	load: () =>
+		chrome.storage.local
+			.get(BEHAVIOR_HISTORY_KEY)
+			.then((stored) => stored[BEHAVIOR_HISTORY_KEY]),
+	save: (history) =>
+		chrome.storage.local.set({ [BEHAVIOR_HISTORY_KEY]: history }),
+	log: (event, details) => debugLog(event, details),
+});
+
 const aiSecondPass = createAiSecondPass({
 	isDead: () => dead,
 	isActive: () =>
@@ -317,6 +371,20 @@ const evaluator = createArticleEvaluator({
 	isMainTweet,
 	applyMark: (article, hit, reason) => marker.applyMark(article, hit, reason),
 	queueForAi: (article, text) => aiSecondPass.queue(article, text),
+	judgeBehavior: ({ article, text, handle }) => {
+		if (!cfg.behaviorFilterEnabled || !cfg.enabled) return null;
+		if (!handle) return null;
+		const at = postedAtFromStatusId(tweetIdOf(article));
+		if (!at) return null;
+		const verdict = behaviorSource.judge({
+			handle,
+			at,
+			parent: currentStatusId(),
+			text,
+		});
+		if (!verdict) return null;
+		return { hit: BEHAVIOR_HIT, reason: behaviorReason(verdict) };
+	},
 });
 
 /** Effect switch: only touch one attribute and one CSS variable on <html>. */
@@ -886,6 +954,9 @@ function scheduleRescans(trigger: ScanTrigger): void {
 }
 
 function start(trigger: ScanTrigger): void {
+	// Hydrate the per-account history before the first scan so early replies are
+	// judged with whatever evidence the previous page views already gathered.
+	void behaviorSource.ready();
 	startObserving();
 	applyStyleVars();
 	scheduleRescans(trigger);
@@ -937,6 +1008,7 @@ function teardown(): void {
 	if (cleanupFrame) cancelAnimationFrame(cleanupFrame);
 	cleanupFrame = 0;
 	revealController.stop();
+	void behaviorSource.flush();
 	window.removeEventListener("popstate", onUrlChange);
 	window.removeEventListener("pageshow", onPageShow);
 	document.removeEventListener("visibilitychange", onVisibility);
@@ -1051,6 +1123,7 @@ async function readStoredState(): Promise<{ cfg: AppConfig; rules: RuleData }> {
 
 const MATCH_KEYS = [
 	"enabled",
+	"behaviorFilterEnabled",
 	"aiFilterEnabled",
 	"aiLlmEnabled",
 	// Editing the preference changes the question, so cached verdicts are stale.

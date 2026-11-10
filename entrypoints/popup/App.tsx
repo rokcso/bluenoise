@@ -572,6 +572,13 @@ export function SettingsApp({
 									checked={config.filterAutomatedAccounts}
 									onChange={(v) => update({ filterAutomatedAccounts: v })}
 								/>
+								<SettingsDivider />
+								<XToggle
+									label={t("behavior_filter")}
+									hint={t("behavior_filter_hint")}
+									checked={config.behaviorFilterEnabled}
+									onChange={(v) => update({ behaviorFilterEnabled: v })}
+								/>
 							</SettingsPanel>
 						</SettingsGroup>
 						<SettingsGroup

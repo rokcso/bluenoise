@@ -111,6 +111,17 @@ export interface ArticleEvaluatorOptions {
 	): void;
 	/** Hand an unmatched reply to the Jev second pass. */
 	queueForAi?(article: Element, text: string, name: string): void;
+	/**
+	 * Record the reply for the behavior source and return a verdict when the
+	 * account looks automated. Called for every reply, including the ones that
+	 * pass: the timing of unfiltered replies is the evidence.
+	 */
+	judgeBehavior?(input: {
+		article: Element;
+		text: string;
+		/** Author handle, or "" when it could not be read. */
+		handle: string;
+	}): { hit: string; reason: FilterReason } | null;
 }
 
 /** Preset filters that are enabled for this config, in precedence order. */
@@ -257,15 +268,39 @@ export function createArticleEvaluator(
 			);
 		}
 
-		state.set(article, { sig, preset, ...decision });
-		options.applyMark(article, decision.hit, decision.reason);
+		// The behavior source runs last: it needs the reply's text and author, and
+		// it must not override a local rule hit or a whitelist decision, both of
+		// which are explicit statements from the user.
+		let finalDecision = decision;
+		if (
+			options.judgeBehavior &&
+			!mainTweet &&
+			!decision.hit &&
+			!decision.whitelisted
+		) {
+			const verdict = options.judgeBehavior({
+				article,
+				text,
+				// Cheap: the name subtree is already parsed for matching above.
+				handle: readAuthorIdentity(article, false).handle ?? "",
+			});
+			if (verdict)
+				finalDecision = {
+					...decision,
+					hit: verdict.hit,
+					reason: verdict.reason,
+				};
+		}
+
+		state.set(article, { sig, preset, ...finalDecision });
+		options.applyMark(article, finalDecision.hit, finalDecision.reason);
 		// Jev only ever sees replies that no local rule matched, and never one the
 		// user explicitly whitelisted. It is a second opinion, not a replacement
 		// for the keyword and account lists.
 		if (
 			cfg.aiFilterEnabled &&
 			!mainTweet &&
-			!decision.hit &&
+			!finalDecision.hit &&
 			!decision.whitelisted
 		)
 			options.queueForAi?.(article, text, name);
@@ -277,7 +312,7 @@ export function createArticleEvaluator(
 				? "main-tweet"
 				: !hasActiveRules
 					? "no-active-rules"
-					: decision.hit
+					: finalDecision.hit
 						? "filtered"
 						: "no-match",
 		};

@@ -1,3 +1,12 @@
+/** Behavior signals that have user-facing wording. */
+export type BehaviorReasonSignal =
+	| "burst"
+	| "flood"
+	| "cadence"
+	| "regular"
+	| "opening"
+	| "phrase";
+
 export type FilterReason =
 	| {
 			category: "keyword";
@@ -7,6 +16,17 @@ export type FilterReason =
 	  }
 	| { category: "account"; source: string }
 	| { category: "ai"; probability: number }
+	| {
+			category: "behavior";
+			/** Which evidence fired; the label explains it in the user's language. */
+			signal: BehaviorReasonSignal;
+			/** Replies the signal looked at. */
+			replies: number;
+			/** Window length in seconds. */
+			windowSeconds: number;
+			/** Median gap in seconds, when the signal is about cadence. */
+			medianGapSeconds?: number;
+	  }
 	| {
 			category: "preset";
 			type: "ad" | "parody" | "fan" | "commentary" | "automated";
@@ -40,6 +60,24 @@ export function formatFilterReason(
 		return translate(
 			"filter_reason_ai",
 			`${Math.round(reason.probability * 100)}%`,
+		);
+	}
+	if (reason.category === "behavior") {
+		// The numbers are the point: showing "8 replies to different accounts in
+		// 60s" lets the user disagree with the rule instead of trusting a black box.
+		const seconds = String(reason.windowSeconds);
+		const replies = String(reason.replies);
+		if (reason.signal === "cadence" || reason.signal === "regular") {
+			return translate(
+				`filter_reason_behavior_${reason.signal}`,
+				String(reason.medianGapSeconds ?? 0),
+				replies,
+			);
+		}
+		return translate(
+			`filter_reason_behavior_${reason.signal}`,
+			replies,
+			seconds,
 		);
 	}
 	return translate(`filter_reason_${reason.type}`);

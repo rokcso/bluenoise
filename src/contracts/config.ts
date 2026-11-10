@@ -65,6 +65,11 @@ export interface AppConfig {
 	 * API key lives in `storage.local`, never synced or exported.
 	 */
 	aiFilterEnabled: boolean;
+	/**
+	 * Experimental: flag replies from accounts that post at machine speed across
+	 * different threads. Purely local — no model, no network, no tokens.
+	 */
+	behaviorFilterEnabled: boolean;
 	/** Configured AI providers. No credentials: those stay in `storage.local`. */
 	aiProviders: import("@/src/contracts/ai-providers").AiProviderConfig[];
 	/** Which `jev` provider the second pass calls. */
