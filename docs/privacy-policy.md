@@ -24,9 +24,15 @@ BlueNoise makes limited outbound requests only to download public filter lists:
 
 - `raw.githubusercontent.com`: public keyword lists from the community projects shown in its settings page.
 - `x.zuoluo.tv`: the public community account blacklist/whitelist from the Make X Great Again project, only when you enable external account lists in settings.
-- `api.typesafe.ai`: the Jev API from TypeSafe AI, only when you turn on the experimental **Jev second pass** in settings and enter your own TypeSafe API key. In that mode the text of replies that no rule matched, and the text of the post they reply to when you are on a post page, are sent to TypeSafe to be classified. No page content is sent while the feature is off.
+- **An AI endpoint you configure yourself**, only when you turn on one of the experimental AI passes in settings and add a model provider with your own API key. The two passes are independent switches:
+  - the **Jev second pass** sends replies that no rule matched, plus the post they reply to, to the endpoint you entered (by default `api.typesafe.ai`);
+  - the **LLM second pass** sends the same content to the chat-completion endpoint you entered, together with the filtering preference you wrote as the criterion.
 
-Your TypeSafe API key is stored only in this browser's local extension storage. It is never synced to your browser account and never included in a rules export.
+  No page content is sent while both features are off. The endpoint is whatever you typed on the AI models page: BlueNoise ships with the TypeSafe default and does not otherwise choose a third party for you.
+
+Your API keys are stored only in this browser's local extension storage. They are never synced to your browser account and never included in a rules export.
+
+The reply-farm detector is not a network feature: it compares post times already present in the page and keeps a bounded per-account history in local storage for up to 24 hours. Nothing is uploaded, and no model is called.
 
 Downloads happen when a list is first obtained, on a low-frequency scheduled refresh (every 12 hours for keyword lists, every 6 hours for account lists), or when you explicitly choose to sync. These requests do not include your X account data, custom keywords, whitelist, or browsing history.
 

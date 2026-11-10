@@ -92,7 +92,24 @@ BlueNoise 注册四个右键菜单项，仅在用户在 X 页面选中文本时�
 
 ### Host permission（主机权限说明）
 
-扩展申请两个收窄的站点权限。`https://raw.githubusercontent.com/*` 用于下载设置页中展示的公开关键词列表（BlueNoise、x-spam-filter 与 x-comment-blocker）。`https://x.zuoluo.tv/*` 用于在用户启用对应外部名单时下载 Make X Great Again 的公开账号黑/白名单。下载发生在初始设置、手动同步或定时刷新时。这些权限绝不用来在这些主机上执行脚本或读取其他内容；BlueNoise 不会在 X 之外的页面注入或观察。下载文件在使用前会经过校验，请求不附带任何 cookie 或凭据。
+安装时授予两个收窄的站点权限。`https://raw.githubusercontent.com/*` 用于下载设置页中展示的公开关键词列表（BlueNoise、x-spam-filter 与 x-comment-blocker）。`https://x.zuoluo.tv/*` 用于在用户启用对应外部名单时下载 Make X Great Again 的公开账号黑/白名单。下载发生在初始设置、手动同步或定时刷新时。这些权限绝不用来在这些主机上执行脚本或读取其他内容；BlueNoise 不会在 X 之外的页面注入或观察。下载文件在使用前会经过校验，请求不附带任何 cookie 或凭据。
+
+### 可选站点权限说明（审核重点）
+
+扩展还声明了一项**可选**站点权限。它在安装时不授予，不会出现在安装提示里。
+
+BlueNoise 提供两个实验性 AI 通道，均默认关闭。它们会把未被内置规则命中的回复文本发给用户自己选择的模型，因此用户必须能填写自己的接口地址——扩展无法预知那个域名。这是宽泛可选权限存在的唯一原因。
+
+约束如下：
+
+- **按域名、运行时申请。**`chrome.permissions.request` 传入的是从用户所填地址解析出的那一个 origin（如 `https://api.example.com/*`），从不使用通配符。`optional_host_permissions` 只是「任何单个域名都可以被申请」的声明，不是安装即授予的权限。
+- **在使用的那一刻申请。**权限提示只在用户打开某个 AI 通道、或点击某个模型卡片的「测试」按钮时出现。拒绝则通道保持关闭，扩展其余功能不受影响。
+- **没有别的地方用它。**不会对该主机注入页面、不执行脚本；两个通道都关闭时不会向它发出任何请求。
+- **Key 不离开设备。**API Key 存放在 `storage.local`，不同步，也不会写入规则导出文件。
+
+审核可对照代码核验：唯一的调用点在 `entrypoints/popup/App.tsx`（`chrome.permissions.request({ origins: [origin] })`），origin 推导在 `src/contracts/ai-providers.ts`（`originPatternFor`）。
+
+与这些通道一同提供的「机器人回复农场检测」不需要任何站点权限：它只比较页面里已有的发帖时间。
 
 ### Are you using remote code?（是否使用远程代码？）
 

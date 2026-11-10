@@ -20,11 +20,14 @@ What it does
 - Optionally filters promoted posts, media or card ads, and accounts labeled by X as parody, fan, commentary, or automated.
 - Imports and exports personal rules and adds allow or block rules from the right-click menu.
 - Independently hides selected X recommendations, promotions, counters, and navigation elements.
+- Experimental, off by default: flags reply farms from posting behavior (bursts across different accounts, machine-regular cadence, reused template lines) — computed locally from post times already in the page, with no model and no network.
+- Experimental, off by default: two independent AI passes that send unmatched replies to a model you supply the endpoint and key for — a judgment model (Jev/TypeSafe by default) and/or a chat model applying a filtering preference you write.
 
 What it does not do
 
 - It does not read cookies or call X APIs.
 - It does not block, mute, follow, unfollow, post, or otherwise alter your X account - banned accounts are only dimmed or hidden locally, never actioned on X.
+- It does not send page content anywhere unless you switch on an AI pass and configure your own endpoint.
 - It does not collect analytics or send your rules to a server.
 
 ### Permissions
@@ -37,6 +40,7 @@ The extension requests the minimum permissions needed for its single purpose:
 - `contextMenus`: adds allow/block keyword and account actions for selected text, only on X pages.
 - `raw.githubusercontent.com`: downloads the public keyword lists available in the extension.
 - `x.zuoluo.tv`: downloads the public community account blacklist/whitelist (Make X Great Again) only when you enable external account lists.
+- **Optional host permission (not granted at install):** reach a user-configured AI endpoint. An experimental AI pass is off by default; a default install grants no AI host at all. When the user turns a pass on, the extension requests permission for that one origin only.
 
 ### Privacy
 
@@ -93,7 +97,24 @@ These items exist purely for convenience: users can add a filter rule from the p
 
 ### Host permission justification
 
-The extension requests two narrow host permissions. `https://raw.githubusercontent.com/*` downloads the public keyword lists shown in settings (BlueNoise, x-spam-filter, and x-comment-blocker). `https://x.zuoluo.tv/*` downloads the public Make X Great Again account blacklist/whitelist when that external list is enabled. Downloads occur during initial setup, manual sync, or scheduled refresh. These permissions are never used to execute scripts or read other content from those hosts; BlueNoise does not inject into or observe any page outside X. Files are validated before use, and requests include no cookies or credentials.
+Two narrow host permissions are granted at install. `https://raw.githubusercontent.com/*` downloads the public keyword lists shown in settings (BlueNoise, x-spam-filter, and x-comment-blocker). `https://x.zuoluo.tv/*` downloads the public Make X Great Again account blacklist/whitelist when that external list is enabled. Downloads occur during initial setup, manual sync, or scheduled refresh. These permissions are never used to execute scripts or read other content from those hosts; BlueNoise does not inject into or observe any page outside X. Files are validated before use, and requests include no cookies or credentials.
+
+### Optional host permission justification
+
+The extension also declares an **optional** host permission, which is not granted at install and does not appear on the install prompt.
+
+BlueNoise offers two experimental AI passes, both off by default. They send the text of replies that no built-in rule matched to a model the user chooses, so the user must be able to enter their own endpoint — the extension cannot know that address in advance. That is the only reason a broad optional pattern exists.
+
+How it is constrained:
+
+- **Requested per origin, at runtime.** `chrome.permissions.request` is called with exactly the origin parsed from the endpoint the user typed (`https://api.example.com/*`), never with a wildcard. `optional_host_permissions` is the declaration that makes any single origin requestable; it is not an install-time grant.
+- **Requested at the moment of use.** The permission prompt appears only when the user switches an AI pass on or presses "Test" on a provider. Declining leaves the pass off and the extension fully functional.
+- **Nothing else uses it.** No page is injected into, no script is executed against the AI host, and no request is made to it while both passes are off.
+- **Keys never leave the device.** API keys live in `storage.local`, are never synced, and are never included in a rules export.
+
+Reviewers can verify the single call site in `entrypoints/popup/App.tsx` (`chrome.permissions.request({ origins: [origin] })`) and the origin derivation in `src/contracts/ai-providers.ts` (`originPatternFor`).
+
+The reply-farm detector that ships alongside these passes requires no host permission at all: it compares post times already present in the page.
 
 ### Are you using remote code?
 
