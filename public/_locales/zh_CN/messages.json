@@ -410,5 +410,32 @@
 	"ai_model_test_failed": { "message": "连接失败" },
 	"ai_model_test_untested": { "message": "未测试" },
 	"ai_model_test_incomplete": { "message": "请先填写接口地址和模型。" },
-	"filter_reason_ai": { "message": "Jev 判定为噪音（$1）" }
+	"ai_llm_group": { "message": "LLM 判断通道" },
+	"ai_llm_privacy": {
+		"message": "与上面的 Jev 通道相互独立：未命中规则的回复会带着你自己写的过滤偏好发给对话模型。"
+	},
+	"ai_llm_enable": { "message": "用对话模型过滤" },
+	"ai_llm_enable_hint": {
+		"message": "用 $1 按你写的偏好判断，与上面的通道互不影响。"
+	},
+	"ai_llm_model": { "message": "LLM 模型" },
+	"ai_llm_model_hint": {
+		"message": "用哪个已配置的对话模型来按你的偏好判断回复。"
+	},
+	"ai_llm_preference": { "message": "过滤偏好" },
+	"ai_llm_preference_hint": {
+		"message": "100 分制里达到 90 分才会过滤，低于 90 一律放过，所以尽量写清你真正想去掉什么。"
+	},
+	"ai_llm_preference_placeholder": {
+		"message": "例如：币圈拉盘、拉人进付费群、只让我去看主页的引流回复"
+	},
+	"ai_llm_no_provider": { "message": "尚未配置 LLM 模型" },
+	"ai_llm_provider_required": {
+		"message": "请先在「AI 模型」页面添加一个 LLM 模型。"
+	},
+	"ai_llm_preference_required": { "message": "请先写清楚你想过滤什么内容。" },
+	"ai_llm_key_required": {
+		"message": "请先在「AI 模型」页面为选中的 LLM 模型填写 API Key。"
+	},
+	"filter_reason_ai": { "message": "AI 判定：疑似噪音（$1）" }
 }

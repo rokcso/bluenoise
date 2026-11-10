@@ -138,6 +138,23 @@ export function resolveJevProvider(
 	);
 }
 
+/**
+ * The provider a preference-driven pass should call. Unlike the judgment
+ * fallback there is no built-in chat model, so an unconfigured registry
+ * resolves to "" and the caller treats the pass as unavailable.
+ */
+export function resolveLlmProvider(
+	providers: AiProviderConfig[],
+	selectedId: string,
+): AiProviderConfig | null {
+	const selected = providers.find(
+		(provider) => provider.id === selectedId && provider.kind === "llm",
+	);
+	return (
+		selected ?? providers.find((provider) => provider.kind === "llm") ?? null
+	);
+}
+
 /** Id for a provider the user just added. */
 export function createProviderId(): string {
 	return `p-${crypto.randomUUID().slice(0, 8)}`;

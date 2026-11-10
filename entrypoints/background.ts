@@ -15,8 +15,16 @@ import {
 	parseAiGateMap,
 	parseAiSecrets,
 } from "@/src/contracts/ai";
-import { resolveJevProvider } from "@/src/contracts/ai-providers";
-import { RULE_DATA_KEY, SETTINGS_KEY } from "@/src/contracts/config";
+import {
+	type AiProviderConfig,
+	resolveJevProvider,
+	resolveLlmProvider,
+} from "@/src/contracts/ai-providers";
+import {
+	type AppConfig,
+	RULE_DATA_KEY,
+	SETTINGS_KEY,
+} from "@/src/contracts/config";
 import {
 	DEBUG_LOG_FLUSH_DELAY_MS,
 	DEBUG_LOG_KEY,
@@ -45,6 +53,12 @@ import {
 	recordRequest,
 	recordSuccess,
 } from "@/src/domain/ai-gate";
+import {
+	buildLlmRequest,
+	llmCachePartition,
+	llmPreferenceUsable,
+	parseLlmResponse,
+} from "@/src/domain/ai-llm";
 import {
 	defaultConfig,
 	defaultRuleData,
@@ -124,42 +138,116 @@ export default defineBackground(() => {
 		return parseAiSecrets(stored[AI_SECRETS_KEY]);
 	}
 
-	/** Judge replies with the selected judgment provider, reusing stored verdicts so identical text is paid for once. */
-	async function evaluateWithJev(
+	/**
+	 * One judging channel: a provider, its parser, and where its verdicts are
+	 * cached. The two experimental passes are the same machinery with different
+	 * prompts, so they share everything below and differ only here.
+	 */
+	interface AiChannel {
+		name: "jev" | "llm";
+		/** Cache partition; the LLM partition includes the preference it was asked. */
+		partition: string;
+		provider: AiProviderConfig;
+		apiKey: string;
+		build(
+			request: AiEvaluateRequest,
+			items: AiCandidate[],
+		): { url: string; init: RequestInit };
+		parse(
+			payload: unknown,
+			items: AiCandidate[],
+		): Record<string, number> | null;
+	}
+
+	/**
+	 * Resolve the channels that should run for this batch. Each pass is
+	 * independently opt-in, and a pass whose provider or key is missing is
+	 * skipped rather than failing the other one.
+	 */
+	async function resolveChannels(
+		cfg: AppConfig,
+		secrets: AiSecrets,
+	): Promise<AiChannel[]> {
+		const channels: AiChannel[] = [];
+
+		if (cfg.aiFilterEnabled) {
+			const provider = resolveJevProvider(
+				cfg.aiProviders,
+				cfg.aiFilterProviderId,
+			);
+			const apiKey = aiKeyFor(secrets, provider.id);
+			if (provider.endpoint && provider.model && apiKey) {
+				channels.push({
+					name: "jev",
+					// Unchanged for the judgment pass, so verdicts already cached
+					// before the LLM pass existed keep working.
+					partition: provider.id,
+					provider,
+					apiKey,
+					build: (request, items) => ({
+						url: provider.endpoint,
+						init: {
+							method: "POST",
+							headers: {
+								Authorization: `Bearer ${apiKey}`,
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify(
+								buildAiRequest(provider.model, request.parent, items),
+							),
+						},
+					}),
+					parse: parseAiResponse,
+				});
+			}
+		}
+
+		if (cfg.aiLlmEnabled && llmPreferenceUsable(cfg.aiLlmPreference)) {
+			const provider = resolveLlmProvider(cfg.aiProviders, cfg.aiLlmProviderId);
+			const apiKey = provider ? aiKeyFor(secrets, provider.id) : "";
+			if (provider?.endpoint && provider.model && apiKey) {
+				channels.push({
+					name: "llm",
+					partition: llmCachePartition(provider.id, cfg.aiLlmPreference),
+					provider,
+					apiKey,
+					build: (request, items) => ({
+						url: provider.endpoint,
+						init: buildLlmRequest(
+							provider,
+							{
+								preference: cfg.aiLlmPreference,
+								parent: request.parent,
+							},
+							items,
+						),
+					}),
+					parse: parseLlmResponse,
+				});
+			}
+		}
+
+		return channels;
+	}
+
+	/**
+	 * Run one channel end to end: reuse cached verdicts, skip the request when
+	 * everything is cached, respect the per-provider quota guard, and only then
+	 * pay for a call.
+	 */
+	async function runChannel(
+		channel: AiChannel,
 		request: AiEvaluateRequest,
-	): Promise<AiEvaluateResponse> {
-		// The provider is resolved from settings on every batch: the user may
-		// switch models while a scan is already running.
-		const { settings: cfg } = await readState();
-		const provider = resolveJevProvider(
-			cfg.aiProviders,
-			cfg.aiFilterProviderId,
-		);
-		if (!provider.endpoint || !provider.model)
-			return { ok: false, error: "incomplete-provider" };
-		const apiKey = aiKeyFor(await readAiSecrets(), provider.id);
-		if (!apiKey) return { ok: false, error: "missing-key" };
-
-		const items: AiCandidate[] = request.items
-			.slice(0, AI_MAX_BATCH)
-			.filter((item) => typeof item?.text === "string" && item.text.trim());
-		if (!items.length) return { ok: true, probabilities: {} };
-
-		// Verdicts and rate limits are per provider: a verdict belongs to the model
-		// that produced it, and the quota belongs to the key that paid for it.
+		items: AiCandidate[],
+		cacheMap: AiCacheMap,
+		gateMap: AiGateMap,
+	): Promise<{ probabilities: Record<string, number>; error?: string }> {
 		const now = Date.now();
-		const [cacheMap, gateMap] = await Promise.all([
-			readAiCacheMap(),
-			readAiGateMap(),
-		]);
-		const cache = cacheMap[provider.id] ?? {};
-		const storedGate = gateMap[provider.id] ?? emptyGate();
-		const writeAiGate = async (next: AiGate) => {
-			gateMap[provider.id] = next;
-			await chrome.storage.local.set({ [AI_GATE_KEY]: gateMap });
-		};
+		const cache = cacheMap[channel.partition] ?? {};
+		const storedGate = gateMap[channel.provider.id] ?? emptyGate();
 		const probabilities: Record<string, number> = {};
 		const pending: AiCandidate[] = [];
+
 		for (const item of items) {
 			const cached = readCachedProbability(
 				cache,
@@ -169,42 +257,37 @@ export default defineBackground(() => {
 			if (cached === null) pending.push(item);
 			else probabilities[item.id] = cached;
 		}
-		if (!pending.length) return { ok: true, probabilities };
+		if (!pending.length) return { probabilities };
 
-		// Cached verdicts are free; only a request about to leave the browser has
-		// to pass the quota guard.
 		const blocked = gateBlock(storedGate, now);
-		if (blocked) return { ok: false, error: blocked, probabilities };
-		let gate = recordRequest(storedGate, now);
-		await writeAiGate(gate);
+		if (blocked) return { probabilities, error: blocked };
+
+		const gate = recordRequest(storedGate, now);
+		const writeGate = async (next: AiGate) => {
+			gateMap[channel.provider.id] = next;
+			await chrome.storage.local.set({ [AI_GATE_KEY]: gateMap });
+		};
+		await writeGate(gate);
 
 		let next = cache;
 		try {
-			const response = await fetch(provider.endpoint, {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${apiKey}`,
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(
-					buildAiRequest(provider.model, request.parent, pending),
-				),
-			});
+			const probe = channel.build(request, pending);
+			const response = await fetch(probe.url, probe.init);
 			if (!response.ok) {
-				gate = recordFailure(
-					gate,
-					classifyFailure(response.status),
-					parseRetryAfter(response.headers.get("retry-after"), now),
-					Date.now(),
+				await writeGate(
+					recordFailure(
+						gate,
+						classifyFailure(response.status),
+						parseRetryAfter(response.headers.get("retry-after"), now),
+						Date.now(),
+					),
 				);
-				await writeAiGate(gate);
-				return { ok: false, error: `http-${response.status}`, probabilities };
+				return { probabilities, error: `http-${response.status}` };
 			}
-			const parsed = parseAiResponse(await response.json(), pending);
+			const parsed = channel.parse(await response.json(), pending);
 			if (!parsed || !Object.keys(parsed).length) {
-				gate = recordFailure(gate, "server", null, Date.now());
-				await writeAiGate(gate);
-				return { ok: false, error: "unexpected-response", probabilities };
+				await writeGate(recordFailure(gate, "server", null, Date.now()));
+				return { probabilities, error: "unexpected-response" };
 			}
 			for (const item of pending) {
 				const probability = parsed[item.id];
@@ -217,18 +300,66 @@ export default defineBackground(() => {
 					now,
 				);
 			}
-			await writeAiGate(recordSuccess(gate, Date.now()));
+			await writeGate(recordSuccess(gate, Date.now()));
+			cacheMap[channel.partition] = next;
+			await chrome.storage.local.set({ [AI_CACHE_KEY]: cacheMap });
+			return { probabilities };
 		} catch (error) {
-			await writeAiGate(recordFailure(gate, "network", null, Date.now()));
+			await writeGate(recordFailure(gate, "network", null, Date.now()));
 			return {
-				ok: false,
-				error: error instanceof Error ? error.message : String(error),
 				probabilities,
+				error: error instanceof Error ? error.message : String(error),
 			};
 		}
-		cacheMap[provider.id] = next;
-		await chrome.storage.local.set({ [AI_CACHE_KEY]: cacheMap });
-		return { ok: true, probabilities };
+	}
+
+	/**
+	 * Judge replies with every enabled pass, reusing stored verdicts so identical
+	 * text is paid for once. Both passes answer on the same 0–1 scale and share
+	 * one gate downstream, so the merge is a plain maximum: whichever pass is more
+	 * confident about a reply decides it.
+	 */
+	async function evaluateWithAi(
+		request: AiEvaluateRequest,
+	): Promise<AiEvaluateResponse> {
+		// Providers are resolved from settings on every batch: the user may switch
+		// models, edit the preference, or toggle a pass while a scan is running.
+		const { settings: cfg } = await readState();
+		const channels = await resolveChannels(cfg, await readAiSecrets());
+		if (!channels.length) return { ok: false, error: "no-channel" };
+
+		const items: AiCandidate[] = request.items
+			.slice(0, AI_MAX_BATCH)
+			.filter((item) => typeof item?.text === "string" && item.text.trim());
+		if (!items.length) return { ok: true, probabilities: {} };
+
+		const [cacheMap, gateMap] = await Promise.all([
+			readAiCacheMap(),
+			readAiGateMap(),
+		]);
+
+		const merged: Record<string, number> = {};
+		const errors: string[] = [];
+		for (const channel of channels) {
+			const result = await runChannel(
+				channel,
+				request,
+				items,
+				cacheMap,
+				gateMap,
+			);
+			for (const [id, probability] of Object.entries(result.probabilities)) {
+				const known = merged[id];
+				merged[id] =
+					known === undefined ? probability : Math.max(known, probability);
+			}
+			if (result.error) errors.push(`${channel.name}:${result.error}`);
+		}
+
+		if (!Object.keys(merged).length && errors.length) {
+			return { ok: false, error: errors.join(","), probabilities: merged };
+		}
+		return { ok: true, probabilities: merged };
 	}
 
 	async function readAiCacheMap(): Promise<AiCacheMap> {
@@ -422,7 +553,7 @@ export default defineBackground(() => {
 				);
 			return true;
 		} else if (message?.type === "BLUENOISE_AI_EVALUATE") {
-			evaluateWithJev(message as AiEvaluateRequest)
+			evaluateWithAi(message as AiEvaluateRequest)
 				.then(sendResponse)
 				.catch((error) =>
 					sendResponse({

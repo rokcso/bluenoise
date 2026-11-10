@@ -69,6 +69,16 @@ export interface AppConfig {
 	aiProviders: import("@/src/contracts/ai-providers").AiProviderConfig[];
 	/** Which `jev` provider the second pass calls. */
 	aiFilterProviderId: string;
+	/**
+	 * Experimental: run replies no rule matched past a chat model as well, using
+	 * the user's own free-text filtering preference as the criterion.
+	 * Independent of `aiFilterEnabled`: either pass may run alone.
+	 */
+	aiLlmEnabled: boolean;
+	/** Which `llm` provider the preference pass calls. */
+	aiLlmProviderId: string;
+	/** The user's own words for what counts as unwanted. Empty disables the pass. */
+	aiLlmPreference: string;
 	/** Filter promoted posts whose creative contains video or media. */
 	filterMediaAds: boolean;
 	/** Filter promoted posts containing an external website card. */

@@ -3,6 +3,7 @@ import {
 	AI_BUILTIN_PROVIDER,
 	parseAiProviders,
 	resolveJevProvider,
+	resolveLlmProvider,
 } from "@/src/contracts/ai-providers";
 import type { AppConfig, RuleData } from "@/src/contracts/config";
 
@@ -57,6 +58,9 @@ export const DEFAULTS: AppConfig = {
 	aiFilterEnabled: false,
 	aiProviders: [AI_BUILTIN_PROVIDER],
 	aiFilterProviderId: AI_DEFAULT_PROVIDER_ID,
+	aiLlmEnabled: false,
+	aiLlmProviderId: "",
+	aiLlmPreference: "",
 	filterMediaAds: false,
 	filterCardAds: false,
 	filterParodyAccounts: false,
@@ -99,6 +103,18 @@ export function loadConfig(partial: unknown): AppConfig {
 				? stored.aiFilterProviderId
 				: DEFAULTS.aiFilterProviderId,
 		).id,
+		// No built-in chat model: an empty id means "no LLM pass configured".
+		aiLlmProviderId:
+			resolveLlmProvider(
+				aiProviders,
+				typeof stored.aiLlmProviderId === "string"
+					? stored.aiLlmProviderId
+					: "",
+			)?.id ?? "",
+		aiLlmPreference:
+			typeof stored.aiLlmPreference === "string"
+				? stored.aiLlmPreference
+				: DEFAULTS.aiLlmPreference,
 		keywordSourceEnabled: {
 			...DEFAULTS.keywordSourceEnabled,
 			...stored.keywordSourceEnabled,

@@ -50,6 +50,29 @@ describe("ai filter request", () => {
 		expect(body.questions[aiQuestionKey("r2")].instructions).toContain('"r2"');
 	});
 
+	it("states both sides of the boundary and defaults to not filtering", () => {
+		const body = buildAiRequest("jev-latest", "Original post", items) as {
+			questions: Record<
+				string,
+				{
+					type: string;
+					instructions: string;
+					criteria?: Record<string, string>;
+				}
+			>;
+		};
+		const question = body.questions[aiQuestionKey("r1")];
+		// `criteria` is what keeps the probability from drifting on bland text.
+		expect(question.criteria?.true).toBeTruthy();
+		expect(question.criteria?.false).toBeTruthy();
+		expect(question.instructions).toMatch(/ambiguous, answer false/i);
+		// Short, blunt, non-native or joking replies must not read as noise.
+		expect(question.instructions).toMatch(/Short or blunt replies/i);
+		expect(question.instructions).toMatch(/non-English text are not/i);
+		// The parent post is part of the judgement, not just payload.
+		expect(question.instructions).toMatch(/parent_post/);
+	});
+
 	it("omits the parent post when the page has none", () => {
 		const body = buildAiRequest("jev-latest", "", items) as {
 			state: { parent_post: null };

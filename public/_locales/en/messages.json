@@ -420,5 +420,34 @@
 	"ai_model_test_incomplete": {
 		"message": "Fill in the endpoint and model first."
 	},
-	"filter_reason_ai": { "message": "Jev: likely noise ($1)" }
+	"ai_llm_group": { "message": "LLM filter pass" },
+	"ai_llm_privacy": {
+		"message": "Runs separately from the Jev pass: replies no rule matched are sent to a chat model with your own filtering preference."
+	},
+	"ai_llm_enable": { "message": "Filter with a chat model" },
+	"ai_llm_enable_hint": {
+		"message": "Applies your written preference using $1. Independent of the pass above."
+	},
+	"ai_llm_model": { "message": "LLM model" },
+	"ai_llm_model_hint": {
+		"message": "Which configured chat model judges replies against your preference."
+	},
+	"ai_llm_preference": { "message": "Filtering preference" },
+	"ai_llm_preference_hint": {
+		"message": "Counts as a filter at 90 of 100 or above. Below that the reply is left alone, so describe what you actually want gone."
+	},
+	"ai_llm_preference_placeholder": {
+		"message": "e.g. crypto shilling, recruiting for paid groups, replies that only ask me to check a profile"
+	},
+	"ai_llm_no_provider": { "message": "No LLM model configured" },
+	"ai_llm_provider_required": {
+		"message": "Add an LLM model on the AI models page first."
+	},
+	"ai_llm_preference_required": {
+		"message": "Describe what you want filtered first."
+	},
+	"ai_llm_key_required": {
+		"message": "Add an API key for the selected LLM model on the AI models page."
+	},
+	"filter_reason_ai": { "message": "AI-matched: likely noise ($1)" }
 }

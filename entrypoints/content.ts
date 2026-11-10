@@ -195,7 +195,8 @@ function debugConfigSnapshot(
 		mode: cfg.mode,
 		dimOpacity: cfg.dimOpacity,
 		filters: {
-			aiSecondPass: cfg.aiFilterEnabled,
+			// Either pass may be on: the two are independent switches.
+			aiSecondPass: cfg.aiFilterEnabled || cfg.aiLlmEnabled,
 			mediaAds: cfg.filterMediaAds,
 			cardAds: cfg.filterCardAds,
 			parodyAccounts: cfg.filterParodyAccounts,
@@ -288,7 +289,8 @@ function aiParentText(): string {
 
 const aiSecondPass = createAiSecondPass({
 	isDead: () => dead,
-	isActive: () => cfg.aiFilterEnabled && cfg.enabled && active,
+	isActive: () =>
+		(cfg.aiFilterEnabled || cfg.aiLlmEnabled) && cfg.enabled && active,
 	readParentText: aiParentText,
 	getGeneration: () => generation,
 	send: (message) => sendToBackgroundAsync<AiEvaluateResponse>(message),
@@ -1050,6 +1052,9 @@ async function readStoredState(): Promise<{ cfg: AppConfig; rules: RuleData }> {
 const MATCH_KEYS = [
 	"enabled",
 	"aiFilterEnabled",
+	"aiLlmEnabled",
+	// Editing the preference changes the question, so cached verdicts are stale.
+	"aiLlmPreference",
 	"filterMediaAds",
 	"filterCardAds",
 	"filterParodyAccounts",

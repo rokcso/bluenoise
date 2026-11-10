@@ -64,16 +64,32 @@ export function aiFingerprint(text: string): string {
  * One atomic question per reply. Asking a single "is this noise" question and
  * keeping the routing decision in code is deliberate: it matches the project's
  * existing one-rule-one-reason model and keeps the model out of the controls.
+ *
+ * The wording is tuned for precision, not recall: a false positive hides a real
+ * person's reply, which is far worse than letting one piece of spam through.
+ * `criteria` states both sides of the boundary, and the prior is explicitly
+ * "when uncertain, false" — without it `noul` drifts high on short bland text.
  */
-function noiseInstructions(id: string): string {
-	return (
-		`Reply "${id}" in the "replies" list. ` +
-		"Answer true if it is conversational noise: spam, advertising or promotion, " +
-		"engagement bait, a link or follow solicitation, content-free praise or banter, " +
-		"or text that adds nothing to the discussion. " +
-		"Answer false if it makes a genuine point, asks or answers a question, " +
-		"or shares information or an opinion."
-	);
+function noiseQuestion(id: string) {
+	return {
+		type: "noul",
+		instructions:
+			`Reply "${id}" in the "replies" list, read together with "parent_post". ` +
+			"Answer true only if this reply is noise: spam, advertising or promotion, " +
+			"engagement bait, a link or follow solicitation, a reply that could be pasted " +
+			"unchanged under any unrelated post, or text that adds nothing to this thread. " +
+			"Answer false if it responds to what the post actually says, makes a point, " +
+			"asks or answers a question, shares information or an opinion, jokes about " +
+			"something specific, disagrees, or is simply brief. " +
+			"Short or blunt replies, typos, slang, sarcasm and non-English text are not " +
+			"evidence of noise. Judge meaning, never writing quality. " +
+			"If the reply is ambiguous, answer false.",
+		criteria: {
+			true: "Remove the reply and the thread loses nothing: it fits any other post equally well.",
+			false:
+				"It is tied to this thread's specific subject, even briefly or informally; or the evidence is thin.",
+		},
+	};
 }
 
 export function aiQuestionKey(id: string): string {
@@ -104,10 +120,7 @@ export function buildAiRequest(
 			})),
 		},
 		questions: Object.fromEntries(
-			items.map((item) => [
-				aiQuestionKey(item.id),
-				{ type: "noul", instructions: noiseInstructions(item.id) },
-			]),
+			items.map((item) => [aiQuestionKey(item.id), noiseQuestion(item.id)]),
 		),
 	};
 }

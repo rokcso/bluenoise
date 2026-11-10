@@ -17,6 +17,7 @@ import {
 	originPatternFor,
 	providersOfKind,
 	resolveJevProvider,
+	resolveLlmProvider,
 } from "@/src/contracts/ai-providers";
 import type {
 	KeywordSubscription,
@@ -37,6 +38,7 @@ import {
 	MXGA_DATA_URL,
 	MXGA_REPO_URL,
 } from "@/src/domain/account-list";
+import { llmPreferenceUsable } from "@/src/domain/ai-llm";
 import { buildProviderProbe, judgeProbeResponse } from "@/src/domain/ai-test";
 import {
 	defaultRuleData,
@@ -706,6 +708,14 @@ export function SettingsApp({
 							labelClassName="font-normal"
 						>
 							<AiSecondPass config={config} update={update} />
+						</SettingsGroup>
+						<SettingsGroup
+							label={t("ai_llm_group")}
+							description={t("ai_llm_privacy")}
+							icon={MessageIcon}
+							labelClassName="font-normal"
+						>
+							<AiLlmPass config={config} update={update} />
 						</SettingsGroup>
 					</>
 				)}
@@ -1804,6 +1814,143 @@ function AiSecondPass({
 /** A provider form in flight. `isNew` decides append vs. replace on save. */
 type AiProviderDraft = AiProviderConfig & { isNew: boolean };
 
+/**
+ * The preference pass: the user writes what they do not want to see, and a chat
+ * model judges unmatched replies against that text. Independent of the judgment
+ * pass above, including its model choice.
+ */
+function AiLlmPass({
+	config,
+	update,
+}: {
+	config: AppConfig;
+	update: (p: Partial<AppConfig>) => void;
+}) {
+	const [error, setError] = useState("");
+	const [apiKey, setApiKey] = useState("");
+	const llmProviders = providersOfKind(config.aiProviders, "llm");
+	const provider = resolveLlmProvider(
+		config.aiProviders,
+		config.aiLlmProviderId,
+	);
+	const providerLabel = provider ? provider.label || provider.id : "";
+	const providerId = provider?.id ?? "";
+
+	// Same synchronous mirror as the judgment pass: the origin request must stay
+	// inside the click's user gesture.
+	useEffect(() => {
+		const read = () =>
+			chrome.storage.local.get(AI_SECRETS_KEY).then((stored) => {
+				const secrets = parseAiSecrets(stored[AI_SECRETS_KEY]);
+				setApiKey(providerId ? aiKeyFor(secrets, providerId) : "");
+			});
+		void read();
+		const onChange = (
+			changes: { [key: string]: chrome.storage.StorageChange },
+			area: string,
+		) => {
+			if (area === "local" && changes[AI_SECRETS_KEY]) void read();
+		};
+		chrome.storage.onChanged.addListener(onChange);
+		return () => chrome.storage.onChanged.removeListener(onChange);
+	}, [providerId]);
+
+	async function toggle(enabled: boolean) {
+		setError("");
+		if (enabled) {
+			if (!llmProviders.length || !provider) {
+				setError(t("ai_llm_provider_required"));
+				return;
+			}
+			if (!llmPreferenceUsable(config.aiLlmPreference)) {
+				setError(t("ai_llm_preference_required"));
+				return;
+			}
+			if (!apiKey) {
+				setError(t("ai_llm_key_required"));
+				return;
+			}
+			const origin = originPatternFor(provider.endpoint);
+			if (!origin) {
+				setError(t("ai_filter_endpoint_required"));
+				return;
+			}
+			const granted = await chrome.permissions
+				.request({ origins: [origin] })
+				.catch(() => false);
+			if (!granted) {
+				setError(t("ai_filter_permission_denied"));
+				return;
+			}
+		}
+		update({ aiLlmEnabled: enabled });
+	}
+
+	return (
+		<>
+			<SettingsPanel>
+				<XToggle
+					label={t("ai_llm_enable")}
+					hint={t(
+						"ai_llm_enable_hint",
+						providerLabel || t("ai_llm_no_provider"),
+					)}
+					checked={config.aiLlmEnabled}
+					onChange={(v) => void toggle(v)}
+				/>
+				<SettingsDivider />
+				<SettingsRow
+					label={t("ai_llm_model")}
+					description={t("ai_llm_model_hint")}
+					control={
+						<div className="w-40 shrink-0 self-center">
+							{llmProviders.length ? (
+								<SelectMenu
+									value={provider?.id ?? ""}
+									ariaLabel={t("ai_llm_model")}
+									options={llmProviders.map((option) => ({
+										value: option.id,
+										label: option.label || option.id,
+									}))}
+									onChange={(next) => update({ aiLlmProviderId: next })}
+								/>
+							) : (
+								<span className="block text-right text-xs text-x-muted">
+									{t("ai_llm_no_provider")}
+								</span>
+							)}
+						</div>
+					}
+				/>
+			</SettingsPanel>
+			<div className="mt-3 flex flex-col gap-1.5">
+				<label className="text-xs text-x-muted" htmlFor="ai-llm-preference">
+					{t("ai_llm_preference")}
+				</label>
+				<textarea
+					id="ai-llm-preference"
+					value={config.aiLlmPreference}
+					onChange={(event) => update({ aiLlmPreference: event.target.value })}
+					rows={4}
+					placeholder={t("ai_llm_preference_placeholder")}
+					className="rules-keywords-control w-full resize-y rounded-lg border border-x-border bg-x-bg p-3 text-xs leading-5 text-x-fg outline-none focus:border-x-accent focus-visible:ring-2 focus-visible:ring-x-accent/30"
+				/>
+				<span className="text-xs text-x-muted">
+					{t("ai_llm_preference_hint")}
+				</span>
+			</div>
+			<div className="mt-3 flex flex-col gap-2 text-xs text-x-muted">
+				<p>
+					{provider
+						? t("ai_filter_provider", providerLabel, provider.model || "—")
+						: t("ai_llm_no_provider")}
+				</p>
+			</div>
+			{error && <p className="mt-3 text-xs text-x-muted">{error}</p>}
+		</>
+	);
+}
+
 /** One choice in a {@link SelectMenu}. */
 interface SelectOption {
 	value: string;
@@ -2264,9 +2411,20 @@ function AiProviderDialog({
 				/>
 			</label>
 			<div className="flex flex-col gap-1.5">
-				<label className="text-xs text-x-muted" htmlFor={`${fieldId}-key`}>
-					{t("ai_model_key")}
-				</label>
+				<div className="flex items-center justify-between gap-2">
+					<label className="text-xs text-x-muted" htmlFor={`${fieldId}-key`}>
+						{t("ai_model_key")}
+					</label>
+					{/* Testing belongs beside the credential it tests, not in its own bar. */}
+					<button
+						type="button"
+						onClick={() => void runTest()}
+						disabled={testing}
+						className="cursor-pointer rounded-md px-1.5 py-0.5 text-xs text-x-muted underline decoration-x-border underline-offset-2 transition-colors hover:text-x-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-progress disabled:opacity-60"
+					>
+						{testing ? t("ai_model_testing") : t("ai_model_test")}
+					</button>
+				</div>
 				<div className="relative">
 					<input
 						id={`${fieldId}-key`}
@@ -2299,9 +2457,7 @@ function AiProviderDialog({
 						)}
 					</button>
 				</div>
-			</div>
-			<div className="flex items-center justify-between gap-3 border-t border-x-border pt-3">
-				<span className="flex min-w-0 items-center gap-2 text-xs text-x-muted">
+				<span className="flex min-w-0 items-center gap-1.5 text-xs text-x-muted">
 					<ProviderTestDot test={test} />
 					<span className="truncate">
 						{testError
@@ -2313,14 +2469,6 @@ function AiProviderDialog({
 									: `${t("ai_model_test_failed")}${test.detail ? ` · ${test.detail}` : ""}`}
 					</span>
 				</span>
-				<button
-					type="button"
-					onClick={() => void runTest()}
-					disabled={testing}
-					className="shrink-0 cursor-pointer rounded-full border border-x-border px-3 py-1.5 text-xs text-x-fg transition-colors hover:bg-x-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-x-accent/40 disabled:cursor-progress disabled:opacity-60"
-				>
-					{testing ? t("ai_model_testing") : t("ai_model_test")}
-				</button>
 			</div>
 		</Dialog>
 	);
